@@ -1,0 +1,173 @@
+// Prisma schema for Karyana Bakery
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== AUTH (Auth.js compatible) ====================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // for credentials provider (hashed)
+  phone         String?
+  role          UserRole  @default(CUSTOMER)
+
+  // Referral system
+  referralCode   String   @unique @default(cuid())
+  referredById   String?
+  referredBy     User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals      User[]   @relation("Referrals")
+  referralCredit Int      @default(0) // in cents
+
+  // Preferences
+  preferences Json? // { newsletter, dietary, lang, ... }
+
+  accounts  Account[]
+  sessions  Session[]
+  orders    Order[]
+  addresses Address[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==================== ADDRESSES ====================
+
+model Address {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label        String?  // "Home", "Work"
+  fullName     String
+  phone        String
+  line1        String
+  line2        String?
+  city         String
+  province     String   @default("AB")
+  postalCode   String
+  country      String   @default("Canada")
+
+  isDefaultBilling  Boolean @default(false)
+  isDefaultShipping Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+}
+
+// ==================== ORDERS ====================
+
+model Order {
+  id           String   @id @default(cuid())
+  orderNumber  String   @unique // KAR-000001
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+
+  // Guest checkout fallback
+  guestEmail   String?
+  guestName    String?
+  guestPhone   String?
+
+  // Items (snapshot — products may change in Sanity)
+  items        Json     // [{ productId, slug, name, price, quantity, image }]
+  subtotal     Int      // cents
+  tax          Int      @default(0)
+  shipping     Int      @default(0)
+  discount     Int      @default(0)
+  total        Int
+
+  // Fulfillment
+  fulfillmentType FulfillmentType @default(PICKUP)
+  pickupDate      DateTime?
+  pickupTime      String?
+  notes           String?
+
+  // Shipping address (optional)
+  addressId  String?
+  address    Address?  @relation(fields: [addressId], references: [id])
+
+  // Payment
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  squarePaymentId String?
+  squareOrderId   String?
+
+  // Referral
+  referralCodeUsed String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum FulfillmentType {
+  PICKUP
+  DELIVERY
+  EVENT
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}

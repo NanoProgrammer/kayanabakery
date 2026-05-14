@@ -1,95 +1,78 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
+import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
 import { urlFor } from "@/sanity/lib/image";
+import { cn } from "@/lib/utils";
 import type { Category } from "@/types";
 
-const layouts = [
-  "md:col-span-7 aspect-[4/3]",
-  "md:col-span-5 aspect-[3/4]",
-  "md:col-span-5 aspect-[4/3]",
-  "md:col-span-7 aspect-[4/3]",
-];
-
-const fallbackImages = [
-  "https://karyanabakery.ca/wp-content/uploads/2025/06/428691672_274905795636586_551486907034465799_n-1.jpg",
-  "https://karyanabakery.ca/wp-content/uploads/elementor/thumbs/20240801_181722-scaled-rfxbr5zg25rab7ugvn6g760qegah5ff5gt5iawohb4.jpg",
-  "https://karyanabakery.ca/wp-content/uploads/2025/07/assorted-mex-bread-1024x576.jpg",
-  "https://karyanabakery.ca/wp-content/uploads/2025/06/Untitled-design-3-1-1024x899.png",
-];
-
-type Props = { categories: Category[] };
-
-export function FeaturedCategories({ categories }: Props) {
+export function FeaturedCategories({ categories }: { categories: Category[] }) {
+  const { t, locale } = useLocale();
   if (!categories?.length) return null;
 
   return (
-    <section className="relative bg-cream py-20 md:py-28">
-      <div className="container-bakery">
-        <div className="mb-14 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
-          <div>
-            <span className="eyebrow mb-3">Explore</span>
-            <h2 className="section-title max-w-xl">
-              Everything we bake,
-              <br />
-              <span className="italic text-canela">made with love.</span>
-            </h2>
-          </div>
-          <Link
-            href="/shop"
-            className="group inline-flex items-center gap-2 text-sm font-medium uppercase tracking-widest text-canela"
-          >
-            <span className="link-underline">See full menu</span>
-            <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-          </Link>
+    <section className="container-bakery py-24">
+      <div className="mb-12 flex flex-col items-end justify-between gap-6 md:flex-row">
+        <div className="max-w-2xl">
+          <span className="eyebrow">{t("home.exploreEyebrow")}</span>
+          <h2 className="section-title mt-2">
+            {t("home.exploreTitle")}{" "}
+            <span className="font-script text-canela-dark">
+              {t("home.exploreTitleAccent")}
+            </span>
+          </h2>
         </div>
+        <Link
+          href="/shop"
+          className="link-underline text-sm font-medium text-ink"
+        >
+          {t("home.seeFullMenu")} →
+        </Link>
+      </div>
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-12 md:gap-6">
-          {categories.slice(0, 4).map((cat, i) => {
-            const image = cat.image
-              ? urlFor(cat.image).width(800).height(800).url()
-              : fallbackImages[i];
-
-            return (
-              <Link
-                key={cat._id}
-                href={`/category/${cat.slug}`}
-                className={`group relative overflow-hidden rounded-3xl bg-masa ${layouts[i]}`}
-              >
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {categories.map((c) => {
+          const name = pickI18n(c, "name", locale);
+          const tagline = pickI18n(c, "tagline", locale);
+          return (
+            <Link
+              key={c._id}
+              href={`/category/${c.slug}`}
+              className="group relative aspect-[4/5] overflow-hidden rounded-3xl"
+            >
+              {c.image ? (
                 <Image
-                  src={image}
-                  alt={cat.name}
+                  src={urlFor(c.image).width(700).height(900).url()}
+                  alt={name || ""}
                   fill
-                  sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  sizes="(max-width: 768px) 50vw, 25vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-ink/10 to-transparent" />
+              ) : (
                 <div
-                  className={`absolute left-5 top-5 h-2 w-2 rounded-full ${
-                    cat.accentColor || "bg-otomi-red"
-                  }`}
+                  className={cn(
+                    "absolute inset-0",
+                    c.accentColor || "bg-canela"
+                  )}
                 />
-                <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
-                  <div className="flex items-end justify-between gap-4">
-                    <div>
-                      {cat.tagline && (
-                        <p className="mb-1 font-script text-lg text-cream/90">
-                          {cat.tagline}
-                        </p>
-                      )}
-                      <h3 className="font-display text-3xl text-cream md:text-4xl">
-                        {cat.name}
-                      </h3>
-                    </div>
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cream text-canela transition-all duration-300 group-hover:bg-canela group-hover:text-cream">
-                      <ArrowUpRight className="h-5 w-5" />
-                    </div>
-                  </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/10 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-cream">
+                {tagline && (
+                  <p className="font-script text-xl text-canela">
+                    {tagline}
+                  </p>
+                )}
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-display text-2xl">{name}</h3>
+                  <ArrowUpRight className="h-5 w-5 transition-transform group-hover:-translate-y-1 group-hover:translate-x-1" />
                 </div>
-              </Link>
-            );
-          })}
-        </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

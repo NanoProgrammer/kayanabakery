@@ -1,204 +1,338 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, Star, StarOff } from "lucide-react";
+import { Plus, MapPin, Check, Edit2, Trash2, Star } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { isSECalgary } from "@/lib/checkout/postal-codes";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 type Address = {
   id: string;
-  label?: string | null;
-  fullName: string;
-  phone: string;
-  line1: string;
-  line2?: string | null;
+  street: string;
   city: string;
   province: string;
   postalCode: string;
-  country: string;
-  isDefaultBilling: boolean;
-  isDefaultShipping: boolean;
+  buzzer?: string | null;
+  notes?: string | null;
+  isDefault: boolean;
+  isSE: boolean;
 };
 
-export function AddressManager({
-  initialAddresses,
-}: {
-  initialAddresses: Address[];
-}) {
-  const router = useRouter();
-  const [adding, setAdding] = useState(false);
-  const [loading, setLoading] = useState(false);
+type Draft = Omit<Address, "id" | "isSE">;
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    const fd = new FormData(e.currentTarget);
+const EMPTY: Draft = {
+  street: "",
+  city: "Calgary",
+  province: "AB",
+  postalCode: "",
+  buzzer: "",
+  notes: "",
+  isDefault: false,
+};
+
+export function AddressManager({ initial }: { initial: Address[] }) {
+  const { locale } = useLocale();
+  const [addresses, setAddresses] = useState<Address[]>(initial);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [saving, setSaving] = useState(false);
+
+  function startEdit(a: Address) {
+    setEditingId(a.id);
+    setAdding(false);
+    setDraft({
+      street: a.street,
+      city: a.city,
+      province: a.province,
+      postalCode: a.postalCode,
+      buzzer: a.buzzer ?? "",
+      notes: a.notes ?? "",
+      isDefault: a.isDefault,
+    });
+  }
+
+  function startAdd() {
+    setAdding(true);
+    setEditingId(null);
+    setDraft({ ...EMPTY, isDefault: addresses.length === 0 });
+  }
+
+  function cancel() {
+    setAdding(false);
+    setEditingId(null);
+    setDraft(EMPTY);
+  }
+
+  async function save() {
+    if (!draft.street || !draft.postalCode) {
+      toast.error(locale === "es" ? "Faltan campos" : "Missing fields");
+      return;
+    }
+    setSaving(true);
     try {
-      const res = await fetch("/api/addresses", {
-        method: "POST",
+      const isUpdate = !!editingId;
+      const url = isUpdate
+        ? `/api/addresses/${editingId}`
+        : "/api/addresses";
+      const method = isUpdate ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(fd.entries())),
+        body: JSON.stringify(draft),
       });
       if (!res.ok) throw new Error();
-      toast.success("Address saved");
-      setAdding(false);
-      router.refresh();
+      const data = await res.json();
+
+      if (isUpdate) {
+        setAddresses((prev) =>
+          prev.map((a) => (a.id === editingId ? data.address : a))
+        );
+      } else {
+        setAddresses((prev) => [data.address, ...prev]);
+      }
+
+      // If default changed, refresh others
+      if (draft.isDefault) {
+        setAddresses((prev) =>
+          prev.map((a) =>
+            a.id === data.address.id
+              ? { ...a, isDefault: true }
+              : { ...a, isDefault: false }
+          )
+        );
+      }
+
+      toast.success(locale === "es" ? "Guardado" : "Saved");
+      cancel();
     } catch {
-      toast.error("Could not save address");
+      toast.error(locale === "es" ? "Error" : "Failed");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm("Remove this address?")) return;
+    if (
+      !confirm(
+        locale === "es"
+          ? "¿Eliminar esta dirección?"
+          : "Delete this address?"
+      )
+    )
+      return;
     const res = await fetch(`/api/addresses/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      toast.success("Removed");
-      router.refresh();
+    if (!res.ok) {
+      toast.error(locale === "es" ? "Error" : "Failed");
+      return;
     }
-  }
-
-  async function setDefault(id: string, type: "billing" | "shipping") {
-    const res = await fetch(`/api/addresses/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ default: type }),
-    });
-    if (res.ok) {
-      toast.success("Default updated");
-      router.refresh();
-    }
+    setAddresses((prev) => prev.filter((a) => a.id !== id));
   }
 
   return (
-    <div className="space-y-4">
-      {initialAddresses.length === 0 && !adding && (
-        <div className="rounded-2xl border border-canela/15 bg-masa/30 p-8 text-center">
-          <p className="text-ink/60">No addresses saved yet.</p>
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {initialAddresses.map((a) => (
-          <div
-            key={a.id}
-            className="rounded-2xl border border-canela/15 bg-masa/30 p-6"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                {a.label && (
-                  <p className="text-xs font-bold uppercase tracking-widest text-canela">
-                    {a.label}
+    <div className="space-y-3">
+      {addresses.map((a) => (
+        <div
+          key={a.id}
+          className="rounded-2xl border border-canela/15 bg-cream p-5"
+        >
+          {editingId === a.id ? (
+            <Form
+              draft={draft}
+              setDraft={setDraft}
+              saving={saving}
+              onSave={save}
+              onCancel={cancel}
+            />
+          ) : (
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <MapPin className="mt-0.5 h-4 w-4 text-canela-dark" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{a.street}</p>
+                    {a.isDefault && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-canela-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-canela-dark">
+                        <Star className="h-2.5 w-2.5" />
+                        {locale === "es" ? "Principal" : "Default"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-ink-soft">
+                    {a.city}, {a.province} {a.postalCode}
                   </p>
-                )}
-                <p className="mt-1 font-display text-lg text-ink">
-                  {a.fullName}
-                </p>
-                <p className="text-sm text-ink/70">
-                  {a.line1}
-                  {a.line2 ? `, ${a.line2}` : ""}
-                </p>
-                <p className="text-sm text-ink/70">
-                  {a.city}, {a.province} {a.postalCode}
-                </p>
-                <p className="mt-1 text-xs text-ink/50">{a.phone}</p>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {a.isDefaultBilling && (
-                    <span className="rounded-full bg-canela/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-canela">
-                      Default billing
-                    </span>
+                  {a.buzzer && (
+                    <p className="text-xs text-ink-soft">
+                      Buzzer: {a.buzzer}
+                    </p>
                   )}
-                  {a.isDefaultShipping && (
-                    <span className="rounded-full bg-otomi-teal/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-otomi-teal">
-                      Default shipping
-                    </span>
+                  {a.isSE && (
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-canela-dark">
+                      ✨ SE Calgary
+                    </p>
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => remove(a.id)}
-                className="text-ink/40 hover:text-otomi-red"
-                aria-label="Remove"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => startEdit(a)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-canela-light"
+                  aria-label="Edit"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => remove(a.id)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-red-500 hover:bg-red-50"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                onClick={() => setDefault(a.id, "billing")}
-                className="inline-flex items-center gap-1.5 text-xs text-ink/60 hover:text-canela"
-              >
-                {a.isDefaultBilling ? (
-                  <StarOff className="h-3.5 w-3.5" />
-                ) : (
-                  <Star className="h-3.5 w-3.5" />
-                )}
-                Set as billing default
-              </button>
-              <button
-                onClick={() => setDefault(a.id, "shipping")}
-                className="inline-flex items-center gap-1.5 text-xs text-ink/60 hover:text-canela"
-              >
-                {a.isDefaultShipping ? (
-                  <StarOff className="h-3.5 w-3.5" />
-                ) : (
-                  <Star className="h-3.5 w-3.5" />
-                )}
-                Set as shipping default
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+      ))}
 
       {adding ? (
-        <form
-          onSubmit={onSubmit}
-          className="space-y-4 rounded-2xl border border-canela/20 bg-cream p-6"
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Input name="label" placeholder="Label (Home, Work)" />
-            <Input name="fullName" placeholder="Full name" required />
-            <Input name="phone" placeholder="Phone" required />
-            <Input name="line1" placeholder="Address line 1" required />
-            <Input name="line2" placeholder="Apt, suite, etc. (optional)" />
-            <Input name="city" placeholder="City" required />
-            <Input name="province" placeholder="Province" defaultValue="AB" />
-            <Input name="postalCode" placeholder="Postal code" required />
-          </div>
-          <div className="flex gap-3">
-            <button type="submit" disabled={loading} className="btn-primary">
-              {loading ? "Saving…" : "Save address"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setAdding(false)}
-              className="btn-ghost"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <div className="rounded-2xl border border-canela/30 bg-cream p-5">
+          <Form
+            draft={draft}
+            setDraft={setDraft}
+            saving={saving}
+            onSave={save}
+            onCancel={cancel}
+          />
+        </div>
       ) : (
         <button
-          onClick={() => setAdding(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-canela/20 py-6 text-sm font-medium text-canela hover:border-canela hover:bg-masa/30"
+          onClick={startAdd}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-canela/30 bg-cream/40 p-5 text-sm font-medium text-ink-soft hover:border-canela hover:bg-canela-light"
         >
           <Plus className="h-4 w-4" />
-          Add new address
+          {locale === "es" ? "Agregar dirección" : "Add address"}
         </button>
       )}
     </div>
   );
 }
 
-function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+function Form({
+  draft,
+  setDraft,
+  saving,
+  onSave,
+  onCancel,
+}: {
+  draft: Draft;
+  setDraft: (d: Draft) => void;
+  saving: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const { locale } = useLocale();
+  const isSE = isSECalgary(draft.postalCode);
+
   return (
-    <input
-      {...props}
-      className="h-11 rounded-full border border-canela/20 bg-cream px-4 text-sm text-ink focus:border-canela focus:outline-none focus:ring-2 focus:ring-canela/20"
-    />
+    <div className="space-y-3">
+      <Field
+        label={locale === "es" ? "Calle" : "Street"}
+        value={draft.street}
+        onChange={(v) => setDraft({ ...draft, street: v })}
+      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field
+          label={locale === "es" ? "Ciudad" : "City"}
+          value={draft.city}
+          onChange={(v) => setDraft({ ...draft, city: v })}
+        />
+        <Field
+          label={locale === "es" ? "Provincia" : "Province"}
+          value={draft.province}
+          onChange={(v) => setDraft({ ...draft, province: v.toUpperCase() })}
+          maxLength={3}
+        />
+      </div>
+      <Field
+        label={locale === "es" ? "Código postal" : "Postal code"}
+        value={draft.postalCode}
+        onChange={(v) => setDraft({ ...draft, postalCode: v.toUpperCase() })}
+      />
+      {draft.postalCode.length >= 6 && isSE && (
+        <p className="rounded-lg bg-canela-light px-3 py-2 text-xs font-bold text-canela-dark">
+          ✨ SE Calgary
+        </p>
+      )}
+      <Field
+        label={locale === "es" ? "Buzzer (opcional)" : "Buzzer (optional)"}
+        value={draft.buzzer ?? ""}
+        onChange={(v) => setDraft({ ...draft, buzzer: v })}
+      />
+      <Field
+        label={locale === "es" ? "Notas (opcional)" : "Notes (optional)"}
+        value={draft.notes ?? ""}
+        onChange={(v) => setDraft({ ...draft, notes: v })}
+      />
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={draft.isDefault}
+          onChange={(e) =>
+            setDraft({ ...draft, isDefault: e.target.checked })
+          }
+          className="h-4 w-4"
+        />
+        {locale === "es"
+          ? "Usar como dirección principal"
+          : "Set as default"}
+      </label>
+      <div className="flex gap-2 pt-2">
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="flex-1 rounded-full bg-canela px-4 py-2 text-sm font-medium text-ink hover:bg-canela-dark disabled:opacity-50"
+        >
+          {saving
+            ? "..."
+            : locale === "es"
+            ? "Guardar"
+            : "Save"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="rounded-full border border-canela/30 px-4 py-2 text-sm"
+        >
+          {locale === "es" ? "Cancelar" : "Cancel"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  maxLength,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  maxLength?: number;
+}) {
+  return (
+    <div>
+      <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+        {label}
+      </label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        maxLength={maxLength}
+        className="mt-1 w-full rounded-full border border-canela/30 bg-cream px-4 py-2 text-sm focus:border-canela-dark focus:outline-none"
+      />
+    </div>
   );
 }

@@ -1,76 +1,96 @@
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
-import { ReferralShare } from "@/components/account/ReferralShare";
-import { formatPriceFromCents } from "@/lib/utils";
+import { ReferralShare } from "@/components/home/ReferralShare";
 
-export default async function ReferralsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ReferralsAccountPage() {
   const session = await auth();
-  const userId = (session!.user as any).id;
+  const userId = (session?.user as any).id;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      referrals: { select: { name: true, email: true, createdAt: true } },
+    select: {
+      referralCode: true,
+      referralCredit: true,
+      referrals: {
+        select: {
+          id: true,
+          name: true,
+          createdAt: true,
+          firstOrderCompleted: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
-  if (!user) return null;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://karyanabakery.ca";
-  const link = `${appUrl}/register?ref=${user.referralCode}`;
+  if (!user) return null;
 
   return (
     <div>
-      <h2 className="mb-2 font-display text-3xl text-ink">Referrals</h2>
-      <p className="mb-8 text-sm text-ink/60">
-        Share your link — you both get $10 off when they place their first
-        order.
+      <h1 className="font-display text-3xl">Refer & earn</h1>
+      <p className="mt-1 text-ink-soft">
+        Share Karyana, both get $10 when they order.
       </p>
 
-      <ReferralShare link={link} code={user.referralCode} />
-
-      <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-canela/15 bg-masa/30 p-6">
-          <p className="text-xs uppercase tracking-widest text-ink/50">
-            Friends referred
-          </p>
-          <p className="mt-2 font-display text-3xl text-canela">
-            {user.referrals.length}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-canela/15 bg-masa/30 p-6">
-          <p className="text-xs uppercase tracking-widest text-ink/50">
-            Credit available
-          </p>
-          <p className="mt-2 font-display text-3xl text-canela">
-            {formatPriceFromCents(user.referralCredit)}
-          </p>
-        </div>
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <Stat label="Friends referred" value={user.referrals.length} />
+        <Stat
+          label="Completed first order"
+          value={user.referrals.filter((r) => r.firstOrderCompleted).length}
+        />
+        <Stat label="Credit earned" value={`$${user.referralCredit ?? 0}`} />
       </div>
 
-      {user.referrals.length > 0 && (
-        <div className="mt-10">
-          <h3 className="mb-4 font-display text-xl text-ink">
-            People you&apos;ve referred
-          </h3>
-          <ul className="divide-y divide-canela/10 rounded-2xl border border-canela/15 bg-masa/30">
-            {user.referrals.map((r, i) => (
+      {user.referralCode && (
+        <div className="mt-8">
+          <ReferralShare code={user.referralCode} />
+        </div>
+      )}
+
+      <section className="mt-10">
+        <h2 className="font-display text-xl">Your referrals</h2>
+        {user.referrals.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-soft">
+            No referrals yet. Share your code to start earning.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {user.referrals.map((r) => (
               <li
-                key={i}
-                className="flex items-center justify-between px-5 py-4"
+                key={r.id}
+                className="flex items-center justify-between rounded-2xl border border-canela/15 bg-cream p-4 text-sm"
               >
                 <div>
-                  <p className="text-sm font-medium text-ink">
-                    {r.name || r.email}
-                  </p>
-                  <p className="text-xs text-ink/50">
-                    Joined {new Date(r.createdAt).toLocaleDateString()}
+                  <p className="font-medium">{r.name ?? "Friend"}</p>
+                  <p className="text-xs text-ink-soft">
+                    Joined {r.createdAt.toLocaleDateString("en-CA")}
                   </p>
                 </div>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                    r.firstOrderCompleted
+                      ? "bg-green-100 text-green-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}
+                >
+                  {r.firstOrderCompleted ? "+ $10 earned" : "Pending"}
+                </span>
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        )}
+      </section>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-2xl border border-canela/15 bg-cream p-5">
+      <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">{label}</p>
+      <p className="mt-2 font-display text-2xl">{value}</p>
     </div>
   );
 }

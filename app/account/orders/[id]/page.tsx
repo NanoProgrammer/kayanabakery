@@ -1,140 +1,156 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
-import { formatPriceFromCents } from "@/lib/utils";
-import { format } from "date-fns";
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import type { OrderItem } from "@/types";
+import { Download, ArrowLeft } from "lucide-react";
+import { formatCents } from "@/lib/checkout/pricing";
+
+export const dynamic = "force-dynamic";
 
 export default async function OrderDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
   const session = await auth();
-  const userId = (session!.user as any).id;
+  const userId = (session?.user as any).id;
+  const { id } = await params;
 
   const order = await prisma.order.findFirst({
     where: { id, userId },
-    include: { address: true },
+    include: {
+      address: true,
+      deliverySlot: true,
+    },
   });
 
   if (!order) notFound();
-  const items = order.items as unknown as OrderItem[];
+
+  const items = (order.items as any[]) ?? [];
 
   return (
     <div>
       <Link
         href="/account/orders"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-canela hover:text-canela-dark"
+        className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.2em] text-ink-soft hover:underline"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to orders
+        <ArrowLeft className="h-3 w-3" /> Back to orders
       </Link>
 
-      <div className="mb-8">
-        <p className="font-mono text-sm text-ink/60">{order.orderNumber}</p>
-        <h2 className="mt-1 font-display text-3xl text-ink">
-          Order {order.status.replace("_", " ").toLowerCase()}
-        </h2>
-        <p className="mt-2 text-sm text-ink/60">
-          Placed {format(order.createdAt, "MMMM d, yyyy 'at' h:mm a")}
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div
-            key={item.productId}
-            className="flex items-center gap-4 rounded-2xl border border-canela/15 bg-masa/30 p-4"
-          >
-            {item.image && (
-              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-cream">
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  fill
-                  sizes="64px"
-                  className="object-cover"
-                />
-              </div>
-            )}
-            <div className="flex-1">
-              <p className="font-display text-base text-ink">{item.name}</p>
-              <p className="text-xs text-ink/60">
-                {item.quantity} × ${item.price.toFixed(2)}
-              </p>
-            </div>
-            <span className="font-display text-base text-canela">
-              ${(item.price * item.quantity).toFixed(2)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-8 rounded-2xl border border-canela/15 bg-masa/30 p-6">
-        <div className="space-y-2 text-sm">
-          <Row label="Subtotal" value={formatPriceFromCents(order.subtotal)} />
-          {order.discount > 0 && (
-            <Row
-              label="Discount"
-              value={`-${formatPriceFromCents(order.discount)}`}
-            />
-          )}
-          {order.tax > 0 && (
-            <Row label="Tax" value={formatPriceFromCents(order.tax)} />
-          )}
-          {order.shipping > 0 && (
-            <Row label="Shipping" value={formatPriceFromCents(order.shipping)} />
-          )}
-          <div className="my-3 h-px bg-canela/15" />
-          <Row
-            label={<span className="font-medium">Total</span>}
-            value={
-              <span className="font-display text-lg text-canela">
-                {formatPriceFromCents(order.total)}
-              </span>
-            }
-          />
-        </div>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-canela/15 bg-masa/30 p-6">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-ink/50">
-            Fulfillment
-          </h3>
-          <p className="mt-2 font-display text-lg text-ink">
-            {order.fulfillmentType === "PICKUP" && "Pickup in Calgary"}
-            {order.fulfillmentType === "DELIVERY" && "Delivery"}
-            {order.fulfillmentType === "EVENT" && "Event pickup"}
+      <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl">Order detail</h1>
+          <p className="mt-1 font-mono text-sm font-bold">
+            {order.orderNumber}
           </p>
-          {order.pickupDate && (
-            <p className="mt-1 text-sm text-ink/60">
-              {format(order.pickupDate, "MMMM d, yyyy")}
-              {order.pickupTime && ` at ${order.pickupTime}`}
-            </p>
-          )}
         </div>
-        {order.address && (
-          <div className="rounded-2xl border border-canela/15 bg-masa/30 p-6">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-ink/50">
-              Delivery address
-            </h3>
-            <div className="mt-2 text-sm text-ink/80">
-              <p>{order.address.fullName}</p>
-              <p>{order.address.line1}</p>
-              {order.address.line2 && <p>{order.address.line2}</p>}
-              <p>
-                {order.address.city}, {order.address.province}{" "}
-                {order.address.postalCode}
-              </p>
-            </div>
-          </div>
-        )}
+        <a
+          href={`/api/orders/${order.id}/invoice`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-ghost"
+        >
+          <Download className="h-4 w-4" /> Invoice PDF
+        </a>
       </div>
+
+      <div className="mt-8 grid gap-6 md:grid-cols-3">
+        <div className="rounded-2xl border border-canela/15 bg-cream p-5">
+          <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">Status</p>
+          <p className="mt-2 font-display text-2xl">
+            {order.status.replace(/_/g, " ")}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-canela/15 bg-cream p-5">
+          <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">
+            {order.fulfillmentType === "PICKUP" ? "Pickup" : "Delivery"}
+          </p>
+          <p className="mt-2 text-sm">
+            {order.fulfillmentType === "PICKUP"
+              ? `${order.pickupDate?.toLocaleDateString("en-CA")} · ${order.pickupTime}`
+              : order.deliverySlot
+              ? order.deliverySlot.startTime.toLocaleString("en-CA", {
+                  weekday: "long",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : ""}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-canela/15 bg-cream p-5">
+          <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">Total</p>
+          <p className="mt-2 font-display text-2xl">
+            {formatCents(order.total, "en")}
+          </p>
+        </div>
+      </div>
+
+      {order.address && (
+        <section className="mt-8">
+          <h2 className="font-display text-xl">Delivery address</h2>
+          <div className="mt-3 rounded-2xl border border-canela/15 bg-cream p-5 text-sm">
+            <p>{order.address.street}</p>
+            <p>
+              {order.address.city}, {order.address.province} {order.address.postalCode}
+            </p>
+            {order.address.buzzer && <p>Buzzer: {order.address.buzzer}</p>}
+            {order.address.notes && (
+              <p className="mt-2 italic text-ink-soft">{order.address.notes}</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      <section className="mt-8">
+        <h2 className="font-display text-xl">Items</h2>
+        <ul className="mt-3 space-y-2">
+          {items.map((it: any, i: number) => (
+            <li
+              key={i}
+              className="flex justify-between rounded-2xl border border-canela/15 bg-cream p-4 text-sm"
+            >
+              <span>
+                {it.quantity}× {it.name}
+              </span>
+              <span className="font-bold">
+                {formatCents(it.price * 100 * it.quantity, "en")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mt-8 max-w-md ml-auto rounded-2xl border border-canela/15 bg-cream p-5 text-sm">
+        <Row label="Subtotal" value={formatCents(order.subtotal, "en")} />
+        {order.couponDiscount > 0 && (
+          <Row
+            label={`Coupon (${order.couponCode})`}
+            value={`−${formatCents(order.couponDiscount, "en")}`}
+          />
+        )}
+        {order.pointsDiscount > 0 && (
+          <Row
+            label={`Points (${order.pointsRedeemed} pts)`}
+            value={`−${formatCents(order.pointsDiscount, "en")}`}
+          />
+        )}
+        <Row
+          label="Delivery"
+          value={
+            order.deliveryFee > 0 ? formatCents(order.deliveryFee, "en") : "FREE"
+          }
+        />
+        <Row label="GST" value={formatCents(order.gst, "en")} />
+        <div className="my-3 border-t border-canela/30" />
+        <Row label="Total" value={formatCents(order.total, "en")} bold />
+        {order.pointsEarned > 0 && (
+          <p className="mt-3 rounded-xl bg-canela-light p-2 text-center text-xs">
+            ✨ Earned {order.pointsEarned} pts
+          </p>
+        )}
+      </section>
     </div>
   );
 }
@@ -142,14 +158,16 @@ export default async function OrderDetailPage({
 function Row({
   label,
   value,
+  bold,
 }: {
-  label: React.ReactNode;
-  value: React.ReactNode;
+  label: string;
+  value: string;
+  bold?: boolean;
 }) {
   return (
-    <div className="flex justify-between text-ink/70">
+    <div className={`flex justify-between py-1 ${bold ? "font-bold text-base" : ""}`}>
       <span>{label}</span>
-      <span className="text-ink">{value}</span>
+      <span>{value}</span>
     </div>
   );
 }

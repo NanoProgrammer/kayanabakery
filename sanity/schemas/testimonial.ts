@@ -7,10 +7,16 @@ export const testimonial = defineType({
   fields: [
     defineField({
       name: "quote",
-      title: "Quote",
+      title: "Quote (EN)",
       type: "text",
       rows: 4,
       validation: (r) => r.required(),
+    }),
+    defineField({
+      name: "quoteEs",
+      title: "Quote (ES)",
+      type: "text",
+      rows: 4,
     }),
     defineField({
       name: "author",
@@ -29,13 +35,12 @@ export const testimonial = defineType({
       type: "string",
       options: {
         list: [
-          { title: "Red", value: "text-otomi-red" },
-          { title: "Teal", value: "text-otomi-teal" },
-          { title: "Green", value: "text-otomi-green" },
-          { title: "Orange", value: "text-otomi-orange" },
+          { title: "Rose", value: "text-canela" },
+          { title: "Gold", value: "text-gold" },
+          { title: "Dark", value: "text-ink" },
         ],
       },
-      initialValue: "text-otomi-red",
+      initialValue: "text-canela",
     }),
     defineField({
       name: "isFeatured",

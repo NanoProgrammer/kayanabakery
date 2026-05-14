@@ -21,6 +21,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       credentials: {
@@ -33,6 +34,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
+          include: { membership: true },
         });
         if (!user?.password) return null;
 
@@ -45,15 +47,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           image: user.image,
           role: user.role,
-        };
+          tier: user.membership?.tier ?? "BASICO",
+          points: user.pointsBalance,
+        } as any;
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
-        token.id = user.id;
+        token.id = (user as any).id;
         token.role = (user as any).role ?? "CUSTOMER";
+        token.tier = (user as any).tier ?? "BASICO";
+        token.points = (user as any).points ?? 0;
+      }
+
+      // Refresh tier/points on session update or every ~5 min
+      if (trigger === "update" || (token.id && shouldRefresh(token))) {
+        try {
+          const u = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            include: { membership: true },
+          });
+          if (u) {
+            token.tier = u.membership?.tier ?? "BASICO";
+            token.points = u.pointsBalance;
+            token.role = u.role;
+            (token as any).refreshedAt = Date.now();
+          }
+        } catch {}
       }
       return token;
     },
@@ -61,8 +83,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token && session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session.user as any).tier = token.tier;
+        (session.user as any).points = token.points;
       }
       return session;
     },
   },
 });
+
+function shouldRefresh(token: any): boolean {
+  const last = token.refreshedAt as number | undefined;
+  if (!last) return true;
+  return Date.now() - last > 5 * 60 * 1000;
+}

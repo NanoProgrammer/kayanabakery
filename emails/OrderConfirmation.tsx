@@ -1,186 +1,248 @@
 import {
+  Html,
+  Head,
   Body,
   Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
   Section,
+  Heading,
   Text,
   Hr,
   Row,
   Column,
+  Img,
+  Link,
+  Preview,
 } from "@react-email/components";
-
-type Item = {
-  name: string;
-  quantity: number;
-  price: number;
-};
+import { styles } from "./_styles";
 
 type Props = {
+  appUrl: string;
   orderNumber: string;
   customerName: string;
-  items: Item[];
-  subtotal: number;
-  total: number;
-  fulfillmentType: string;
-  pickupDate?: string | null;
-  pickupTime?: string | null;
+  fulfillmentLabel: string;
+  fulfillmentDetail: string;
+  addressLine?: string | null;
+  items: { name: string; quantity: number; lineTotal: string }[];
+  subtotal: string;
+  couponLine?: { label: string; value: string };
+  pointsLine?: { label: string; value: string };
+  deliveryLine: { label: string; value: string };
+  gst: string;
+  total: string;
+  pointsEarned: number;
+  locale: "en" | "es";
 };
 
-export function OrderConfirmationEmail({
-  orderNumber,
-  customerName,
-  items,
-  subtotal,
-  total,
-  fulfillmentType,
-  pickupDate,
-  pickupTime,
-}: Props) {
+export default function OrderConfirmation(props: Props) {
+  const t =
+    props.locale === "es"
+      ? {
+          preview: `Tu orden ${props.orderNumber} está confirmada`,
+          thanks: `¡Gracias, ${props.customerName}!`,
+          confirmed: `Tu orden ${props.orderNumber} está confirmada y nos pusimos a hornear.`,
+          items: "Productos",
+          subtotal: "Subtotal",
+          gst: "GST (5%)",
+          total: "Total",
+          earned: "Ganaste",
+          points: "puntos",
+          viewOrder: "Ver mi orden",
+          tagline: "Más que pan, un recuerdo de hogar.",
+        }
+      : {
+          preview: `Your order ${props.orderNumber} is confirmed`,
+          thanks: `Thanks, ${props.customerName}!`,
+          confirmed: `Your order ${props.orderNumber} is confirmed and we're getting baking.`,
+          items: "Items",
+          subtotal: "Subtotal",
+          gst: "GST (5%)",
+          total: "Total",
+          earned: "You earned",
+          points: "points",
+          viewOrder: "View my order",
+          tagline: "More than bread, a home memory.",
+        };
+
   return (
     <Html>
       <Head />
-      <Preview>Your Karyana Bakery order is confirmed</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={h1}>Karyana</Heading>
-          <Text style={script}>bakery</Text>
-
-          <Heading style={h2}>¡Gracias, {customerName}!</Heading>
-          <Text style={paragraph}>
-            Your order is in the oven. We&apos;ll have everything fresh and
-            ready for you.
-          </Text>
-
-          <Section style={orderBox}>
-            <Text style={label}>ORDER NUMBER</Text>
-            <Text style={orderNumStyle}>{orderNumber}</Text>
+      <Preview>{t.preview}</Preview>
+      <Body style={styles.body}>
+        <Container style={styles.container}>
+          <Section style={styles.header}>
+            <Img
+              src={`${props.appUrl}/logo.png`}
+              alt="Karyana Bakery"
+              width="120"
+              style={{ margin: "0 auto" }}
+            />
+            <Text style={styles.tagline}>{t.tagline}</Text>
           </Section>
 
-          <Hr style={hr} />
+          <Section style={styles.card}>
+            <Heading style={styles.h1}>{t.thanks}</Heading>
+            <Text style={styles.body1}>{t.confirmed}</Text>
 
-          <Heading style={h3}>Your order</Heading>
-          {items.map((item, i) => (
-            <Row key={i} style={itemRow}>
+            <Section style={styles.pinkBox}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.15em",
+                  color: "#777",
+                  margin: 0,
+                }}
+              >
+                {props.fulfillmentLabel}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: "#2B2B2B",
+                  margin: "4px 0 0",
+                }}
+              >
+                {props.fulfillmentDetail}
+              </Text>
+              {props.addressLine && (
+                <Text style={{ fontSize: 13, color: "#777", margin: "4px 0 0" }}>
+                  {props.addressLine}
+                </Text>
+              )}
+            </Section>
+
+            <Heading as="h2" style={styles.h2}>
+              {t.items}
+            </Heading>
+            {props.items.map((it, i) => (
+              <Row key={i} style={{ marginBottom: 4 }}>
+                <Column>
+                  <Text style={{ fontSize: 14, color: "#2B2B2B", margin: 0 }}>
+                    {it.quantity}× {it.name}
+                  </Text>
+                </Column>
+                <Column align="right">
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: "#2B2B2B",
+                      margin: 0,
+                    }}
+                  >
+                    {it.lineTotal}
+                  </Text>
+                </Column>
+              </Row>
+            ))}
+
+            <Hr style={styles.hr} />
+
+            {[
+              { label: t.subtotal, value: props.subtotal, accent: false },
+              ...(props.couponLine
+                ? [{ label: props.couponLine.label, value: props.couponLine.value, accent: true }]
+                : []),
+              ...(props.pointsLine
+                ? [{ label: props.pointsLine.label, value: props.pointsLine.value, accent: true }]
+                : []),
+              {
+                label: props.deliveryLine.label,
+                value: props.deliveryLine.value,
+                accent: false,
+              },
+              { label: t.gst, value: props.gst, accent: false },
+            ].map((row, i) => (
+              <Row key={i}>
+                <Column>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: row.accent ? "#F79BB0" : "#2B2B2B",
+                      fontWeight: row.accent ? 600 : 400,
+                      margin: 0,
+                    }}
+                  >
+                    {row.label}
+                  </Text>
+                </Column>
+                <Column align="right">
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: row.accent ? "#F79BB0" : "#2B2B2B",
+                      fontWeight: row.accent ? 600 : 400,
+                      margin: 0,
+                    }}
+                  >
+                    {row.value}
+                  </Text>
+                </Column>
+              </Row>
+            ))}
+
+            <Hr style={styles.hr} />
+
+            <Row>
               <Column>
-                <Text style={itemName}>{item.name}</Text>
-                <Text style={itemQty}>× {item.quantity}</Text>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    color: "#2B2B2B",
+                    fontFamily: "Georgia, serif",
+                    margin: 0,
+                  }}
+                >
+                  {t.total}
+                </Text>
               </Column>
               <Column align="right">
-                <Text style={itemPrice}>
-                  ${(item.price * item.quantity).toFixed(2)}
+                <Text
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 700,
+                    color: "#2B2B2B",
+                    fontFamily: "Georgia, serif",
+                    margin: 0,
+                  }}
+                >
+                  {props.total}
                 </Text>
               </Column>
             </Row>
-          ))}
 
-          <Hr style={hr} />
+            {props.pointsEarned > 0 && (
+              <Section style={styles.goldBox}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: "#2B2B2B",
+                    margin: 0,
+                    textAlign: "center",
+                  }}
+                >
+                  ✨ {t.earned} <strong>{props.pointsEarned}</strong> {t.points}
+                </Text>
+              </Section>
+            )}
 
-          <Row>
-            <Column>
-              <Text style={totalLabel}>Subtotal</Text>
-            </Column>
-            <Column align="right">
-              <Text style={totalValue}>${(subtotal / 100).toFixed(2)}</Text>
-            </Column>
-          </Row>
-          <Row>
-            <Column>
-              <Text style={totalLabelBold}>Total</Text>
-            </Column>
-            <Column align="right">
-              <Text style={totalValueBold}>${(total / 100).toFixed(2)}</Text>
-            </Column>
-          </Row>
+            <Section style={{ textAlign: "center", marginTop: 24 }}>
+              <Link href={`${props.appUrl}/account/orders`} style={styles.button}>
+                {t.viewOrder}
+              </Link>
+            </Section>
+          </Section>
 
-          <Hr style={hr} />
-
-          <Heading style={h3}>
-            {fulfillmentType === "PICKUP" ? "Pickup details" : "Delivery"}
-          </Heading>
-          {pickupDate && (
-            <Text style={paragraph}>
-              {new Date(pickupDate).toLocaleDateString("en-CA", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-              {pickupTime && ` at ${pickupTime}`}
+          <Section style={styles.footer}>
+            <Text style={styles.footerText}>
+              Karyana Ruiz Bakery · Calgary, AB
             </Text>
-          )}
-
-          <Hr style={hr} />
-
-          <Text style={footer}>
-            Questions? Reply to this email or reach us at{" "}
-            <a href="mailto:karyana@karyanabakery.ca" style={link}>
-              karyana@karyanabakery.ca
-            </a>
-          </Text>
-          <Text style={tagline}>More than bread, a home memory.</Text>
+          </Section>
         </Container>
       </Body>
     </Html>
   );
 }
-
-const main = { backgroundColor: "#FBF6EE", fontFamily: "system-ui, sans-serif" };
-const container = {
-  maxWidth: "580px",
-  margin: "0 auto",
-  padding: "40px 32px",
-  backgroundColor: "#FBF6EE",
-};
-const h1 = {
-  fontSize: "32px",
-  margin: "0",
-  color: "#6B4423",
-  fontFamily: "Georgia, serif",
-  textAlign: "center" as const,
-};
-const script = {
-  fontSize: "18px",
-  margin: "4px 0 40px",
-  color: "#D64545",
-  fontStyle: "italic" as const,
-  textAlign: "center" as const,
-};
-const h2 = { fontSize: "28px", color: "#2B1810", marginTop: "32px" };
-const h3 = { fontSize: "18px", color: "#2B1810", marginTop: "24px" };
-const paragraph = { fontSize: "14px", color: "#4A3428", lineHeight: "1.6" };
-const orderBox = {
-  backgroundColor: "#F3EADB",
-  borderRadius: "16px",
-  padding: "20px",
-  margin: "24px 0",
-};
-const label = {
-  fontSize: "10px",
-  fontWeight: "bold",
-  letterSpacing: "0.2em",
-  color: "#6B4423",
-  margin: "0",
-};
-const orderNumStyle = {
-  fontSize: "20px",
-  color: "#2B1810",
-  margin: "4px 0 0",
-  fontFamily: "monospace",
-};
-const hr = { borderColor: "#6B4423", opacity: 0.15, margin: "24px 0" };
-const itemRow = { margin: "8px 0" };
-const itemName = { fontSize: "14px", color: "#2B1810", margin: "0" };
-const itemQty = { fontSize: "12px", color: "#2B1810", opacity: 0.6, margin: "0" };
-const itemPrice = { fontSize: "14px", color: "#6B4423", margin: "0" };
-const totalLabel = { fontSize: "14px", color: "#4A3428", margin: "4px 0" };
-const totalValue = { fontSize: "14px", color: "#2B1810", margin: "4px 0" };
-const totalLabelBold = { fontSize: "16px", color: "#2B1810", fontWeight: "bold", margin: "8px 0" };
-const totalValueBold = { fontSize: "20px", color: "#6B4423", fontWeight: "bold", margin: "8px 0" };
-const footer = { fontSize: "12px", color: "#4A3428", opacity: 0.7, textAlign: "center" as const };
-const link = { color: "#6B4423" };
-const tagline = { fontSize: "14px", color: "#D64545", fontStyle: "italic" as const, textAlign: "center" as const, marginTop: "16px" };
-
-export default OrderConfirmationEmail;

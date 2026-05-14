@@ -1,85 +1,95 @@
+"use client";
+
 import Link from "next/link";
-import { ShoppingBag, MapPin, Truck, Calendar } from "lucide-react";
-
-const steps = [
-  {
-    icon: ShoppingBag,
-    title: "Browse & add",
-    description:
-      "Browse our menu, add what speaks to you. Custom cakes need 48h notice — plan ahead for special orders.",
-  },
-  {
-    icon: Calendar,
-    title: "Pick your date",
-    description:
-      "Choose a pickup date that works for you. Everything is baked fresh the morning of pickup.",
-  },
-  {
-    icon: MapPin,
-    title: "Pay & confirm",
-    description:
-      "Secure checkout with Square. You'll receive an order confirmation with pickup details via email.",
-  },
-  {
-    icon: Truck,
-    title: "Pick up & enjoy",
-    description:
-      "Come grab your order at our Calgary location. Still warm, still perfect.",
-  },
-];
-
-export const metadata = { title: "How to Order · Karyana Bakery" };
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { Search, ShoppingBag, Calendar, Truck } from "lucide-react";
 
 export default function HowToOrderPage() {
+  const { locale } = useLocale();
+
+  const steps = [
+    {
+      icon: Search,
+      title: locale === "es" ? "1. Explora" : "1. Browse",
+      desc:
+        locale === "es"
+          ? "Mira el menú completo, conchas, pasteles, y especialidades de temporada."
+          : "Check out the full menu — conchas, cakes, and seasonal specialties.",
+    },
+    {
+      icon: ShoppingBag,
+      title: locale === "es" ? "2. Agrega al carrito" : "2. Add to cart",
+      desc:
+        locale === "es"
+          ? "Selecciona cantidad. Algunos pasteles necesitan 24h de anticipación."
+          : "Pick your quantity. Some cakes need 24h advance notice.",
+    },
+    {
+      icon: Calendar,
+      title:
+        locale === "es" ? "3. Elige cuándo" : "3. Pick when",
+      desc:
+        locale === "es"
+          ? "Recoge en el horario que te convenga, o pide envío (Lun 6-8pm, Vie 7-9pm)."
+          : "Pick up at a time that works for you, or schedule delivery (Mon 6-8pm, Fri 7-9pm).",
+    },
+    {
+      icon: Truck,
+      title:
+        locale === "es" ? "4. Listo" : "4. Done",
+      desc:
+        locale === "es"
+          ? "Pagas seguro con Square, recibes confirmación y tu pan está listo."
+          : "Pay securely via Square, get a confirmation, and your bread is ready.",
+    },
+  ];
+
   return (
-    <div className="container-bakery py-16 md:py-24">
-      <header className="mb-16 text-center">
-        <span className="eyebrow mb-3">The process</span>
-        <h1 className="section-title mx-auto max-w-3xl">
-          Ordering is as easy as{" "}
-          <span className="italic text-otomi-red">pan comido.</span>
+    <div className="container-bakery py-16 md:py-20">
+      <header className="mb-12 max-w-2xl">
+        <span className="eyebrow">
+          {locale === "es" ? "Cómo ordenar" : "How to order"}
+        </span>
+        <h1 className="section-title mt-2">
+          {locale === "es" ? "Fácil," : "Easy,"}{" "}
+          <span className="font-script text-canela-dark">
+            {locale === "es" ? "rápido," : "quick,"}
+          </span>
+          {locale === "es" ? " y delicioso." : " and delicious."}
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-ink/70">
-          A simple four-step flow from cart to kitchen table.
-        </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {steps.map((step, i) => {
-          const Icon = step.icon;
-          return (
-            <div
-              key={i}
-              className="relative rounded-3xl border border-canela/15 bg-masa/40 p-8"
-            >
-              <span className="absolute right-6 top-6 font-display text-5xl text-canela/10">
-                0{i + 1}
-              </span>
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-canela text-cream">
-                <Icon className="h-5 w-5" />
-              </div>
-              <h3 className="font-display text-xl text-ink">{step.title}</h3>
-              <p className="mt-3 text-sm text-ink/70">{step.description}</p>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {steps.map((s) => (
+          <div
+            key={s.title}
+            className="rounded-2xl border border-canela/15 bg-cream p-6"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-canela-light">
+              <s.icon className="h-5 w-5 text-canela-dark" />
             </div>
-          );
-        })}
+            <h3 className="font-display text-lg">{s.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              {s.desc}
+            </p>
+          </div>
+        ))}
       </div>
 
-      <div className="mx-auto mt-20 max-w-3xl rounded-3xl bg-concha-rosa/40 p-10 text-center md:p-14">
-        <h2 className="font-display text-3xl text-ink md:text-4xl">
-          Questions? <span className="italic">We&apos;re happy to help.</span>
+      <div className="mt-12 rounded-3xl bg-canela-light p-8 md:p-12">
+        <h2 className="font-display text-2xl md:text-3xl">
+          {locale === "es"
+            ? "¿Vives en Sureste de Calgary?"
+            : "Live in Southeast Calgary?"}
         </h2>
-        <p className="mt-4 text-ink/70">
-          Check our FAQ or reach out directly. Custom orders always welcome.
+        <p className="mt-3 max-w-2xl text-ink-soft">
+          {locale === "es"
+            ? "Tu primer envío es gratis. Y si te haces miembro, tienes envío gratis siempre (con orden mínima)."
+            : "Your first delivery is free. And if you become a member, you get free delivery always (with minimum order)."}
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/faq" className="btn-primary">
-            Read the FAQ
-          </Link>
-          <Link href="/contact" className="btn-ghost">
-            Contact us
-          </Link>
-        </div>
+        <Link href="/memberships" className="btn-gold mt-6 inline-flex">
+          {locale === "es" ? "Ver membresías" : "See memberships"}
+        </Link>
       </div>
     </div>
   );

@@ -2,17 +2,23 @@
 
 import { useState } from "react";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { useLocale } from "@/lib/i18n/locale-provider";
 import { toast } from "sonner";
 
 export default function ContactPage() {
-  const [loading, setLoading] = useState(false);
+  const { locale } = useLocale();
+  const [submitting, setSubmitting] = useState(false);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     const fd = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(fd.entries());
-
+    const payload = {
+      name: fd.get("name"),
+      email: fd.get("email"),
+      subject: fd.get("subject"),
+      message: fd.get("message"),
+    };
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -20,113 +26,152 @@ export default function ContactPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error();
-      toast.success("Message sent! We'll get back to you within 24h.");
-      (e.target as HTMLFormElement).reset();
+      toast.success(
+        locale === "es" ? "Mensaje enviado" : "Message sent"
+      );
+      e.currentTarget.reset();
     } catch {
-      toast.error("Something went wrong. Try again?");
+      toast.error(
+        locale === "es" ? "Error al enviar" : "Failed to send"
+      );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
   return (
-    <div className="container-bakery py-16 md:py-24">
-      <header className="mb-14 text-center">
-        <span className="eyebrow mb-3">Say hello</span>
-        <h1 className="section-title mx-auto max-w-3xl">
-          Let&apos;s <span className="italic text-otomi-red">talk.</span>
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-ink/70">
-          Custom cake? Large order? Just want to chat about pan? We&apos;re here.
-        </p>
-      </header>
+    <div className="container-bakery py-16 md:py-20">
+      <div className="grid gap-12 md:grid-cols-2">
+        <div>
+          <span className="eyebrow">
+            {locale === "es" ? "Contacto" : "Get in touch"}
+          </span>
+          <h1 className="mt-2 font-display text-[length:var(--text-display-md)] leading-tight">
+            {locale === "es" ? "Hablemos." : "Let's talk."}
+          </h1>
+          <p className="mt-4 text-ink-soft">
+            {locale === "es"
+              ? "¿Pasteles personalizados? ¿Eventos? ¿Solo decir hola? Escríbenos."
+              : "Custom cakes? Events? Just want to say hi? Drop us a line."}
+          </p>
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-5 lg:gap-16">
-        <aside className="lg:col-span-2">
-          <div className="space-y-6 rounded-3xl border border-canela/15 bg-masa/40 p-8">
-            <div>
-              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-canela">
-                <Mail className="h-4 w-4" /> Email
-              </div>
-              <a
-                href="mailto:karyana@karyanabakery.ca"
-                className="font-display text-lg text-ink hover:text-otomi-red"
-              >
-                karyana@karyanabakery.ca
-              </a>
-            </div>
-            <div>
-              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-canela">
-                <Phone className="h-4 w-4" /> Phone
-              </div>
-              <a
-                href="tel:+1"
-                className="font-display text-lg text-ink hover:text-otomi-red"
-              >
-                (403) 555-0199
-              </a>
-            </div>
-            <div>
-              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-widest text-canela">
-                <MapPin className="h-4 w-4" /> Pickup
-              </div>
-              <p className="font-display text-lg text-ink">Calgary, AB</p>
-              <p className="text-sm text-ink/60">Address shared upon order.</p>
-            </div>
-          </div>
-        </aside>
-
-        <form onSubmit={onSubmit} className="space-y-5 lg:col-span-3">
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <Field label="Name" name="name" required />
-            <Field label="Email" name="email" type="email" required />
-          </div>
-          <Field label="Subject" name="subject" required />
-          <div>
-            <label className="mb-2 block text-sm font-medium text-ink">
-              Message
-            </label>
-            <textarea
-              name="message"
-              required
-              rows={6}
-              className="w-full rounded-2xl border border-canela/20 bg-cream p-4 text-sm text-ink placeholder:text-ink/40 focus:border-canela focus:outline-none focus:ring-2 focus:ring-canela/20"
-              placeholder="Tell us about your order, event, or question..."
+          <div className="mt-10 space-y-4">
+            <ContactItem
+              icon={Mail}
+              label="Email"
+              value="hola@karyanabakery.ca"
+              href="mailto:hola@karyanabakery.ca"
+            />
+            <ContactItem
+              icon={Phone}
+              label={locale === "es" ? "Teléfono" : "Phone"}
+              value="(403) 555-1234"
+              href="tel:+14035551234"
+            />
+            <ContactItem
+              icon={MapPin}
+              label={locale === "es" ? "Calgary" : "Calgary"}
+              value="Southeast Calgary, AB"
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary group disabled:opacity-60"
-          >
-            {loading ? "Sending…" : "Send message"}
-            <Send className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </button>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-3xl border border-canela/15 bg-cream p-8"
+        >
+          <div className="space-y-5">
+            <Field
+              name="name"
+              label={locale === "es" ? "Nombre" : "Name"}
+              required
+            />
+            <Field name="email" type="email" label="Email" required />
+            <Field
+              name="subject"
+              label={locale === "es" ? "Asunto" : "Subject"}
+              required
+            />
+            <div>
+              <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+                {locale === "es" ? "Mensaje" : "Message"} *
+              </label>
+              <textarea
+                name="message"
+                required
+                rows={5}
+                className="mt-2 w-full rounded-2xl border border-canela/30 bg-cream px-4 py-3 text-sm focus:border-canela-dark focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-primary w-full disabled:opacity-60"
+            >
+              <Send className="h-4 w-4" />
+              {submitting
+                ? locale === "es"
+                  ? "Enviando…"
+                  : "Sending…"
+                : locale === "es"
+                ? "Enviar"
+                : "Send"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
   );
 }
 
-function Field({
+function ContactItem({
+  icon: Icon,
   label,
-  name,
-  type = "text",
-  required,
+  value,
+  href,
 }: {
+  icon: any;
   label: string;
+  value: string;
+  href?: string;
+}) {
+  const Inner = (
+    <div className="flex items-center gap-4 rounded-2xl border border-canela/15 p-4 transition-colors hover:bg-canela-light">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-canela-light">
+        <Icon className="h-5 w-5 text-canela-dark" />
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">
+          {label}
+        </p>
+        <p className="mt-0.5 text-sm font-medium">{value}</p>
+      </div>
+    </div>
+  );
+  return href ? <a href={href}>{Inner}</a> : Inner;
+}
+
+function Field({
+  name,
+  label,
+  type = "text",
+  required = false,
+}: {
   name: string;
+  label: string;
   type?: string;
   required?: boolean;
 }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-ink">{label}</label>
+      <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+        {label} {required && "*"}
+      </label>
       <input
         name={name}
         type={type}
         required={required}
-        className="h-12 w-full rounded-full border border-canela/20 bg-cream px-5 text-sm text-ink placeholder:text-ink/40 focus:border-canela focus:outline-none focus:ring-2 focus:ring-canela/20"
+        className="mt-2 w-full rounded-full border border-canela/30 bg-cream px-5 py-3 text-sm focus:border-canela-dark focus:outline-none"
       />
     </div>
   );

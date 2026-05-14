@@ -1,4 +1,5 @@
-// Prisma schema for Karyana Bakery
+// Prisma schema for Karyana Bakery — aligned with ZIPs 1-5 code
+// Includes: Auth, Addresses, Orders, Memberships, Points, Coupons, Ambassadors, Delivery Slots
 
 generator client {
   provider = "prisma-client-js"
@@ -9,7 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== AUTH (Auth.js compatible) ====================
+// ==================== AUTH ====================
 
 model User {
   id            String    @id @default(cuid())
@@ -17,24 +18,51 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  password      String?   // for credentials provider (hashed)
+  password      String?
   phone         String?
   role          UserRole  @default(CUSTOMER)
+  birthday      DateTime?
+  preferredLang String    @default("en") // en | es
 
-  // Referral system
+  // Email marketing
+  emailMarketing Boolean @default(true)
+
+  // Square
+  squareCustomerId String? @unique
+
+  // Referral
   referralCode   String   @unique @default(cuid())
   referredById   String?
   referredBy     User?    @relation("Referrals", fields: [referredById], references: [id])
   referrals      User[]   @relation("Referrals")
-  referralCredit Int      @default(0) // in cents
+  referralCredit Int      @default(0)
+  firstOrderCompleted Boolean @default(false)
 
-  // Preferences
-  preferences Json? // { newsletter, dietary, lang, ... }
+  // Membership
+  membership            Membership?
+  pointsBalance         Int     @default(0)
+  pointsBirthdayClaimed Int?    // year of last birthday claim (e.g. 2026)
+
+  // Free items quotas
+  freeItemsUsedThisMonth Int      @default(0)
+  freeItemsResetDate     DateTime @default(now())
+
+  preferences Json?
 
   accounts  Account[]
   sessions  Session[]
   orders    Order[]
   addresses Address[]
+
+  // Points transactions
+  pointsLedger PointsTransaction[]
+
+  // Ambassador
+  ambassadorApplication AmbassadorApplication?
+  ambassadorDeliveries  AmbassadorDelivery[]
+
+  // Coupon redemptions
+  couponRedemptions CouponRedemption[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -42,7 +70,9 @@ model User {
 
 enum UserRole {
   CUSTOMER
+  STAFF
   ADMIN
+  AMBASSADOR
 }
 
 model Account {
@@ -87,18 +117,16 @@ model Address {
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  label        String?  // "Home", "Work"
-  fullName     String
-  phone        String
-  line1        String
-  line2        String?
-  city         String
+  label        String?
+  street       String   // street address line
+  buzzer       String?  // unit / buzzer / suite
+  city         String   @default("Calgary")
   province     String   @default("AB")
   postalCode   String
   country      String   @default("Canada")
-
-  isDefaultBilling  Boolean @default(false)
-  isDefaultShipping Boolean @default(false)
+  notes        String?  // delivery notes for driver
+  isSE         Boolean  @default(false) // Southeast Calgary flag → first delivery free
+  isDefault    Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -110,44 +138,78 @@ model Address {
 
 model Order {
   id           String   @id @default(cuid())
-  orderNumber  String   @unique // KAR-000001
+  orderNumber  String   @unique
   userId       String?
   user         User?    @relation(fields: [userId], references: [id])
 
-  // Guest checkout fallback
   guestEmail   String?
   guestName    String?
   guestPhone   String?
 
-  // Items (snapshot — products may change in Sanity)
-  items        Json     // [{ productId, slug, name, price, quantity, image }]
-  subtotal     Int      // cents
-  tax          Int      @default(0)
-  shipping     Int      @default(0)
-  discount     Int      @default(0)
-  total        Int
+  items        Json     // array of { productId, name, nameEs?, slug, price (cents), quantity }
+
+  // Pricing breakdown (all cents)
+  subtotal           Int
+  couponId           String?
+  couponCode         String?
+  couponDiscount     Int      @default(0)
+  pointsRedeemed     Int      @default(0)
+  pointsDiscount     Int      @default(0)
+  deliveryFee        Int      @default(0)
+  freeDeliveryReason String?  // PICKUP | MEMBER_FREE_DELIVERY | FIRST_SE_DELIVERY
+  gst                Int      @default(0)
+  total              Int
+  pointsEarned       Int      @default(0)
 
   // Fulfillment
   fulfillmentType FulfillmentType @default(PICKUP)
   pickupDate      DateTime?
   pickupTime      String?
+  deliverySlotId  String?
+  deliverySlot    DeliverySlot? @relation(fields: [deliverySlotId], references: [id])
   notes           String?
 
-  // Shipping address (optional)
   addressId  String?
   address    Address?  @relation(fields: [addressId], references: [id])
 
-  // Payment
   status          OrderStatus   @default(PENDING)
   paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   String?       // SQUARE | etc
   squarePaymentId String?
   squareOrderId   String?
 
-  // Referral
+  // Timeline
+  confirmedAt        DateTime?
+  inProgressAt       DateTime?
+  readyAt            DateTime?
+  outForDeliveryAt   DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+
+  // Coupon redemption (1-to-1)
+  couponRedemption CouponRedemption?
+
+  // Google Calendar
+  gcalEventId   String?
+
+  // Ambassador delivery (1-to-many to support edge cases like reassignment, but normally 0 or 1)
+  ambassadorDeliveries AmbassadorDelivery[]
+
+  // Reorder source
+  reorderedFromId String?
+
   referralCodeUsed String?
+  deliveryStartTime      DateTime?
+deliveryEndTime        DateTime?
+googleCalendarEventId  String?
+  // Points transactions on this order
+  pointsTransactions PointsTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 enum FulfillmentType {
@@ -161,6 +223,7 @@ enum OrderStatus {
   CONFIRMED
   IN_PROGRESS
   READY
+  OUT_FOR_DELIVERY
   COMPLETED
   CANCELLED
 }
@@ -170,4 +233,210 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+}
+
+// ==================== MEMBERSHIPS ====================
+
+model Membership {
+  id     String         @id @default(cuid())
+  userId String         @unique
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tier   MembershipTier @default(BASICO)
+  status MembershipStatus @default(ACTIVE)
+
+  // Square subscription
+  squareSubscriptionId String?
+
+  startedAt    DateTime  @default(now())
+  renewsAt     DateTime?
+  cancelledAt  DateTime?
+  endsAt       DateTime?
+
+  // For Embajador (needs approval)
+  approvedAt   DateTime?
+  approvedById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MembershipTier {
+  BASICO       // Free
+  ARTESANO     // $39/year
+  SELECTO      // $30/month
+  LEGENDARIO   // $50/month
+  EMBAJADOR    // Free, needs approval
+}
+
+enum MembershipStatus {
+  ACTIVE
+  PENDING_APPROVAL
+  PAUSED
+  CANCELED
+  INACTIVE
+  EXPIRED
+  PAST_DUE
+}
+
+// ==================== POINTS LEDGER ====================
+
+model PointsTransaction {
+  id      String                @id @default(cuid())
+  userId  String
+  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type    PointsTransactionType
+  amount  Int                   // positive for earned, negative for redeemed
+  note    String?
+  orderId String?
+  order   Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+enum PointsTransactionType {
+  EARNED
+  REDEMPTION
+  BIRTHDAY
+  SIGNUP
+  REFERRAL
+  BONUS
+  ADJUSTMENT
+  EXPIRE
+}
+
+// ==================== COUPONS ====================
+
+model Coupon {
+  id              String        @id @default(cuid())
+  code            String        @unique
+  description     String?
+  sanityId        String?       @unique
+  discountType    DiscountType
+  discountValue   Int           // percent (0-100) for PERCENT, cents for FIXED
+  minOrderCents   Int?
+  maxRedemptions  Int?          // total uses across all customers
+  redemptionCount Int           @default(0)
+  maxPerUser      Int           @default(1)
+  startsAt        DateTime?
+  expiresAt       DateTime?
+  active          Boolean       @default(true)
+  appliesTo       String        @default("ALL")
+  requiredTier    MembershipTier?
+
+  redemptions     CouponRedemption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+  FREE_SHIPPING
+}
+
+model CouponRedemption {
+  id          String  @id @default(cuid())
+  couponId    String
+  coupon      Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orderId     String? @unique
+  order       Order?  @relation(fields: [orderId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ==================== AMBASSADORS ====================
+
+model AmbassadorApplication {
+  id           String                    @id @default(cuid())
+  userId       String?                   @unique
+  user         User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status       AmbassadorAppStatus       @default(PENDING)
+
+  fullName     String
+  email        String
+  phone        String
+  instagram    String?
+  followers    Int?
+  city         String
+  motivation   String  @db.Text
+  hasVehicle   Boolean @default(false)
+  willDeliver  Boolean @default(false)
+
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewNotes  String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AmbassadorAppStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AmbassadorDelivery {
+  id            String   @id @default(cuid())
+  ambassadorId  String
+  ambassador    User     @relation(fields: [ambassadorId], references: [id], onDelete: Cascade)
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payoutCents   Int      // 800 (Artesano/Selecto) or 1000 (Legendario)
+  status        AmbassadorDeliveryStatus @default(ASSIGNED)
+  squarePayoutId String?
+  deliveredAt   DateTime?
+  paidAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ambassadorId, status])
+  @@index([orderId])
+}
+
+enum AmbassadorDeliveryStatus {
+  ASSIGNED
+  IN_PROGRESS
+  DELIVERED
+  PAID
+  CANCELLED
+}
+
+// ==================== DELIVERY SLOTS ====================
+
+model DeliverySlot {
+  id          String   @id @default(cuid())
+  startTime   DateTime // full datetime in UTC (Edmonton-local converted)
+  endTime     DateTime
+  label       String?  // "Mon evening", "Morning · members", etc
+  capacity    Int      @default(10)
+  isOpen      Boolean  @default(true)
+  membersOnly Boolean  @default(false)
+  notes       String?
+
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([startTime, endTime])
+  @@index([startTime])
+}
+
+// ==================== NEWSLETTER ====================
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  language  String   @default("en")
+  active    Boolean  @default(true)
+  source    String?
+  createdAt DateTime @default(now())
 }

@@ -1,392 +1,543 @@
 "use client";
 
-import { useCartStore } from "@/lib/store/cart-store";
-import { formatPrice } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import Link from "next/link";
-import Image from "next/image";
-import {
-  PaymentForm,
-  CreditCard,
-} from "react-square-web-payments-sdk";
-import { CreditCard as CardIcon, MapPin, Calendar, Check } from "lucide-react";
+import { Truck, ShoppingBag, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { useCartStore } from "@/lib/store/cart-store";
+import { computePricing, formatCents } from "@/lib/checkout/pricing";
+import { isSECalgary } from "@/lib/checkout/postal-codes";
+import { tierMeets, type MembershipTier } from "@/lib/membership/tiers";
+import { cn } from "@/lib/utils";
 
-type Props = {
-  user: { id: string; email: string; name: string | null } | null;
-  addresses: any[];
-  squareAppId: string;
-  squareLocationId: string;
+import { DeliverySlotPicker } from "./DeliverySlotPicker";
+import { PickupSlotPicker } from "./PickupSlotPicker";
+import { CouponInput } from "./CouponInput";
+import { PointsSlider } from "./PointsSlider";
+import { AddressPicker, type AddressData, type SavedAddress } from "./AddressPicker";
+import { SquarePaymentForm } from "./SquarePaymentForm";
+import { OrderSummarySidebar } from "./OrderSummarySidebar";
+
+type UserCtx = {
+  id: string;
+  name: string | null;
+  email: string;
+  phone?: string | null;
+  pointsBalance: number;
+  tier: MembershipTier;
+  hasUsedFirstFreeDelivery: boolean;
 };
 
 export function CheckoutForm({
   user,
-  addresses,
-  squareAppId,
-  squareLocationId,
-}: Props) {
+  addresses: initialAddresses,
+}: {
+  user: UserCtx | null;
+  addresses: SavedAddress[];
+}) {
   const router = useRouter();
+  const { t, locale } = useLocale();
+
   const items = useCartStore((s) => s.items);
-  const subtotal = useCartStore((s) => s.getSubtotal());
-  const clear = useCartStore((s) => s.clear);
+  const clearCart = useCartStore((s) => s.clearCart);
+  const cartCouponCode = useCartStore((s) => s.appliedCouponCode);
+  const cartPoints = useCartStore((s) => s.pointsToRedeem);
+  const setCartCoupon = useCartStore((s) => s.setAppliedCoupon);
+  const setCartPoints = useCartStore((s) => s.setPointsToRedeem);
 
   const [fulfillment, setFulfillment] = useState<"PICKUP" | "DELIVERY">(
     "PICKUP"
   );
-  const [addressId, setAddressId] = useState<string>(
-    addresses[0]?.id || ""
+
+  // Address
+  const [addresses] = useState(initialAddresses);
+  const [addressId, setAddressId] = useState<string | null>(
+    addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? null
   );
+  const [guestAddress, setGuestAddress] = useState<AddressData | null>(null);
+
+  // Slots
+  const [deliverySlotId, setDeliverySlotId] = useState<string | null>(null);
   const [pickupDate, setPickupDate] = useState("");
-  const [pickupTime, setPickupTime] = useState("11:00");
-  const [notes, setNotes] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
+  const [pickupTime, setPickupTime] = useState("");
+
+  // Guest fields
   const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const total = subtotal;
+  // Coupon + points
+  const [coupon, setCoupon] = useState<{
+    code: string;
+    discountType: "PERCENT" | "FIXED";
+    discountValue: number;
+    description?: string;
+  } | null>(null);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
 
-  if (items.length === 0) {
-    return (
-      <div className="rounded-3xl border border-canela/15 bg-masa/40 p-10 text-center">
-        <p className="text-ink/70">
-          Your cart is empty.{" "}
-          <Link href="/shop" className="text-canela hover:underline">
-            Browse the menu
-          </Link>
-          .
-        </p>
-      </div>
-    );
-  }
+  // Hydrate from cart store on mount
+  useEffect(() => {
+    if (cartCouponCode && !coupon) {
+      // Re-validate coupon against current subtotal
+      fetch("/api/coupon/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: cartCouponCode,
+          subtotalCents: items.reduce(
+            (s, it) => s + it.price * 100 * it.quantity,
+            0
+          ),
+        }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.coupon) {
+            setCoupon({
+              code: data.coupon.code,
+              discountType: data.coupon.discountType,
+              discountValue: data.coupon.discountValue,
+              description: data.coupon.description,
+            });
+          }
+        });
+    }
+    if (cartPoints && pointsToRedeem === 0) {
+      setPointsToRedeem(cartPoints);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function handlePayment(token: any) {
-    setLoading(true);
+  // Empty cart redirect
+  useEffect(() => {
+    if (items.length === 0) {
+      router.push("/cart");
+    }
+  }, [items.length, router]);
+
+  // Determine SE Calgary
+  const isSECustomer = useMemo(() => {
+    if (fulfillment !== "DELIVERY") return false;
+    if (addressId) {
+      const a = addresses.find((x) => x.id === addressId);
+      return a?.isSE ?? false;
+    }
+    if (guestAddress) return isSECalgary(guestAddress.postalCode);
+    return false;
+  }, [fulfillment, addressId, addresses, guestAddress]);
+
+  // Maximum lead time across cart
+  const maxLeadTime = items.reduce(
+    (max, it) => Math.max(max, it.leadTime ?? 0),
+    0
+  );
+
+  // Pricing computation
+  const pricing = useMemo(() => {
+    return computePricing({
+      items: items.map((it) => ({
+        productId: it.productId,
+        price: it.price * 100,
+        quantity: it.quantity,
+      })),
+      fulfillmentType: fulfillment,
+      tier: user?.tier ?? "BASICO",
+      isSouthEastCalgary: isSECustomer,
+      hasUsedFirstFreeDelivery: user?.hasUsedFirstFreeDelivery ?? false,
+      coupon: coupon
+        ? {
+            code: coupon.code,
+            discountType: coupon.discountType,
+            discountValue: coupon.discountValue,
+          }
+        : null,
+      pointsToRedeem,
+    });
+  }, [items, fulfillment, user, isSECustomer, coupon, pointsToRedeem]);
+
+  const isMember = user ? tierMeets(user.tier, "ARTESANO") : false;
+
+  // Validation gate
+  const canPay =
+    items.length > 0 &&
+    pricing.errors.length === 0 &&
+    (fulfillment === "PICKUP"
+      ? !!pickupDate && !!pickupTime
+      : !!deliverySlotId &&
+        ((user && addressId) ||
+          (!user &&
+            guestAddress?.street &&
+            guestAddress?.postalCode))) &&
+    (!!user ||
+      (guestEmail && guestName && guestPhone)); // guests need contact info
+
+  async function handlePayment(token: string) {
+    const cartItemsForApi = items.map((it) => ({
+      productId: it.productId,
+      quantity: it.quantity,
+    }));
+
+    const payload: any = {
+      paymentToken: token,
+      fulfillmentType: fulfillment,
+      items: cartItemsForApi,
+      couponCode: coupon?.code,
+      pointsToRedeem: pointsToRedeem || undefined,
+      clientReferenceId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    };
+
+    if (fulfillment === "PICKUP") {
+      payload.pickupDate = pickupDate;
+      payload.pickupTime = pickupTime;
+    } else {
+      payload.deliverySlotId = deliverySlotId;
+      if (user && addressId) {
+        payload.addressId = addressId;
+      } else if (guestAddress) {
+        payload.guestAddress = guestAddress;
+      }
+    }
+
+    if (!user) {
+      payload.guestEmail = guestEmail;
+      payload.guestName = guestName;
+      payload.guestPhone = guestPhone;
+    }
+
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourceId: token.token,
-          items: items.map((i) => ({
-            productId: i.productId,
-            slug: i.slug,
-            name: i.name,
-            price: i.price,
-            quantity: i.quantity,
-            image: i.image,
-            unit: i.unit,
-          })),
-          subtotal: Math.round(subtotal * 100),
-          total: Math.round(total * 100),
-          fulfillmentType: fulfillment,
-          addressId: fulfillment === "DELIVERY" ? addressId : null,
-          pickupDate: pickupDate || null,
-          pickupTime: pickupTime || null,
-          notes,
-          guestEmail: user ? null : guestEmail,
-          guestName: user ? null : guestName,
-          guestPhone: user ? null : guestPhone,
-        }),
+        body: JSON.stringify(payload),
       });
+      const data = await res.json();
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Payment failed");
+        toast.error(data.error || "Checkout failed");
+        return;
       }
-      const { orderId } = await res.json();
-      clear();
-      toast.success("Order placed!");
-      router.push(`/order-confirmation/${orderId}`);
+      // Clear local cart state
+      clearCart();
+      setCartCoupon(null);
+      setCartPoints(0);
+      router.push(data.redirect || `/checkout/success?order=${data.orderNumber}`);
     } catch (e: any) {
-      toast.error(e.message || "Something went wrong");
-    } finally {
-      setLoading(false);
+      toast.error(e.message || "Network error");
     }
   }
 
+  if (items.length === 0) return null;
+
   return (
-    <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-14">
-      <div className="space-y-8 lg:col-span-2">
-        {!user && (
-          <Section title="Contact info" icon="01">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Field
-                placeholder="Full name"
-                value={guestName}
-                onChange={setGuestName}
-                required
-              />
-              <Field
-                placeholder="Phone"
-                value={guestPhone}
-                onChange={setGuestPhone}
-                required
-              />
-              <div className="md:col-span-2">
-                <Field
-                  placeholder="Email"
+    <div className="container-bakery py-8 md:py-12">
+      <header className="mb-8">
+        <Link
+          href="/cart"
+          className="text-xs uppercase tracking-[0.2em] text-ink-soft hover:underline"
+        >
+          ← {locale === "es" ? "Volver al carrito" : "Back to cart"}
+        </Link>
+        <h1 className="mt-2 font-display text-3xl md:text-4xl">
+          {locale === "es" ? "Pagar" : "Checkout"}
+        </h1>
+      </header>
+
+      <div className="grid gap-10 lg:grid-cols-[1fr_400px]">
+        {/* Left: form */}
+        <div className="space-y-8">
+          {/* Guest contact — only if no user */}
+          {!user && (
+            <Section
+              num={1}
+              title={locale === "es" ? "Tus datos" : "Your details"}
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  label={locale === "es" ? "Nombre" : "Name"}
+                  value={guestName}
+                  onChange={setGuestName}
+                  required
+                />
+                <Input
+                  label="Email"
                   type="email"
                   value={guestEmail}
                   onChange={setGuestEmail}
                   required
                 />
+                <Input
+                  label={locale === "es" ? "Teléfono" : "Phone"}
+                  type="tel"
+                  value={guestPhone}
+                  onChange={setGuestPhone}
+                  required
+                />
               </div>
+              <p className="mt-3 text-xs text-ink-soft">
+                {locale === "es" ? "¿Ya tienes cuenta?" : "Have an account?"}{" "}
+                <Link
+                  href="/login?callbackUrl=/checkout"
+                  className="font-medium text-canela-dark underline"
+                >
+                  {locale === "es" ? "Inicia sesión" : "Sign in"}
+                </Link>
+              </p>
+            </Section>
+          )}
+
+          {/* Fulfillment toggle */}
+          <Section
+            num={user ? 1 : 2}
+            title={locale === "es" ? "Recolección o envío" : "Pickup or delivery"}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FulfillmentTile
+                active={fulfillment === "PICKUP"}
+                onClick={() => setFulfillment("PICKUP")}
+                icon={ShoppingBag}
+                title={locale === "es" ? "Recolección" : "Pickup"}
+                desc={locale === "es" ? "Sin costo" : "No charge"}
+              />
+              <FulfillmentTile
+                active={fulfillment === "DELIVERY"}
+                onClick={() => setFulfillment("DELIVERY")}
+                icon={Truck}
+                title={locale === "es" ? "Envío" : "Delivery"}
+                desc={
+                  isMember
+                    ? locale === "es"
+                      ? "Gratis con tu plan"
+                      : "Free with your plan"
+                    : locale === "es"
+                    ? "$7 · 1ra gratis en SE"
+                    : "$7 · 1st free in SE"
+                }
+              />
             </div>
-            <p className="mt-3 text-xs text-ink/50">
-              Already have an account?{" "}
-              <Link
-                href="/login?callbackUrl=/checkout"
-                className="text-canela hover:underline"
-              >
-                Sign in
-              </Link>
-              .
-            </p>
           </Section>
-        )}
 
-        <Section title="Fulfillment" icon="02">
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setFulfillment("PICKUP")}
-              className={`rounded-2xl border px-5 py-4 text-left transition-all ${
-                fulfillment === "PICKUP"
-                  ? "border-canela bg-canela/10"
-                  : "border-canela/15 bg-cream"
-              }`}
-            >
-              <MapPin className="mb-2 h-5 w-5 text-canela" />
-              <div className="font-display text-base text-ink">Pickup</div>
-              <div className="text-xs text-ink/60">Calgary · free</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFulfillment("DELIVERY")}
-              className={`rounded-2xl border px-5 py-4 text-left transition-all ${
-                fulfillment === "DELIVERY"
-                  ? "border-canela bg-canela/10"
-                  : "border-canela/15 bg-cream"
-              }`}
-            >
-              <Calendar className="mb-2 h-5 w-5 text-canela" />
-              <div className="font-display text-base text-ink">Delivery</div>
-              <div className="text-xs text-ink/60">Calgary only</div>
-            </button>
-          </div>
+          {/* Slot picker */}
+          <Section
+            num={user ? 2 : 3}
+            title={
+              fulfillment === "PICKUP"
+                ? locale === "es"
+                  ? "¿Cuándo recoges?"
+                  : "When to pick up?"
+                : locale === "es"
+                ? "¿Cuándo entregamos?"
+                : "When to deliver?"
+            }
+          >
+            {fulfillment === "PICKUP" ? (
+              <PickupSlotPicker
+                date={pickupDate}
+                time={pickupTime}
+                onDateChange={setPickupDate}
+                onTimeChange={setPickupTime}
+                minLeadHours={maxLeadTime}
+              />
+            ) : (
+              <DeliverySlotPicker
+                selectedId={deliverySlotId}
+                onChange={setDeliverySlotId}
+              />
+            )}
+          </Section>
 
-          {fulfillment === "DELIVERY" && user && addresses.length > 0 && (
-            <div className="mt-5">
-              <label className="mb-2 block text-sm text-ink">Address</label>
-              <select
-                value={addressId}
-                onChange={(e) => setAddressId(e.target.value)}
-                className="h-11 w-full rounded-full border border-canela/20 bg-cream px-4 text-sm text-ink"
-              >
-                {addresses.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.line1}, {a.city}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Address — delivery only */}
+          {fulfillment === "DELIVERY" && (
+            <Section
+              num={user ? 3 : 4}
+              title={locale === "es" ? "Dirección" : "Address"}
+            >
+              <AddressPicker
+                addresses={addresses}
+                selectedId={addressId}
+                onSelect={setAddressId}
+                guestAddress={guestAddress}
+                onGuestAddressChange={setGuestAddress}
+                isLoggedIn={!!user}
+              />
+            </Section>
           )}
 
-          {fulfillment === "DELIVERY" && user && addresses.length === 0 && (
-            <p className="mt-4 text-sm text-ink/60">
-              No saved addresses.{" "}
-              <Link
-                href="/account/addresses"
-                className="text-canela hover:underline"
-              >
-                Add one
-              </Link>
-              .
-            </p>
-          )}
-
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm text-ink">
-                {fulfillment === "PICKUP" ? "Pickup date" : "Delivery date"}
-              </label>
-              <input
-                type="date"
-                value={pickupDate}
-                onChange={(e) => setPickupDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-                className="h-11 w-full rounded-full border border-canela/20 bg-cream px-4 text-sm text-ink"
+          {/* Discounts */}
+          <Section
+            num={
+              user
+                ? fulfillment === "DELIVERY"
+                  ? 4
+                  : 3
+                : fulfillment === "DELIVERY"
+                ? 5
+                : 4
+            }
+            title={locale === "es" ? "Descuentos" : "Discounts"}
+          >
+            <div className="space-y-4">
+              <CouponInput
+                applied={coupon}
+                onApply={(c) => {
+                  setCoupon(c);
+                  setCartCoupon(c.code);
+                }}
+                onRemove={() => {
+                  setCoupon(null);
+                  setCartCoupon(null);
+                }}
+                subtotalCents={pricing.subtotalCents}
               />
+              {user && (
+                <PointsSlider
+                  available={user.pointsBalance}
+                  current={pointsToRedeem}
+                  maxRedeemable={Math.floor(
+                    (pricing.subtotalCents - pricing.couponDiscountCents) / 1
+                  )}
+                  onChange={(n) => {
+                    setPointsToRedeem(n);
+                    setCartPoints(n);
+                  }}
+                />
+              )}
             </div>
-            <div>
-              <label className="mb-2 block text-sm text-ink">Time</label>
-              <input
-                type="time"
-                value={pickupTime}
-                onChange={(e) => setPickupTime(e.target.value)}
-                className="h-11 w-full rounded-full border border-canela/20 bg-cream px-4 text-sm text-ink"
-              />
-            </div>
-          </div>
+          </Section>
 
-          <div className="mt-5">
-            <label className="mb-2 block text-sm text-ink">
-              Notes (optional)
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              placeholder="Special requests, allergies, cake message..."
-              className="w-full rounded-2xl border border-canela/20 bg-cream p-4 text-sm text-ink"
+          {/* Payment */}
+          <Section
+            num={
+              user
+                ? fulfillment === "DELIVERY"
+                  ? 5
+                  : 4
+                : fulfillment === "DELIVERY"
+                ? 6
+                : 5
+            }
+            title={locale === "es" ? "Pago" : "Payment"}
+          >
+            <SquarePaymentForm
+              totalCents={pricing.totalCents}
+              onTokenReady={handlePayment}
+              disabled={!canPay}
             />
-          </div>
-        </Section>
+            {!canPay && pricing.errors.length === 0 && (
+              <p className="mt-3 text-xs text-ink-soft">
+                {locale === "es"
+                  ? "Completa los pasos anteriores para continuar."
+                  : "Complete the steps above to continue."}
+              </p>
+            )}
+            {pricing.errors.length > 0 && (
+              <div className="mt-3 rounded-2xl bg-red-50 p-3 text-xs text-red-700">
+                {pricing.errors.join("; ")}
+              </div>
+            )}
+          </Section>
+        </div>
 
-        <Section title="Payment" icon="03">
-          {squareAppId && squareLocationId ? (
-            <PaymentForm
-              applicationId={squareAppId}
-              locationId={squareLocationId}
-              cardTokenizeResponseReceived={handlePayment}
-            >
-              <CreditCard />
-            </PaymentForm>
-          ) : (
-            <div className="rounded-2xl border border-otomi-orange/40 bg-otomi-orange/10 p-5 text-sm text-ink/80">
-              <CardIcon className="mb-2 h-5 w-5 text-otomi-orange" />
-              Square is not configured. Add{" "}
-              <code className="rounded bg-masa/60 px-1 text-xs">
-                NEXT_PUBLIC_SQUARE_APP_ID
-              </code>{" "}
-              and{" "}
-              <code className="rounded bg-masa/60 px-1 text-xs">
-                NEXT_PUBLIC_SQUARE_LOCATION_ID
-              </code>{" "}
-              to your <code>.env</code> to enable checkout.
-            </div>
-          )}
-        </Section>
+        {/* Right: summary */}
+        <OrderSummarySidebar pricing={pricing} />
       </div>
-
-      <aside className="lg:sticky lg:top-28 lg:h-fit">
-        <div className="rounded-3xl border border-canela/15 bg-masa/40 p-8">
-          <h2 className="font-display text-2xl text-ink">Your order</h2>
-
-          <ul className="mt-6 divide-y divide-canela/10">
-            {items.map((item) => (
-              <li key={item.productId} className="flex gap-3 py-3">
-                {item.image && (
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-cream">
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      fill
-                      sizes="56px"
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-                <div className="flex flex-1 items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-ink">{item.name}</p>
-                    <p className="text-xs text-ink/60">× {item.quantity}</p>
-                  </div>
-                  <span className="text-sm font-display text-canela">
-                    {formatPrice(item.price * item.quantity)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          <div className="my-5 h-px bg-canela/15" />
-          <div className="space-y-2 text-sm">
-            <Row label="Subtotal" value={formatPrice(subtotal)} />
-            <Row label="Tax" value="Calculated at checkout" />
-          </div>
-          <div className="my-5 h-px bg-canela/15" />
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm uppercase tracking-widest text-ink/60">
-              Total
-            </span>
-            <span className="font-display text-3xl text-canela">
-              {formatPrice(total)}
-            </span>
-          </div>
-          <p className="mt-4 flex items-center justify-center gap-2 text-xs text-ink/50">
-            <Check className="h-3 w-3" />
-            Secure payment via Square
-          </p>
-        </div>
-      </aside>
-
-      {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm">
-          <div className="rounded-3xl bg-cream p-8 text-center">
-            <p className="font-display text-xl text-ink">
-              Processing your order…
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 function Section({
+  num,
   title,
-  icon,
   children,
 }: {
+  num: number;
   title: string;
-  icon: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-canela/15 bg-masa/30 p-8">
-      <div className="mb-5 flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-canela/30 font-display text-canela">
-          {icon}
+    <section>
+      <header className="mb-4 flex items-center gap-3">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-canela text-xs font-bold">
+          {num}
         </span>
-        <h2 className="font-display text-2xl text-ink">{title}</h2>
-      </div>
-      {children}
+        <h2 className="font-display text-xl">{title}</h2>
+      </header>
+      <div className="ml-10">{children}</div>
     </section>
   );
 }
 
-function Field({
-  placeholder,
-  value,
-  onChange,
-  type = "text",
-  required,
+function FulfillmentTile({
+  active,
+  onClick,
+  icon: Icon,
+  title,
+  desc,
 }: {
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  required?: boolean;
+  active: boolean;
+  onClick: () => void;
+  icon: any;
+  title: string;
+  desc: string;
 }) {
   return (
-    <input
-      type={type}
-      required={required}
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-11 w-full rounded-full border border-canela/20 bg-cream px-4 text-sm text-ink focus:border-canela focus:outline-none focus:ring-2 focus:ring-canela/20"
-    />
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 rounded-2xl border p-4 text-left transition-all",
+        active
+          ? "border-canela-dark bg-canela-light"
+          : "border-canela/30 bg-cream hover:border-canela"
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-10 w-10 items-center justify-center rounded-full",
+          active ? "bg-canela-dark text-cream" : "bg-canela-light"
+        )}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="flex-1">
+        <p className="font-medium">{title}</p>
+        <p className="text-xs text-ink-soft">{desc}</p>
+      </div>
+      <ChevronRight
+        className={cn(
+          "h-4 w-4 transition-transform",
+          active && "rotate-90 text-canela-dark"
+        )}
+      />
+    </button>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Input({
+  label,
+  type = "text",
+  value,
+  onChange,
+  required,
+}: {
+  label: string;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+}) {
   return (
-    <div className="flex justify-between text-ink/70">
-      <span>{label}</span>
-      <span className="text-ink">{value}</span>
+    <div>
+      <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+        {label} {required && "*"}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="mt-1 w-full rounded-full border border-canela/30 bg-cream px-4 py-2.5 text-sm focus:border-canela-dark focus:outline-none"
+      />
     </div>
   );
 }

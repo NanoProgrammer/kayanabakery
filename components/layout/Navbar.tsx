@@ -1,194 +1,234 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ShoppingBag, User, Menu, X, Search } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
+import { ShoppingBag, User, Menu, X, Crown } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 import { useCartStore } from "@/lib/store/cart-store";
-
-const navLinks = [
-  { href: "/shop", label: "Shop" },
-  { href: "/category/conchas", label: "Conchas" },
-  { href: "/category/cakes", label: "Cakes" },
-  { href: "/events", label: "Events" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-];
-
-const announcements = [
-  "✦ Free pickup in Calgary",
-  "✦ Fresh baked daily",
-  "✦ Order 48h in advance for custom cakes",
-  "✦ More than bread, a home memory",
-  "✦ Est. 2018",
-];
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { LanguageToggle } from "@/components/i18n/LanguageToggle";
+import { cn } from "@/lib/utils";
 
 export function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
+  const { data: session } = useSession();
   const itemCount = useCartStore((s) => s.getItemCount());
-  const setCartOpen = useCartStore((s) => s.setOpen);
+  const setOpen = useCartStore((s) => s.setOpen);
+  const { t } = useLocale();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
-  useEffect(() => setMounted(true), []);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const tier = (session?.user as any)?.tier as string | undefined;
+  const isMember =
+    tier && tier !== "BASICO" && tier !== "EMBAJADOR";
 
   return (
-    <>
-      <div className="relative overflow-hidden bg-canela text-cream">
-        <div className="flex animate-[marquee_40s_linear_infinite] whitespace-nowrap py-2 text-xs font-medium tracking-widest uppercase">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex shrink-0 items-center gap-12 px-6">
-              {announcements.map((a, j) => (
-                <span key={j}>{a}</span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+    <header className="sticky top-0 z-40 border-b border-canela/15 bg-cream/90 backdrop-blur-md">
+      <div className="container-bakery flex h-20 items-center justify-between gap-4">
+        {/* Logo */}
+        <Link
+          href="/"
+          aria-label="Karyana Bakery"
+          className="flex items-center gap-3"
+        >
+          <Image
+            src="/logo.png"
+            alt="Karyana Ruiz Bakery"
+            width={60}
+            height={60}
+            priority
+            className="h-12 w-12 object-contain"
+          />
+          <div className="hidden flex-col leading-tight md:flex">
+            <span className="font-display text-lg tracking-tight">
+              Karyana Ruiz
+            </span>
+            <span className="font-script text-base text-canela-dark">
+              Bakery
+            </span>
+          </div>
+        </Link>
 
-      <header
-        className={`sticky top-0 z-40 transition-all duration-500 ${
-          scrolled
-            ? "border-b border-canela/10 bg-cream/85 backdrop-blur-md"
-            : "bg-transparent"
-        }`}
-      >
-        <div className="container-bakery">
-          <div className="flex h-20 items-center justify-between gap-6">
-            <div className="flex flex-1 items-center gap-8">
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-7 text-sm font-medium lg:flex">
+          <Link href="/shop" className="link-underline">
+            {t("nav.shop")}
+          </Link>
+          <Link href="/category/conchas" className="link-underline">
+            {t("nav.conchas")}
+          </Link>
+          <Link href="/category/cakes" className="link-underline">
+            {t("nav.cakes")}
+          </Link>
+          <Link href="/memberships" className="link-underline flex items-center gap-1">
+            <Crown className="h-3.5 w-3.5 text-gold" />
+            {t("nav.memberships")}
+          </Link>
+          <Link href="/events" className="link-underline">
+            {t("nav.events")}
+          </Link>
+          <Link href="/about" className="link-underline">
+            {t("nav.about")}
+          </Link>
+          <Link href="/contact" className="link-underline">
+            {t("nav.contact")}
+          </Link>
+        </nav>
+
+        {/* Right cluster */}
+        <div className="flex items-center gap-3">
+          <LanguageToggle className="hidden sm:inline-flex" />
+
+          {/* Account */}
+          <div className="relative">
+            {session ? (
               <button
-                onClick={() => setMobileOpen(true)}
-                className="text-canela lg:hidden"
-                aria-label="Open menu"
+                onClick={() => setAccountOpen((o) => !o)}
+                className="flex items-center gap-2 rounded-full border border-canela/30 bg-cream px-3 py-1.5 text-xs font-medium hover:bg-canela-light"
+                aria-label="Account menu"
               >
-                <Menu className="h-6 w-6" />
+                <User className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">
+                  {session.user?.name?.split(" ")[0] || t("common.account")}
+                </span>
+                {isMember && (
+                  <Crown className="h-3 w-3 text-gold" />
+                )}
               </button>
-              <nav className="hidden items-center gap-7 lg:flex">
-                {navLinks.slice(0, 3).map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="link-underline text-sm font-medium tracking-wide text-canela transition-colors hover:text-canela-dark"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 rounded-full border border-canela/30 px-3 py-1.5 text-xs font-medium hover:bg-canela-light"
+              >
+                <User className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">{t("common.signIn")}</span>
+              </Link>
+            )}
 
-            <Link href="/" className="flex flex-col items-center">
-              <span className="font-display text-2xl leading-none tracking-tight text-canela md:text-3xl">
-                Karyana
-              </span>
-              <span className="font-script text-sm leading-tight text-otomi-red">
-                bakery
-              </span>
-            </Link>
-
-            <div className="flex flex-1 items-center justify-end gap-5">
-              <nav className="hidden items-center gap-7 lg:flex">
-                {navLinks.slice(3).map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="link-underline text-sm font-medium tracking-wide text-canela transition-colors hover:text-canela-dark"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-
-              <div className="flex items-center gap-1">
-                <Link
-                  href="/shop"
-                  className="hidden h-10 w-10 items-center justify-center rounded-full text-canela transition-colors hover:bg-canela/10 md:flex"
-                  aria-label="Search"
-                >
-                  <Search className="h-5 w-5" />
-                </Link>
+            {accountOpen && session && (
+              <div
+                onMouseLeave={() => setAccountOpen(false)}
+                className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-canela/20 bg-cream shadow-lg"
+              >
                 <Link
                   href="/account"
-                  className="hidden h-10 w-10 items-center justify-center rounded-full text-canela transition-colors hover:bg-canela/10 md:flex"
-                  aria-label="Account"
+                  className="block px-4 py-2.5 text-sm hover:bg-canela-light"
+                  onClick={() => setAccountOpen(false)}
                 >
-                  <User className="h-5 w-5" />
+                  {t("account.overview")}
                 </Link>
-                <button
-                  onClick={() => setCartOpen(true)}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full text-canela transition-colors hover:bg-canela/10"
-                  aria-label="Cart"
+                <Link
+                  href="/account/orders"
+                  className="block px-4 py-2.5 text-sm hover:bg-canela-light"
+                  onClick={() => setAccountOpen(false)}
                 >
-                  <ShoppingBag className="h-5 w-5" />
-                  {mounted && itemCount > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-otomi-red px-1 text-[10px] font-bold text-cream">
-                      {itemCount}
-                    </span>
-                  )}
+                  {t("account.orders")}
+                </Link>
+                <Link
+                  href="/account/membership"
+                  className="block px-4 py-2.5 text-sm hover:bg-canela-light"
+                  onClick={() => setAccountOpen(false)}
+                >
+                  {t("account.membership")}
+                </Link>
+                {(session.user as any)?.role === "ADMIN" && (
+                  <Link
+                    href="/admin"
+                    className="block border-t border-canela/15 px-4 py-2.5 text-sm font-medium text-canela-dark hover:bg-canela-light"
+                    onClick={() => setAccountOpen(false)}
+                  >
+                    Admin
+                  </Link>
+                )}
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="block w-full border-t border-canela/15 px-4 py-2.5 text-left text-sm hover:bg-canela-light"
+                >
+                  {t("common.signOut")}
                 </button>
               </div>
-            </div>
+            )}
           </div>
+
+          {/* Cart */}
+          <button
+            onClick={() => setOpen(true)}
+            className="relative inline-flex items-center justify-center rounded-full bg-canela px-3.5 py-2 text-ink transition-all hover:bg-canela-dark"
+            aria-label="Open cart"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            {itemCount > 0 && (
+              <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-[10px] font-bold text-cream">
+                {itemCount}
+              </span>
+            )}
+          </button>
+
+          {/* Mobile burger */}
+          <button
+            className="lg:hidden"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
-      </header>
+      </div>
 
       {/* Mobile drawer */}
       <div
-        className={`fixed inset-0 z-50 lg:hidden ${
-          mobileOpen ? "pointer-events-auto" : "pointer-events-none"
-        }`}
+        className={cn(
+          "fixed inset-0 z-50 transition-opacity lg:hidden",
+          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        )}
       >
         <div
-          className={`absolute inset-0 bg-ink/40 transition-opacity duration-300 ${
-            mobileOpen ? "opacity-100" : "opacity-0"
-          }`}
+          className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
         />
         <div
-          className={`absolute left-0 top-0 h-full w-[85%] max-w-sm bg-cream p-8 shadow-xl transition-transform duration-500 ${
-            mobileOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={cn(
+            "absolute right-0 top-0 h-full w-[85%] max-w-sm overflow-y-auto bg-cream p-6 shadow-2xl transition-transform",
+            mobileOpen ? "translate-x-0" : "translate-x-full"
+          )}
         >
-          <div className="mb-10 flex items-center justify-between">
-            <span className="font-display text-2xl text-canela">Karyana</span>
+          <div className="mb-8 flex items-center justify-between">
+            <span className="font-display text-2xl">Menu</span>
             <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
-              <X className="h-6 w-6 text-canela" />
+              <X className="h-5 w-5" />
             </button>
           </div>
-          <nav className="flex flex-col gap-5">
-            {navLinks.map((link) => (
+
+          <nav className="flex flex-col gap-1 text-lg">
+            {[
+              { href: "/shop", label: t("nav.shop") },
+              { href: "/category/conchas", label: t("nav.conchas") },
+              { href: "/category/cakes", label: t("nav.cakes") },
+              { href: "/memberships", label: t("nav.memberships") },
+              { href: "/events", label: t("nav.events") },
+              { href: "/ambassador", label: t("nav.ambassador") },
+              { href: "/faq", label: t("nav.faq") },
+              { href: "/how-to-order", label: t("nav.howToOrder") },
+              { href: "/refer-a-friend", label: t("nav.referAFriend") },
+              { href: "/about", label: t("nav.about") },
+              { href: "/contact", label: t("nav.contact") },
+            ].map((l) => (
               <Link
-                key={link.href}
-                href={link.href}
+                key={l.href}
+                href={l.href}
+                className="rounded-lg px-3 py-3 hover:bg-canela-light"
                 onClick={() => setMobileOpen(false)}
-                className="font-display text-3xl text-ink transition-colors hover:text-otomi-red"
               >
-                {link.label}
+                {l.label}
               </Link>
             ))}
           </nav>
-          <div className="mt-10 flex flex-col gap-3 border-t border-canela/10 pt-6">
-            <Link href="/account" className="text-sm text-canela">
-              My Account
-            </Link>
-            <Link href="/how-to-order" className="text-sm text-canela">
-              How to Order
-            </Link>
-            <Link href="/faq" className="text-sm text-canela">
-              FAQ
-            </Link>
-            <Link href="/refer-a-friend" className="text-sm text-canela">
-              Refer a Friend
-            </Link>
+
+          <div className="mt-8 border-t border-canela/15 pt-6">
+            <LanguageToggle />
           </div>
         </div>
       </div>
-    </>
+    </header>
   );
 }

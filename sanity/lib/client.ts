@@ -13,7 +13,6 @@ export const client = createClient({
   perspective: "published",
 });
 
-// Authenticated client for drafts / writes
 export const serverClient = createClient({
   projectId,
   dataset,

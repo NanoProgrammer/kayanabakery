@@ -1,173 +1,310 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { auth } from "@/lib/auth/auth";
-import { prisma } from "@/lib/prisma";
-import { Gift, Copy, Mail, MessageCircle } from "lucide-react";
-import { ReferralShare } from "@/components/account/ReferralShare";
+import { useLocale } from "@/lib/i18n/locale-provider";
+import { toast } from "sonner";
+import { Heart, ArrowRight, Loader2 } from "lucide-react";
 
-export const metadata = { title: "Refer a Friend · Karyana Bakery" };
+type FormState = {
+  yourName: string;
+  yourEmail: string;
+  friendName: string;
+  friendEmail: string;
+  personalMessage: string;
+};
 
-export default async function ReferPage() {
-  const session = await auth();
-  const userId = (session?.user as any)?.id;
+const INITIAL: FormState = {
+  yourName: "",
+  yourEmail: "",
+  friendName: "",
+  friendEmail: "",
+  personalMessage: "",
+};
 
-  let user = null;
-  let referralCount = 0;
-  if (userId) {
-    user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { _count: { select: { referrals: true } } },
-    });
-    referralCount = user?._count?.referrals ?? 0;
+export default function ReferAFriendPage() {
+  const { locale } = useLocale();
+  const [form, setForm] = useState<FormState>(INITIAL);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  function update<K extends keyof FormState>(key: K, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://karyanabakery.ca";
-  const referralLink = user
-    ? `${appUrl}/register?ref=${user.referralCode}`
-    : `${appUrl}/register`;
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
 
-  return (
-    <>
-      <section className="relative overflow-hidden bg-canela text-cream">
-        <div className="grain absolute inset-0" />
-        <div className="container-bakery relative py-20 text-center md:py-28">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cream/20 bg-cream/5 px-4 py-1.5 text-xs font-medium uppercase tracking-widest">
-            <Gift className="h-3.5 w-3.5" /> Refer a friend
+    if (
+      !form.yourName ||
+      !form.yourEmail ||
+      !form.friendName ||
+      !form.friendEmail
+    ) {
+      toast.error(
+        locale === "es"
+          ? "Completa los campos requeridos"
+          : "Please fill in the required fields"
+      );
+      return;
+    }
+
+    if (form.yourEmail.toLowerCase() === form.friendEmail.toLowerCase()) {
+      toast.error(
+        locale === "es"
+          ? "No puedes invitarte a ti mismo 😉"
+          : "You can't invite yourself 😉"
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/refer-a-friend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Something went wrong");
+      }
+
+      setSubmitted(true);
+      toast.success(
+        locale === "es" ? "¡Mensaje enviado! 🥖" : "Message sent! 🥖"
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ============ TRANSLATIONS ============
+  const t = {
+    eyebrow:
+      locale === "es"
+        ? "Comparte Karyana"
+        : "Share Karyana",
+
+    titleStart: locale === "es" ? "Las " : "Sorrows ",
+    titleScript: locale === "es" ? "penas con pan" : "with bread",
+    titleEnd: locale === "es" ? " son menos." : " are less.",
+
+    subtitle:
+      locale === "es"
+        ? "Un dicho viejo que entendemos bien: el pan se hace para compartir. Si Karyana te trajo un pedacito de casa, mándale el sabor a alguien que quieras."
+        : "An old saying we know well: bread is meant to be shared. If Karyana brought you a piece of home, send that taste to someone you love.",
+
+    formIntro:
+      locale === "es"
+        ? "Llena los datos y le mandamos a tu amigo un mensaje contándole de Karyana — con tus palabras, no las nuestras."
+        : "Fill in the details and we'll send your friend a note about Karyana — in your words, not ours.",
+
+    yourName: locale === "es" ? "Tu nombre" : "Your name",
+    yourEmail: locale === "es" ? "Tu correo" : "Your email",
+    friendName: locale === "es" ? "Nombre de tu amigo" : "Friend's name",
+    friendEmail: locale === "es" ? "Correo de tu amigo" : "Friend's email",
+    message:
+      locale === "es"
+        ? "Tu mensaje (opcional)"
+        : "Your message (optional)",
+    messagePlaceholder:
+      locale === "es"
+        ? "Cuéntale por qué te encanta Karyana…"
+        : "Tell them why you love Karyana…",
+
+    send: locale === "es" ? "Mandar mensaje" : "Send message",
+    sending: locale === "es" ? "Enviando…" : "Sending…",
+    requiredHint:
+      locale === "es" ? "* campos requeridos" : "* required fields",
+
+    successTitleA: locale === "es" ? "Pan " : "Bread ",
+    successTitleB: locale === "es" ? "compartido" : "shared",
+    successDesc:
+      locale === "es"
+        ? "Le mandamos a tu amigo el mensaje. Gracias por hacer crecer la familia Karyana 🫶"
+        : "We sent your friend the message. Thank you for growing the Karyana family 🫶",
+    sendAnother:
+      locale === "es" ? "Mandar otro mensaje" : "Send another",
+    backHome: locale === "es" ? "Volver al inicio" : "Back home",
+  };
+
+  // ============ SUCCESS STATE ============
+  if (submitted) {
+    return (
+      <div className="container-bakery py-20 md:py-28">
+        <div className="mx-auto max-w-xl text-center">
+          <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full bg-canela-light">
+            <Heart
+              className="h-10 w-10 text-canela-dark"
+              fill="currentColor"
+            />
           </div>
-          <h1 className="font-display text-[length:var(--text-display-lg)] leading-[var(--text-display-lg--line-height)] tracking-[var(--text-display-lg--letter-spacing)]">
-            <span className="font-script text-otomi-yellow">
-              &ldquo;Las penas con pan
+          <h1 className="section-title">
+            {t.successTitleA}
+            <span className="font-script text-canela-dark">
+              {t.successTitleB}
             </span>
-            <br />
-            <span className="italic">son menos.&rdquo;</span>
+            .
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-cream/80">
-            Share Karyana with a friend. When they place their first order,
-            you both get{" "}
-            <span className="font-semibold text-otomi-yellow">$10 off</span>.
-            Because good pan dulce is meant to be shared.
+          <p className="mt-4 text-ink-soft">{t.successDesc}</p>
+
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setForm(INITIAL);
+                setSubmitted(false);
+              }}
+              className="btn-primary"
+            >
+              {t.sendAnother}
+            </button>
+            <Link href="/" className="btn-secondary">
+              {t.backHome}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============ MAIN FORM ============
+  return (
+    <div className="container-bakery py-16 md:py-20">
+      {/* Hero */}
+      <header className="mb-12 max-w-3xl">
+        <span className="eyebrow">{t.eyebrow}</span>
+        <h1 className="section-title mt-2">
+          {t.titleStart}
+          <span className="font-script text-canela-dark">
+            {t.titleScript}
+          </span>
+          {t.titleEnd}
+        </h1>
+        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-soft">
+          {t.subtitle}
+        </p>
+      </header>
+
+      {/* Form */}
+      <section className="rounded-3xl border border-canela/15 bg-cream p-6 md:p-10">
+        <div className="mb-8 flex items-start gap-3">
+          <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-canela-dark">
+            <Heart className="h-4 w-4 text-cream" fill="currentColor" />
+          </div>
+          <p className="text-sm leading-relaxed text-ink-soft md:text-base">
+            {t.formIntro}
           </p>
         </div>
-      </section>
 
-      <section className="container-bakery py-16 md:py-20">
-        {user ? (
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-14">
-            <div className="lg:col-span-2">
-              <h2 className="font-display text-3xl text-ink">
-                Your sharing link
-              </h2>
-              <p className="mt-2 text-sm text-ink/60">
-                Drop it in a text, an email, or anywhere you connect with
-                friends.
-              </p>
+        <form
+          onSubmit={handleSubmit}
+          className="grid gap-5 md:grid-cols-2"
+          noValidate
+        >
+          <Field
+            label={t.yourName + " *"}
+            value={form.yourName}
+            onChange={(v) => update("yourName", v)}
+            required
+          />
+          <Field
+            label={t.yourEmail + " *"}
+            type="email"
+            value={form.yourEmail}
+            onChange={(v) => update("yourEmail", v)}
+            required
+          />
+          <Field
+            label={t.friendName + " *"}
+            value={form.friendName}
+            onChange={(v) => update("friendName", v)}
+            required
+          />
+          <Field
+            label={t.friendEmail + " *"}
+            type="email"
+            value={form.friendEmail}
+            onChange={(v) => update("friendEmail", v)}
+            required
+          />
 
-              <ReferralShare link={referralLink} code={user.referralCode} />
-
-              <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
-                <ShareMethod
-                  icon={Copy}
-                  label="Copy link"
-                  description="Paste anywhere"
-                />
-                <ShareMethod
-                  icon={Mail}
-                  label="Send via email"
-                  description="One-click share"
-                />
-                <ShareMethod
-                  icon={MessageCircle}
-                  label="Share in chat"
-                  description="WhatsApp, iMessage"
-                />
-              </div>
-            </div>
-
-            <aside className="rounded-3xl border border-canela/15 bg-masa/40 p-8 lg:sticky lg:top-28 lg:h-fit">
-              <h3 className="font-display text-2xl text-ink">Your stats</h3>
-              <div className="mt-6 space-y-5">
-                <Stat label="Friends referred" value={referralCount} />
-                <Stat
-                  label="Credit available"
-                  value={`$${((user.referralCredit ?? 0) / 100).toFixed(2)}`}
-                />
-              </div>
-              <Link
-                href="/shop"
-                className="mt-8 block rounded-full bg-canela px-5 py-3 text-center text-sm text-cream"
-              >
-                Use credit in the shop
-              </Link>
-            </aside>
-          </div>
-        ) : (
-          <div className="mx-auto max-w-xl rounded-3xl border border-canela/15 bg-masa/40 p-10 text-center">
-            <h2 className="font-display text-3xl text-ink">
-              Create an account to get your link
-            </h2>
-            <p className="mt-3 text-ink/70">
-              Sign in and we&apos;ll generate a unique referral code just for
-              you.
+          <div className="md:col-span-2">
+            <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+              {t.message}
+            </label>
+            <textarea
+              value={form.personalMessage}
+              onChange={(e) => update("personalMessage", e.target.value)}
+              rows={4}
+              maxLength={300}
+              placeholder={t.messagePlaceholder}
+              className="mt-1.5 w-full rounded-2xl border border-canela/30 bg-white px-5 py-3 text-sm leading-relaxed focus:border-canela-dark focus:outline-none"
+            />
+            <p className="mt-1 text-right text-[10px] text-ink-soft">
+              {form.personalMessage.length}/300
             </p>
-            <div className="mt-6 flex justify-center gap-3">
-              <Link href="/register" className="btn-primary">
-                Create account
-              </Link>
-              <Link href="/login" className="btn-ghost">
-                Sign in
-              </Link>
-            </div>
           </div>
-        )}
-      </section>
 
-      <section className="bg-masa/60 py-20">
-        <div className="container-bakery">
-          <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-            {[
-              { num: "01", title: "Share your link", text: "Send it to a friend." },
-              { num: "02", title: "They order", text: "They get $10 off their first order." },
-              { num: "03", title: "You earn", text: "You receive $10 credit. Everybody wins." },
-            ].map((s) => (
-              <div key={s.num} className="text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-canela/30 font-display text-xl text-canela">
-                  {s.num}
-                </div>
-                <h3 className="font-display text-xl text-ink">{s.title}</h3>
-                <p className="mt-2 text-sm text-ink/70">{s.text}</p>
-              </div>
-            ))}
+          <div className="md:col-span-2 flex flex-col gap-4 border-t border-canela/15 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11px] uppercase tracking-widest text-ink-soft">
+              {t.requiredHint}
+            </p>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-primary inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t.sending}
+                </>
+              ) : (
+                <>
+                  {t.send}
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
           </div>
-        </div>
+        </form>
       </section>
-    </>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div>
-      <div className="text-xs uppercase tracking-widest text-ink/50">
-        {label}
-      </div>
-      <div className="mt-1 font-display text-3xl text-canela">{value}</div>
     </div>
   );
 }
 
-function ShareMethod({
-  icon: Icon,
+// ============ HELPERS ============
+
+function Field({
   label,
-  description,
+  type = "text",
+  value,
+  onChange,
+  required,
 }: {
-  icon: any;
   label: string;
-  description: string;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-canela/15 bg-cream p-5">
-      <Icon className="h-5 w-5 text-canela" />
-      <div className="mt-3 font-display text-base text-ink">{label}</div>
-      <div className="mt-1 text-xs text-ink/60">{description}</div>
+    <div>
+      <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="mt-1.5 w-full rounded-full border border-canela/30 bg-white px-5 py-3 text-sm focus:border-canela-dark focus:outline-none"
+      />
     </div>
   );
 }

@@ -1,87 +1,74 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-
-export const metadata = { title: "About · Karyana Bakery" };
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 export default function AboutPage() {
+  const { locale } = useLocale();
+
   return (
     <>
-      <section className="container-bakery py-16 md:py-24">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <section className="relative overflow-hidden bg-cream py-20 md:py-28">
+        <div className="grain absolute inset-0 opacity-40" />
+        <div className="container-bakery relative grid items-center gap-12 md:grid-cols-2">
           <div>
-            <span className="eyebrow mb-3">Our story</span>
-            <h1 className="font-display text-[length:var(--text-display-lg)] leading-[var(--text-display-lg--line-height)] tracking-[var(--text-display-lg--letter-spacing)] text-ink">
-              A taste of home,{" "}
-              <span className="italic text-canela">since 2018.</span>
+            <span className="eyebrow">
+              {locale === "es" ? "Nuestra historia" : "Our story"}
+            </span>
+            <h1 className="mt-2 font-display text-[length:var(--text-display-lg)] leading-tight">
+              {locale === "es" ? (
+                <>
+                  Pan que sabe a{" "}
+                  <span className="font-script text-canela-dark">casa.</span>
+                </>
+              ) : (
+                <>
+                  Bread that tastes like{" "}
+                  <span className="font-script text-canela-dark">home.</span>
+                </>
+              )}
             </h1>
-            <div className="mt-8 space-y-5 text-ink/75">
-              <p>
-                Karyana Bakery began with a simple longing — the warm smell of
-                pan dulce on Sunday mornings, the crack of a sugar-topped concha,
-                the pride of baking the way abuelita taught us.
-              </p>
-              <p>
-                Founded in Calgary in 2018, we set out to bring a piece of Mexico
-                to our new home. Every loaf, every cake, every churro is
-                handcrafted with the same recipes, the same patience, the same
-                love we grew up with.
-              </p>
-              <p className="font-script text-2xl text-otomi-red">
-                Más que pan, un recuerdo de hogar.
-              </p>
-            </div>
+            <p className="mt-6 text-base leading-relaxed text-ink-soft md:text-lg">
+              {locale === "es"
+                ? "Karyana Ruiz Bakery nació en 2018 con una idea simple: traer a Calgary el sabor de la panadería mexicana auténtica, esa que despierta recuerdos de la cocina de la abuela."
+                : "Karyana Ruiz Bakery was born in 2018 with a simple idea: bring authentic Mexican bakery to Calgary — the kind that wakes up memories of grandma's kitchen."}
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-ink-soft md:text-lg">
+              {locale === "es"
+                ? "Cada concha, cada pastel, cada pieza la hacemos a mano con ingredientes seleccionados y mucho cariño. No usamos atajos. Solo la receta tradicional, paciencia, y horno caliente."
+                : "Every concha, every cake, every piece is handmade with selected ingredients and lots of love. No shortcuts. Just traditional recipes, patience, and a hot oven."}
+            </p>
           </div>
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[40px] bg-masa">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-canela-light">
             <Image
-              src="https://karyanabakery.ca/wp-content/uploads/2025/06/20241221_143840-Edited.png"
-              alt="Karyana Bakery"
-              fill
-              className="object-cover"
+              src="/logo.png"
+              alt="Karyana"
+              width={600}
+              height={750}
+              className="h-full w-full object-contain p-8"
             />
           </div>
         </div>
       </section>
 
-      <section className="bg-masa/60 py-20 md:py-28">
+      <section className="bg-masa py-20">
         <div className="container-bakery">
-          <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-            {[
-              {
-                title: "Handcrafted",
-                text: "Every item is made by hand in small batches. No shortcuts, no industrial equipment.",
-              },
-              {
-                title: "Fresh daily",
-                text: "We bake in the morning so your pan is warm when you pick it up.",
-              },
-              {
-                title: "From our family",
-                text: "Karyana is run by a Mexican family who believe food is love, shared.",
-              },
-            ].map((v, i) => (
-              <div key={i} className="text-center">
-                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-canela/30 text-canela font-display text-xl">
-                  0{i + 1}
-                </div>
-                <h3 className="font-display text-2xl text-ink">{v.title}</h3>
-                <p className="mt-3 text-sm text-ink/70">{v.text}</p>
-              </div>
-            ))}
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="font-display text-3xl md:text-4xl">
+              {locale === "es"
+                ? "Más que pan, un recuerdo de hogar."
+                : "More than bread, a home memory."}
+            </h2>
+            <p className="mt-4 text-base text-ink-soft md:text-lg">
+              {locale === "es"
+                ? "Cada batch que sale del horno lleva la intención de hacerte sonreír y de conectarte con tus raíces. Porque al final, una pieza de pan dulce es también una abrazo."
+                : "Every batch out of the oven carries the intention to make you smile and connect you to your roots. Because in the end, a piece of pan dulce is also a hug."}
+            </p>
+            <Link href="/shop" className="btn-primary mt-8 inline-flex">
+              {locale === "es" ? "Ver el menú" : "See the menu"}
+            </Link>
           </div>
-        </div>
-      </section>
-
-      <section className="container-bakery py-20 text-center">
-        <h2 className="section-title mx-auto max-w-2xl">
-          Come <span className="italic text-otomi-red">taste</span> the story.
-        </h2>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/shop" className="btn-primary">
-            Browse the menu
-          </Link>
-          <Link href="/contact" className="btn-ghost">
-            Say hello
-          </Link>
         </div>
       </section>
     </>

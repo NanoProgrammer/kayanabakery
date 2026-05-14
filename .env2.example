@@ -1,0 +1,55 @@
+# ============================================================
+# Karyana Bakery — environment variables
+# ============================================================
+# Copy this file to .env (or .env.local) and fill in real values.
+
+# ── Database ──────────────────────────────────────────────
+# Postgres connection string (Neon, Supabase, etc.)
+DATABASE_URL=postgres://user:pass@host:5432/karyana
+
+# ── Auth (NextAuth v5 / Auth.js) ──────────────────────────
+NEXTAUTH_SECRET=changeme-generate-with-openssl-rand-base64-32
+NEXTAUTH_URL=http://localhost:3000
+
+
+
+# ── Sanity CMS ────────────────────────────────────────────
+NEXT_PUBLIC_SANITY_PROJECT_ID=
+NEXT_PUBLIC_SANITY_DATASET=production
+NEXT_PUBLIC_SANITY_API_VERSION=2024-10-01
+SANITY_API_READ_TOKEN=
+SANITY_WEBHOOK_SECRET=changeme
+
+# ── Square ────────────────────────────────────────────────
+SQUARE_ACCESS_TOKEN=
+SQUARE_ENVIRONMENT=sandbox
+SQUARE_LOCATION_ID=
+NEXT_PUBLIC_SQUARE_APP_ID=
+NEXT_PUBLIC_SQUARE_LOCATION_ID=
+
+# Square subscription plan variation IDs
+# (Set up the plans in Square Dashboard once, then paste the IDs here)
+SQUARE_PLAN_ARTESANO_VARIATION_ID=
+SQUARE_PLAN_SELECTO_VARIATION_ID=
+SQUARE_PLAN_LEGENDARIO_VARIATION_ID=
+
+# ── Email (Resend) ────────────────────────────────────────
+
+RESEND_AUDIENCE_ID=
+EMAIL_FROM="Karyana Bakery <hola@karyanabakery.ca>"
+OWNER_EMAIL=karyana@karyanabakery.ca
+
+# ── Google Calendar (delivery → owner's calendar) ─────────
+# Service account that has been GIVEN ACCESS to the owner's calendar.
+# Steps to set up:
+#  1. Create service account in Google Cloud Console
+#  2. Enable Calendar API
+#  3. Generate JSON key, copy email + private_key
+#  4. Owner shares their calendar with the service account email
+#     (Settings → Share with specific people → "Make changes to events")
+GOOGLE_CALENDAR_ID=2fadb4c5625d8f52dd7969f195b0e9bf62abd71fd6b27e4929ecf63d87950742@group.calendar.google.com
+# Note: keep \n as literal "\n" in env files — code handles the conversion.
+GOOGLE_SERVICE_ACCOUNT_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...etc...\n-----END PRIVATE KEY-----\n"
+
+# ── App ───────────────────────────────────────────────────
+NEXT_PUBLIC_APP_URL=http://localhost:3000

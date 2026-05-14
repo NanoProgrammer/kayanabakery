@@ -5,16 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-CA", {
+export function formatPrice(price: number, locale: string = "en-CA") {
+  return new Intl.NumberFormat(locale === "es" ? "es-MX" : "en-CA", {
     style: "currency",
     currency: "CAD",
     minimumFractionDigits: price % 1 === 0 ? 0 : 2,
   }).format(price);
 }
 
-export function formatPriceFromCents(cents: number) {
-  return formatPrice(cents / 100);
+export function formatPriceFromCents(cents: number, locale: string = "en-CA") {
+  return formatPrice(cents / 100, locale);
 }
 
 export function generateOrderNumber() {

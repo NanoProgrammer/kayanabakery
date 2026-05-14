@@ -1,352 +1,289 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
- * Karyana Bakery — Sanity Seed Script (resilient v2)
+ * Seed Karyana Sanity dataset with starter content.
  *
- * Differences from v1:
- *   - Uses Picsum (always reliable) as primary source
- *   - Falls back gracefully if any image fails (creates doc without image)
- *   - Retries each image once before giving up
- *   - Will NEVER stop seeding because of a broken image URL
+ * Usage:
+ *   npm run seed:sanity
  *
- * USAGE:
- *   1. Add SANITY_API_WRITE_TOKEN to .env.local (Editor permissions)
- *   2. npm install -D tsx dotenv
- *   3. npx tsx scripts/seed-sanity.ts
+ * Requires env: NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET, SANITY_API_WRITE_TOKEN
  */
 
-import { createClient } from "next-sanity";
-import { config as loadEnv } from "dotenv";
-loadEnv();
-loadEnv({ path: ".env.example", override: true });
-
-const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
-const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || "production";
-const token = process.env.SANITY_API_READ_TOKEN;
-
-if (!projectId) {
-  console.error(
-    "\n❌ Missing NEXT_PUBLIC_SANITY_PROJECT_ID in .env.local\n" +
-      "   Find it at https://sanity.io/manage → your project\n"
-  );
-  process.exit(1);
-}
-
-if (!token) {
-  console.error(
-    "\n❌ Missing SANITY_API_READ_TOKEN in .env.local\n" +
-      "   Go to https://sanity.io/manage → your project → API → Tokens\n" +
-      '   Create a token with "Editor" permissions, then add to .env.local:\n' +
-      '   SANITY_API_READ_TOKEN="sk..."\n'
-  );
-  process.exit(1);
-}
+require("dotenv").config({ path: ".env.local" });
+const { createClient } = require("@sanity/client");
 
 const client = createClient({
-  projectId,
-  dataset,
-  apiVersion: "2024-10-01",
-  token,
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
+  apiVersion: "2024-01-01",
+  token: process.env.SANITY_API_WRITE_TOKEN,
   useCdn: false,
 });
 
-// ============================================
-// IMAGE URLS — using Picsum + reliable Unsplash
-// Each gets a stable seed for consistent images
-// ============================================
-const IMAGES = {
-  // Hero & generic — using Picsum with food-themed seeds
-  hero: "https://picsum.photos/seed/karyana-hero/1200/1500",
-  conchasCategory: "https://picsum.photos/seed/karyana-conchas/800/800",
-  cakesCategory: "https://picsum.photos/seed/karyana-cakes/800/800",
-  breadCategory: "https://picsum.photos/seed/karyana-bread/800/800",
-  churrosCategory: "https://picsum.photos/seed/karyana-churros/800/800",
+if (!process.env.SANITY_API_WRITE_TOKEN) {
+  console.error(
+    "❌ Missing SANITY_API_WRITE_TOKEN. Get a write token in Sanity manage console."
+  );
+  process.exit(1);
+}
 
-  // Products
-  conchaTradicional: "https://picsum.photos/seed/concha-trad/800/800",
-  conchaChocolate: "https://picsum.photos/seed/concha-choc/800/800",
-  conchasPack: "https://picsum.photos/seed/concha-pack/800/800",
-  megaConcha: "https://picsum.photos/seed/concha-mega/800/800",
-  tresLeches: "https://picsum.photos/seed/tres-leches/800/800",
-  customCake: "https://picsum.photos/seed/custom-cake/800/800",
-  churros: "https://picsum.photos/seed/churros-prod/800/800",
-  cornPancakes: "https://picsum.photos/seed/pancakes/800/800",
-  panDulceMix: "https://picsum.photos/seed/pan-mix/800/800",
-  cuernos: "https://picsum.photos/seed/cuernos/800/800",
-  familyBox: "https://picsum.photos/seed/family-box/800/800",
-  fiestaBox: "https://picsum.photos/seed/fiesta-box/800/800",
-  megaFiesta: "https://picsum.photos/seed/mega-fiesta/800/800",
-  polvorones: "https://picsum.photos/seed/polvorones/800/800",
-  panDeMuerto: "https://picsum.photos/seed/pan-muerto/800/800",
+const FAQS = [
+  // General
+  {
+    _type: "faq",
+    category: "general",
+    questionEn: "Where is Karyana located?",
+    questionEs: "¿Dónde está Karyana?",
+    answerEn: "We're a home-based bakery in Southeast Calgary. We deliver across Calgary and offer pickup at scheduled times.",
+    answerEs: "Somos una panadería casera en el Sureste de Calgary. Hacemos envíos por todo Calgary y ofrecemos recolección en horarios programados.",
+    order: 1,
+  },
+  {
+    _type: "faq",
+    category: "general",
+    questionEn: "Do you bake fresh every day?",
+    questionEs: "¿Hornean fresco todos los días?",
+    answerEn: "Yes — every order is baked fresh the day of pickup or delivery. Some specialty cakes need 24h advance notice.",
+    answerEs: "Sí — cada orden se hornea fresca el día de la entrega o recolección. Algunos pasteles especiales requieren 24h de anticipación.",
+    order: 2,
+  },
+  // Orders
+  {
+    _type: "faq",
+    category: "orders",
+    questionEn: "How do I place an order?",
+    questionEs: "¿Cómo hago un pedido?",
+    answerEn: "Browse the shop, add items to your cart, and checkout. You can choose pickup or delivery and pay securely with a card.",
+    answerEs: "Explora la tienda, agrega productos al carrito y paga. Puedes elegir recolección o envío y pagar con tarjeta de forma segura.",
+    order: 1,
+  },
+  {
+    _type: "faq",
+    category: "orders",
+    questionEn: "Can I modify or cancel my order?",
+    questionEs: "¿Puedo modificar o cancelar mi orden?",
+    answerEn: "Contact us as soon as possible. We can usually accommodate changes if your order hasn't started baking yet.",
+    answerEs: "Contáctanos lo antes posible. Generalmente podemos acomodar cambios si tu orden aún no ha empezado a hornearse.",
+    order: 2,
+  },
+  // Delivery
+  {
+    _type: "faq",
+    category: "delivery",
+    questionEn: "When do you deliver?",
+    questionEs: "¿Cuándo entregan?",
+    answerEn: "Standard delivery windows are Monday 6-8pm and Friday 7-9pm. Members get additional weekday windows from 9am-5pm.",
+    answerEs: "Los horarios estándar son Lunes 6-8pm y Viernes 7-9pm. Los miembros tienen horarios adicionales entre 9am-5pm de lunes a viernes.",
+    order: 1,
+  },
+  {
+    _type: "faq",
+    category: "delivery",
+    questionEn: "Is delivery free?",
+    questionEs: "¿El envío es gratis?",
+    answerEn: "First delivery is free for SE Calgary residents. Members get free delivery on every order with a minimum purchase. Otherwise delivery is $7.",
+    answerEs: "La primera entrega es gratis para residentes del Sureste de Calgary. Los miembros tienen envío gratis en cada orden con compra mínima. Si no, el envío es $7.",
+    order: 2,
+  },
+  // Custom cakes
+  {
+    _type: "faq",
+    category: "custom-cakes",
+    questionEn: "How far in advance should I order a custom cake?",
+    questionEs: "¿Con cuánta anticipación debo pedir un pastel personalizado?",
+    answerEn: "We recommend ordering at least 5-7 days ahead for custom cakes. For standard sizes, 48h is usually enough.",
+    answerEs: "Recomendamos ordenar al menos 5-7 días antes para pasteles personalizados. Para tamaños estándar, 48h suele ser suficiente.",
+    order: 1,
+  },
+  // Memberships
+  {
+    _type: "faq",
+    category: "memberships",
+    questionEn: "Can I cancel my membership anytime?",
+    questionEs: "¿Puedo cancelar mi membresía cuando quiera?",
+    answerEn: "Yes. You'll keep your benefits until the end of the current billing period, then you'll go back to the free Basico plan.",
+    answerEs: "Sí. Mantienes tus beneficios hasta el final del periodo de facturación actual, luego regresas al plan Básico gratuito.",
+    order: 1,
+  },
+  {
+    _type: "faq",
+    category: "memberships",
+    questionEn: "How do points work?",
+    questionEs: "¿Cómo funcionan los puntos?",
+    answerEn: "100 points = $1 CAD. You earn points on every purchase based on your tier (1x to 10x). Redeem them at checkout.",
+    answerEs: "100 puntos = $1 CAD. Ganas puntos en cada compra según tu tier (de 1x a 10x). Canjéalos al pagar.",
+    order: 2,
+  },
+  // Payment
+  {
+    _type: "faq",
+    category: "payment",
+    questionEn: "What payment methods do you accept?",
+    questionEs: "¿Qué métodos de pago aceptan?",
+    answerEn: "We accept all major credit and debit cards through Square — secure encrypted processing.",
+    answerEs: "Aceptamos todas las tarjetas de crédito y débito mayores a través de Square — procesamiento seguro y encriptado.",
+    order: 1,
+  },
+];
 
-  // Promo & events
-  promoTresLeches: "https://picsum.photos/seed/promo-tres/900/900",
-  eventMarket: "https://picsum.photos/seed/event-market/800/600",
-  eventMothersDay: "https://picsum.photos/seed/event-mom/800/600",
-  eventMuertos: "https://picsum.photos/seed/event-muertos/800/600",
-  eventChristmas: "https://picsum.photos/seed/event-xmas/800/600",
+const MEMBERSHIP_PLANS_CMS = [
+  {
+    _type: "membershipPlan",
+    tier: "BASICO",
+    tagEn: "Free forever",
+    tagEs: "Gratis siempre",
+    descriptionEn: "Start here. No commitment.",
+    descriptionEs: "Empieza aquí. Sin compromiso.",
+    isFeatured: false,
+    order: 1,
+  },
+  {
+    _type: "membershipPlan",
+    tier: "ARTESANO",
+    tagEn: "Save on every order",
+    tagEs: "Ahorra en cada orden",
+    descriptionEn: "Yearly plan with free delivery and 2x points.",
+    descriptionEs: "Plan anual con envío gratis y 2x puntos.",
+    isFeatured: false,
+    order: 2,
+  },
+  {
+    _type: "membershipPlan",
+    tier: "SELECTO",
+    tagEn: "Most loved",
+    tagEs: "El favorito",
+    descriptionEn: "Best value. 4x points and 6 free breads in your first box.",
+    descriptionEs: "Mejor valor. 4x puntos y 6 panes gratis en tu primera caja.",
+    highlightEn: "Most popular",
+    highlightEs: "Más popular",
+    isFeatured: true,
+    order: 3,
+  },
+  {
+    _type: "membershipPlan",
+    tier: "LEGENDARIO",
+    tagEn: "Full access",
+    tagEs: "Acceso total",
+    descriptionEn: "All benefits, 5x points, 4 free new breads per month.",
+    descriptionEs: "Todos los beneficios, 5x puntos, 4 panes nuevos al mes.",
+    isFeatured: false,
+    order: 4,
+  },
+  {
+    _type: "membershipPlan",
+    tier: "EMBAJADOR",
+    tagEn: "By application",
+    tagEs: "Por aplicación",
+    descriptionEn: "Free membership for community ambassadors. 10x points, paid deliveries.",
+    descriptionEs: "Membresía gratuita para embajadores. 10x puntos, entregas pagadas.",
+    isFeatured: false,
+    order: 5,
+  },
+];
+
+const POPUP_BANNER = {
+  _type: "popupBanner",
+  isActive: false, // off by default — owner can turn it on
+  mode: "modal",
+  frequency: "session",
+  titleEn: "Welcome to Karyana 🌸",
+  titleEs: "Bienvenido a Karyana 🌸",
+  bodyEn: "Use code WELCOME10 for 10% off your first order.",
+  bodyEs: "Usa el código WELCOME10 para 10% en tu primera orden.",
+  ctaLabelEn: "Shop now",
+  ctaLabelEs: "Comprar",
+  ctaHref: "/shop",
 };
 
-async function tryFetch(url, retries = 1){
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url, {
-        redirect: "follow",
-        headers: { "User-Agent": "karyana-seed-script/1.0" },
-      });
-      if (!res.ok) {
-        if (attempt === retries) return null;
-        await new Promise((r) => setTimeout(r, 1000));
-        continue;
-      }
-      return Buffer.from(await res.arrayBuffer());
-    } catch {
-      if (attempt === retries) return null;
-      await new Promise((r) => setTimeout(r, 1000));
-    }
+const SAMPLE_REVIEWS = [
+  {
+    _type: "googleReview",
+    authorName: "Maria G.",
+    rating: 5,
+    textEn: "The conchas remind me of home. Best Mexican bakery in Calgary, hands down.",
+    textEs: "Las conchas me recuerdan a casa. Sin duda la mejor panadería mexicana de Calgary.",
+    isFeatured: true,
+    order: 1,
+  },
+  {
+    _type: "googleReview",
+    authorName: "James W.",
+    rating: 5,
+    textEn: "Tres leches cake for my wife's birthday — absolutely perfect. Will order again.",
+    textEs: "Pastel de tres leches para el cumpleaños de mi esposa — absolutamente perfecto. Volveré a pedir.",
+    isFeatured: true,
+    order: 2,
+  },
+  {
+    _type: "googleReview",
+    authorName: "Sofia R.",
+    rating: 5,
+    textEn: "Karyana is now part of our weekly routine. The membership is so worth it.",
+    textEs: "Karyana ya es parte de nuestra rutina semanal. La membresía vale muchísimo la pena.",
+    isFeatured: true,
+    order: 3,
+  },
+];
+
+const SITE_SETTINGS = {
+  _type: "siteSettings",
+  _id: "siteSettings",
+  storeName: "Karyana Ruiz Bakery",
+  taglineEn: "More than bread, a home memory.",
+  taglineEs: "Más que pan, un recuerdo de hogar.",
+  heroTitle: "Mexican pan dulce,\nbaked with love in Calgary.",
+  heroTitleEs: "Pan dulce mexicano,\nhecho con amor en Calgary.",
+  heroSubtitle:
+    "Conchas, custom cakes, and the authentic bakery you remember from home.",
+  heroSubtitleEs:
+    "Conchas, pasteles personalizados y la auténtica panadería que recuerdas de casa.",
+  contactEmail: "hola@karyanabakery.ca",
+  contactPhone: "(403) 555-1234",
+  referralDiscount: 10,
+  announcementBarEn:
+    "✨ Free delivery on your first order in SE Calgary",
+  announcementBarEs:
+    "✨ Envío gratis en tu primera orden en el Sureste de Calgary",
+};
+
+async function main() {
+  console.log("🌱 Seeding Sanity dataset...\n");
+
+  // Site settings (singleton)
+  await client.createOrReplace(SITE_SETTINGS);
+  console.log("✓ Site settings");
+
+  // FAQs
+  for (const faq of FAQS) {
+    await client.create(faq);
   }
-  return null;
+  console.log(`✓ ${FAQS.length} FAQs`);
+
+  // Membership plan CMS docs
+  for (const plan of MEMBERSHIP_PLANS_CMS) {
+    await client.create(plan);
+  }
+  console.log(`✓ ${MEMBERSHIP_PLANS_CMS.length} membership plan docs`);
+
+  // Popup banner (off by default)
+  await client.create(POPUP_BANNER);
+  console.log("✓ Popup banner (inactive by default)");
+
+  // Sample reviews
+  for (const review of SAMPLE_REVIEWS) {
+    await client.create(review);
+  }
+  console.log(`✓ ${SAMPLE_REVIEWS.length} sample Google reviews\n`);
+
+  console.log("✅ Sanity seed complete!");
+  console.log(
+    "\nNext: visit /studio to upload images for products, categories, hero, etc."
+  );
+  console.log(
+    "Note: WELCOME10 coupon must be created via /admin or directly in the database."
+  );
 }
 
-async function uploadImageFromUrl(
-  url,
-  filename
-){
-  process.stdout.write(`  ⬇️  ${filename}... `);
-  const buffer = await tryFetch(url, 1);
-  if (!buffer) {
-    console.log("⚠️  skipped (couldn't fetch)");
-    return null;
-  }
-  try {
-    const asset = await client.assets.upload("image", buffer, { filename });
-    console.log("✓");
-    return asset._id;
-  } catch (err) {
-    console.log("⚠️  skipped (upload failed)");
-    return null;
-  }
-}
-
-function imageRef(assetId) {
-  if (!assetId) return undefined;
-  return { _type: "image", asset: { _type: "reference", _ref: assetId } };
-}
-
-async function run() {
-  console.log("🥖 Seeding Karyana Bakery Sanity dataset...\n");
-
-  // -----------------------------------------------------------
-  // 1. Upload all placeholder images first
-  // -----------------------------------------------------------
-  console.log("📸 Uploading images...");
-  const imageIds = {};
-  for (const [key, url] of Object.entries(IMAGES)) {
-    imageIds[key] = await uploadImageFromUrl(url, `${key}.jpg`);
-  }
-  const uploaded = Object.values(imageIds).filter(Boolean).length;
-  console.log(`✅ Uploaded ${uploaded}/${Object.keys(IMAGES).length} images\n`);
-
-  // Helper to optionally include image field
-  const withImage = (key) => {
-    const ref = imageRef(imageIds[key]);
-    return ref ? { image: ref } : {};
-  };
-  const withHeroImage = () => {
-    const ref = imageRef(imageIds.hero);
-    return ref ? { heroImage: ref } : {};
-  };
-
-  // -----------------------------------------------------------
-  // 2. Site Settings (singleton)
-  // -----------------------------------------------------------
-  console.log("⚙️  Creating Site Settings...");
-  await client.createOrReplace({
-    _id: "siteSettings",
-    _type: "siteSettings",
-    announcementBar: [
-      "✦ Free pickup in Calgary",
-      "✦ Fresh baked daily — handmade with love",
-      "✦ Order 48h in advance for custom cakes",
-      "✦ More than bread, a home memory",
-    ],
-    heroTitle: "More than bread, a home memory.",
-    heroSubtitle:
-      "Authentic Mexican baked goods bringing the flavors of Mexico to your table — fresh conchas, tres leches cakes, churros, and more. Handmade with love in YYC since 2018.",
-    ...withHeroImage(),
-    referralDiscount: 10,
-    pickupAddress: "Calgary, AB",
-    contactEmail: "karyana@karyanabakery.ca",
-  });
-
-  // -----------------------------------------------------------
-  // 3. Categories
-  // -----------------------------------------------------------
-  console.log("🏷️  Creating Categories...");
-  const categories = [
-    { slug: "conchas", name: "Conchas", tagline: "Soft, fluffy, colorful", description: "Our signature soft sweet bread topped with vanilla sugar shells. Baked by Karina and family — each bite feels like home again.", accent: "bg-otomi-red", featured: true, order: 1, image: "conchasCategory" },
-    { slug: "cakes", name: "Cakes", tagline: "Next-level cakes", description: "Want to WOW your guests? We create the perfect cakes for your special event — made with premium ingredients and just the right touch of sweetness.", accent: "bg-otomi-teal", featured: true, order: 2, image: "cakesCategory" },
-    { slug: "traditional-mexican-bread", name: "Traditional Mexican Bread", tagline: "Daily fresh", description: "Authentic Mexican pan dulce baked with traditional recipes passed down through generations.", accent: "bg-otomi-orange", featured: true, order: 3, image: "breadCategory" },
-    { slug: "churros", name: "Churros", tagline: "Crispy outside, soft inside", description: "Rolled in cinnamon sugar and made to order. Dip 'em in Dulce de Leche for the ultimate treat.", accent: "bg-otomi-yellow", featured: true, order: 4, image: "churrosCategory" },
-    { slug: "corn-pancakes", name: "Corn Pancakes", tagline: "A hug from abuelita", description: "Fluffy corn pancakes dancing in creamy dulce de leche.", accent: "bg-otomi-green", featured: false, order: 5, image: "cornPancakes" },
-    { slug: "mexican-goodies", name: "Mexican Goodies", tagline: "Sweet treats", description: "Traditional Mexican sweets and treats — the kind you grew up with.", accent: "bg-otomi-purple", featured: false, order: 6, image: "polvorones" },
-    { slug: "boxes", name: "Boxes", tagline: "Curated assortments", description: "Curated boxes of our most-loved bread and treats — perfect for sharing or gifting.", accent: "bg-concha-rosa", featured: false, order: 7, image: "familyBox" },
-    { slug: "pan-de-muerto", name: "Pan de Muerto", tagline: "Día de los Muertos", description: "Traditional bread of the dead — sweet, anise-scented, dusted in sugar.", accent: "bg-otomi-red", featured: false, order: 8, image: "panDeMuerto" },
-  ];
-
-  for (const c of categories) {
-    await client.createOrReplace({
-      _id: `category-${c.slug}`,
-      _type: "category",
-      name: c.name,
-      slug: { _type: "slug", current: c.slug },
-      tagline: c.tagline,
-      description: c.description,
-      ...withImage(c.image),
-      accentColor: c.accent,
-      isFeatured: c.featured,
-      displayOrder: c.order,
-    });
-  }
-
-  // -----------------------------------------------------------
-  // 4. Products
-  // -----------------------------------------------------------
-  console.log("🥖 Creating Products...");
-  const products = [
-    { slug: "concha-tradicional", name: "Concha Tradicional", desc: "Soft, fluffy sweet bread with our signature vanilla sugar shell topping.", price: 4.50, tag: "bestseller", featured: true, order: 1, unit: "each", lead: 0, allergens: ["gluten","dairy","eggs"], cats: ["conchas","traditional-mexican-bread"], image: "conchaTradicional" },
-    { slug: "concha-de-chocolate", name: "Concha de Chocolate", desc: "Our classic concha with rich chocolate sugar topping. A chocolate lover's dream.", price: 4.50, tag: "bestseller", featured: true, order: 2, unit: "each", lead: 0, allergens: ["gluten","dairy","eggs"], cats: ["conchas"], image: "conchaChocolate" },
-    { slug: "conchas-pack-6", name: "Conchas Pack of 6", desc: "Mix of 6 conchas — perfect for sharing or hoarding (we won't judge).", price: 27.00, tag: "bestseller", featured: true, order: 3, unit: "pack of 6", lead: 0, allergens: ["gluten","dairy","eggs"], cats: ["conchas","boxes"], image: "conchasPack" },
-    { slug: "mega-concha", name: "Mega Concha", desc: "Like a regular concha, but five times the size. Perfect for parties or one very serious snacker.", price: 35.00, tag: "limited", featured: false, order: 4, unit: "each", lead: 48, allergens: ["gluten","dairy","eggs"], cats: ["conchas"], image: "megaConcha" },
-    { slug: "tres-leches-cake", name: "Tres Leches Cake", desc: "Soft sponge soaked in three milks — sweet, creamy, melt-in-your-mouth perfection.", price: 55.00, compareAt: 95.00, tag: "bestseller", featured: true, order: 5, unit: "each", lead: 48, allergens: ["gluten","dairy","eggs"], cats: ["cakes"], image: "tresLeches" },
-    { slug: "custom-celebration-cake", name: "Custom Celebration Cake", desc: "Want to WOW your guests? Tell us your theme, flavors, and date — we'll create something unforgettable.", price: 85.00, tag: "new", featured: true, order: 6, unit: "each", lead: 72, allergens: ["gluten","dairy","eggs"], cats: ["cakes"], image: "customCake" },
-    { slug: "classic-churros", name: "Classic Churros", desc: "Crispy outside, soft inside, rolled in cinnamon sugar. Dip 'em in dulce de leche for the ultimate treat.", price: 12.00, tag: "bestseller", featured: true, order: 7, unit: "6-pack", lead: 0, allergens: ["gluten","dairy","eggs"], cats: ["churros"], image: "churros" },
-    { slug: "corn-pancakes-dulce-de-leche", name: "Corn Pancakes with Dulce de Leche", desc: "Fluffy corn pancakes dancing in creamy dulce de leche — like a hug from abuelita in every bite.", price: 15.00, tag: "new", featured: true, order: 8, unit: "4-pack", lead: 24, allergens: ["dairy","eggs"], cats: ["corn-pancakes"], image: "cornPancakes" },
-    { slug: "pan-dulce-mix-box", name: "Pan Dulce Mix Box", desc: "An assortment of our traditional Mexican sweet bread — the perfect introduction to pan dulce.", price: 35.00, tag: "", featured: false, order: 9, unit: "box", lead: 24, allergens: ["gluten","dairy","eggs"], cats: ["traditional-mexican-bread","boxes"], image: "panDulceMix" },
-    { slug: "cuernos", name: "Cuernos", desc: "Soft, slightly sweet horn-shaped bread — Mexico's answer to the croissant.", price: 4.00, tag: "", featured: false, order: 10, unit: "each", lead: 0, allergens: ["gluten","dairy","eggs"], cats: ["traditional-mexican-bread"], image: "cuernos" },
-    { slug: "family-box", name: "Family Box", desc: "12 pieces of mixed pan dulce — enough for the whole family. Saturday morning sorted.", price: 54.00, tag: "bestseller", featured: false, order: 11, unit: "12 pieces", lead: 24, allergens: ["gluten","dairy","eggs"], cats: ["boxes"], image: "familyBox" },
-    { slug: "fiesta-box", name: "Fiesta Box", desc: "24 pieces — perfect for office gatherings, baby showers, or just because you love everyone.", price: 108.00, tag: "", featured: false, order: 12, unit: "24 pieces", lead: 48, allergens: ["gluten","dairy","eggs"], cats: ["boxes"], image: "fiestaBox" },
-    { slug: "mega-fiesta-box", name: "Mega Fiesta Box", desc: "30 pieces of pan dulce assortment. The party box.", price: 120.00, tag: "", featured: false, order: 13, unit: "30 pieces", lead: 48, allergens: ["gluten","dairy","eggs"], cats: ["boxes"], image: "megaFiesta" },
-    { slug: "polvorones", name: "Polvorones", desc: "Crumbly Mexican shortbread cookies dusted in cinnamon sugar. Goes perfect with coffee.", price: 18.00, tag: "", featured: false, order: 14, unit: "dozen", lead: 0, allergens: ["gluten","dairy"], cats: ["mexican-goodies"], image: "polvorones" },
-    { slug: "pan-de-muerto", name: "Pan de Muerto", desc: "Traditional bread of the dead — sweet, anise-scented, dusted in sugar. Available October–November.", price: 8.00, tag: "seasonal", featured: false, order: 15, unit: "each", lead: 24, inStock: false, allergens: ["gluten","dairy","eggs"], cats: ["pan-de-muerto"], image: "panDeMuerto" },
-  ];
-
-  for (const p of products) {
-    await client.createOrReplace({
-      _id: `product-${p.slug}`,
-      _type: "product",
-      name: p.name,
-      slug: { _type: "slug", current: p.slug },
-      description: p.desc,
-      price: p.price,
-      ...(p.compareAt ? { compareAtPrice: p.compareAt } : {}),
-      ...withImage(p.image),
-      tag: p.tag,
-      inStock: p.inStock !== false,
-      isFeatured: p.featured,
-      displayOrder: p.order,
-      unit: p.unit,
-      leadTime: p.lead,
-      allergens: p.allergens,
-      categories: p.cats.map((cs, i) => ({
-        _key: `cat-${i}`,
-        _type: "reference",
-        _ref: `category-${cs}`,
-      })),
-    });
-  }
-
-  // -----------------------------------------------------------
-  // 5. Testimonials
-  // -----------------------------------------------------------
-  console.log("💬 Creating Testimonials...");
-  const testimonials = [
-    { id: "1", quote: "Best conchas I've had outside of Mexico. Tastes exactly like the ones from my abuelita's panadería.", author: "Maria G.", role: "Calgary, AB", accent: "text-otomi-red", order: 1 },
-    { id: "2", quote: "The custom cake for my daughter's quinceañera was absolutely stunning. Everyone is still talking about it.", author: "Sofía R.", role: "Quinceañera client", accent: "text-otomi-teal", order: 2 },
-    { id: "3", quote: "Karina and her family bake with so much love. You can taste the tradition in every bite.", author: "Carlos M.", role: "Calgary, AB", accent: "text-otomi-orange", order: 3 },
-  ];
-  for (const t of testimonials) {
-    await client.createOrReplace({
-      _id: `testimonial-${t.id}`,
-      _type: "testimonial",
-      quote: t.quote,
-      author: t.author,
-      role: t.role,
-      accent: t.accent,
-      isFeatured: true,
-      displayOrder: t.order,
-    });
-  }
-
-  // -----------------------------------------------------------
-  // 6. Home Promo
-  // -----------------------------------------------------------
-  console.log("🎯 Creating Home Promo...");
-  await client.createOrReplace({
-    _id: "homePromo-tres-leches",
-    _type: "homePromo",
-    enabled: true,
-    eyebrow: "Limited Time",
-    title: "Tres Leches Sale",
-    description:
-      "Our beloved Tres Leches Cake is on sale this month — soft sponge soaked in three milks, melt-in-your-mouth perfection. Save $40 while supplies last.",
-    ...withImage("promoTresLeches"),
-    ctaLabel: "Order yours now",
-    ctaHref: "/product/tres-leches-cake",
-    discount: "$40 OFF",
-    validUntil: "Apr 30",
-  });
-
-  // -----------------------------------------------------------
-  // 7. Events
-  // -----------------------------------------------------------
-  console.log("📅 Creating Events...");
-  const events = [
-    { slug: "farmers-makers-market-may-2026", title: "Farmers & Makers Market", start: "2026-05-23T17:00:00.000Z", end: "2026-05-23T21:00:00.000Z", label: "Every Saturday · May 23 – Oct 17", location: "cSpace Marda Loop", address: "1721 29 Ave SW, Calgary, AB", desc: "Find us every Saturday at the Farmers & Makers Market — fresh batches of conchas, churros, and pan dulce.", url: "https://www.farmersmakersmarket.ca/", image: "eventMarket" },
-    { slug: "mothers-day-popup-2026", title: "Mother's Day Concha Pop-up", start: "2026-05-10T17:00:00.000Z", label: "May 10, 2026", location: "Calgary, AB", desc: "Special Mother's Day batch — heart-shaped conchas, custom cakes, and limited edition flowers-decorated pan dulce. Pre-orders only.", image: "eventMothersDay" },
-    { slug: "dia-de-muertos-2026", title: "Día de los Muertos Celebration", start: "2026-11-01T07:00:00.000Z", end: "2026-11-02T07:00:00.000Z", label: "Nov 1 – 2, 2026", location: "Calgary, AB", desc: "Pre-orders for Pan de Muerto open in October. Traditional anise-scented bread of the dead, baked the way abuelita taught us.", image: "eventMuertos" },
-    { slug: "christmas-rosca-reyes-2026", title: "Christmas Market — Rosca de Reyes Pre-orders", start: "2026-12-15T18:00:00.000Z", label: "December 15, 2026", location: "Calgary, AB", desc: "Pre-orders for Rosca de Reyes (Three Kings bread) and holiday gift boxes open in mid-December.", image: "eventChristmas" },
-  ];
-  for (const e of events) {
-    await client.createOrReplace({
-      _id: `event-${e.slug}`,
-      _type: "event",
-      title: e.title,
-      slug: { _type: "slug", current: e.slug },
-      startDate: e.start,
-      ...(e.end ? { endDate: e.end } : {}),
-      dateLabel: e.label,
-      location: e.location,
-      ...(e.address ? { address: e.address } : {}),
-      ...(e.desc
-        ? {
-            description: [
-              {
-                _type: "block",
-                _key: "block1",
-                children: [{ _type: "span", _key: "span1", text: e.desc }],
-              },
-            ],
-          }
-        : {}),
-      ...(e.url ? { externalUrl: e.url } : {}),
-      ...withImage(e.image),
-      isFeatured: true,
-    });
-  }
-
-  console.log("\n✅ Seeding complete!");
-  console.log(`\n📊 Summary:`);
-  console.log(`   • 1 Site Settings`);
-  console.log(`   • ${categories.length} Categories`);
-  console.log(`   • ${products.length} Products`);
-  console.log(`   • ${testimonials.length} Testimonials`);
-  console.log(`   • 1 Home Promo`);
-  console.log(`   • ${events.length} Events`);
-  console.log(`   • ${uploaded}/${Object.keys(IMAGES).length} Images uploaded`);
-  console.log("\n👉 Visit http://localhost:3000/ to see your site");
-  console.log("👉 Visit http://localhost:3000/studio to edit content");
-}
-
-run().catch((err) => {
-  console.error("\n❌ Seed failed:", err);
+main().catch((err) => {
+  console.error("Seed failed:", err);
   process.exit(1);
 });

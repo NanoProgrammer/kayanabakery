@@ -2,13 +2,24 @@ import { defineConfig } from "sanity";
 import { structureTool } from "sanity/structure";
 import { visionTool } from "@sanity/vision";
 import { schemaTypes } from "./sanity/schemas";
+import { karyanaStructure } from "./sanity/structure";
 
 export default defineConfig({
-  name: "karyana-bakery",
-  title: "Karyana Bakery Studio",
+  name: "default",
+  title: "Karyana Bakery",
+  basePath: "/studio",
+
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
-  basePath: "/studio",
-  plugins: [structureTool(), visionTool()],
-  schema: { types: schemaTypes },
+
+  plugins: [
+    structureTool({
+      structure: karyanaStructure,
+    }),
+    visionTool(),
+  ],
+
+  schema: {
+    types: schemaTypes,
+  },
 });

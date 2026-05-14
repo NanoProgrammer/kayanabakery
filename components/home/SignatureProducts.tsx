@@ -1,31 +1,40 @@
+"use client";
+
+import Link from "next/link";
+import { useLocale } from "@/lib/i18n/locale-provider";
 import { ProductCard } from "@/components/product/ProductCard";
 import type { Product } from "@/types";
 
-type Props = { products: Product[] };
-
-export function SignatureProducts({ products }: Props) {
+export function SignatureProducts({ products }: { products: Product[] }) {
+  const { t } = useLocale();
   if (!products?.length) return null;
 
   return (
-    <section className="relative bg-masa/60 py-20 md:py-28">
-      <div className="absolute inset-x-0 top-0 h-1 divider-otomi opacity-40" />
+    <section className="bg-masa py-24">
       <div className="container-bakery">
-        <div className="mb-14 text-center">
-          <span className="eyebrow mb-3">Signature</span>
-          <h2 className="section-title mx-auto max-w-2xl">
-            The ones that made us{" "}
-            <span className="italic text-otomi-red">famous.</span>
+        <div className="mb-12 max-w-3xl">
+          <span className="eyebrow">{t("home.signatureEyebrow")}</span>
+          <h2 className="section-title mt-2">
+            {t("home.signatureTitle")}{" "}
+            <span className="font-script text-canela-dark">
+              {t("home.signatureTitleAccent")}
+            </span>
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-ink/70">
-            Tried, tested, and beloved by the Calgary community. Order ahead —
-            these go fast.
+          <p className="mt-4 text-base text-ink-soft md:text-lg">
+            {t("home.signatureSubtitle")}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {products.slice(0, 8).map((product) => (
-            <ProductCard key={product._id} product={product} />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {products.slice(0, 8).map((p) => (
+            <ProductCard key={p._id} product={p} />
           ))}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link href="/shop" className="btn-ghost">
+            {t("home.seeFullMenu")} →
+          </Link>
         </div>
       </div>
     </section>

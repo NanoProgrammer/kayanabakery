@@ -30,10 +30,10 @@ export async function markAmbassadorDeliveryPaid(input: {
 export async function listUnpaidAmbassadorDeliveries(ambassadorId?: string) {
   return prisma.ambassadorDelivery.findMany({
     where: {
-      status: { in: ["COMPLETED"] },
+      status: { in: ["DELIVERED"] },
       ...(ambassadorId ? { ambassadorId } : {}),
     },
     include: { order: true, ambassador: true },
-    orderBy: { completedAt: "desc" },
+    orderBy: { deliveredAt: "desc" },
   });
 }

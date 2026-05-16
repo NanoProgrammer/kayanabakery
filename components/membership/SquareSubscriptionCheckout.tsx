@@ -100,7 +100,7 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
 
               if (tokenResult.status !== "OK") {
                 setError(
-                  tokenResult.errors?.[0]?.message || "Card tokenization failed"
+                  (tokenResult as any).errors?.[0]?.message || "Card tokenization failed"
                 );
                 return;
               }

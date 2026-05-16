@@ -475,6 +475,7 @@ export async function POST(req: Request) {
   slotEnd: string;
   eventId: string | null | undefined;
 } | null = null;
+
   if (data.fulfillmentType === "DELIVERY") {
     const itemsSummary = items
       .map(

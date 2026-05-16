@@ -11,6 +11,7 @@ import { useCartStore } from "@/lib/store/cart-store";
 import { urlFor } from "@/sanity/lib/image";
 import { formatPrice, cn } from "@/lib/utils";
 import { tierMeets, type MembershipTier } from "@/lib/membership/tiers";
+import { MembershipUpsellModal } from "@/components/membership/MembershipUpsellModal";
 import { toast } from "sonner";
 import type { Product } from "@/types";
 
@@ -21,6 +22,7 @@ export function ProductDetail({ product }: { product: Product }) {
 
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
+  const [showUpsell, setShowUpsell] = useState(false);
 
   const addItem = useCartStore((s) => s.addItem);
   const setOpen = useCartStore((s) => s.setOpen);
@@ -41,16 +43,12 @@ export function ProductDetail({ product }: { product: Product }) {
   const images = [product.image, ...(product.gallery || [])].filter(Boolean);
 
   function handleAdd() {
-    if (isLocked) {
-      toast.error(
-        locale === "es" ? "Producto solo para miembros" : "Members only"
-      );
-      return;
-    }
     if (isUnavailable) {
       toast.error(t("product.outOfStock"));
       return;
     }
+
+    // ALWAYS add to cart — even for members-only products
     addItem(
       {
         productId: product._id,
@@ -63,10 +61,17 @@ export function ProductDetail({ product }: { product: Product }) {
           : "",
         unit: product.unit,
         leadTime: product.leadTime,
+        membersOnly: product.membersOnly ?? false,
       },
       qty
     );
-    setOpen(true);
+
+    // If member-locked, show upsell modal instead of opening cart
+    if (isLocked) {
+      setShowUpsell(true);
+    } else {
+      setOpen(true);
+    }
   }
 
   return (
@@ -198,15 +203,22 @@ export function ProductDetail({ product }: { product: Product }) {
             </div>
             <button
               onClick={handleAdd}
-              disabled={isUnavailable || isLocked}
+              disabled={isUnavailable}
               className="btn-primary flex-1 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <ShoppingBag className="h-4 w-4" />
-              {isUnavailable
-                ? t("product.outOfStock")
-                : isLocked
-                ? t("product.membersOnly")
-                : t("product.addToCart")}
+              {isLocked ? (
+                <>
+                  <ShoppingBag className="h-4 w-4" />
+                  {t("product.membersOnly")}
+                </>
+              ) : isUnavailable ? (
+                t("product.outOfStock")
+              ) : (
+                <>
+                  <ShoppingBag className="h-4 w-4" />
+                  {t("product.addToCart")}
+                </>
+              )}
             </button>
           </div>
 
@@ -237,6 +249,15 @@ export function ProductDetail({ product }: { product: Product }) {
           )}
         </div>
       </div>
+
+      {/* Membership upsell modal */}
+      {showUpsell && (
+        <MembershipUpsellModal
+          productName={name}
+          isLoggedIn={!!session}
+          onClose={() => setShowUpsell(false)}
+        />
+      )}
     </article>
   );
 }

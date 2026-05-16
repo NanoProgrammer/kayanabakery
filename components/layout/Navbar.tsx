@@ -8,6 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useCartStore } from "@/lib/store/cart-store";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { LanguageToggle } from "@/components/i18n/LanguageToggle";
+import { CategoryDropdown } from "@/components/layout/CategoryDropdown";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
@@ -54,12 +55,8 @@ export function Navbar() {
           <Link href="/shop" className="link-underline">
             {t("nav.shop")}
           </Link>
-          <Link href="/category/conchas" className="link-underline">
-            {t("nav.conchas")}
-          </Link>
-          <Link href="/category/cakes" className="link-underline">
-            {t("nav.cakes")}
-          </Link>
+          {/* Dynamic categories dropdown — replaces hardcoded Conchas/Cakes */}
+          <CategoryDropdown />
           <Link href="/memberships" className="link-underline flex items-center gap-1">
             <Crown className="h-3.5 w-3.5 text-gold" />
             {t("nav.memberships")}
@@ -202,8 +199,6 @@ export function Navbar() {
           <nav className="flex flex-col gap-1 text-lg">
             {[
               { href: "/shop", label: t("nav.shop") },
-              { href: "/category/conchas", label: t("nav.conchas") },
-              { href: "/category/cakes", label: t("nav.cakes") },
               { href: "/memberships", label: t("nav.memberships") },
               { href: "/events", label: t("nav.events") },
               { href: "/ambassador", label: t("nav.ambassador") },

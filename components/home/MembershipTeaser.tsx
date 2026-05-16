@@ -18,12 +18,14 @@ export function MembershipTeaser() {
     },
     {
       name: "Artesano",
-      price: "$39/yr",
+      price: locale === "es" ? "1er año gratis" : "1st year free",
+      priceSub: locale === "es" ? "luego $39/año" : "then $39/yr",
       perks:
         locale === "es"
-          ? "Envío gratis · 2x puntos"
-          : "Free delivery · 2x points",
+          ? "Envío gratis · 2x puntos · Exclusivos"
+          : "Free delivery · 2x points · Exclusives",
       featured: false,
+      highlight: true,
     },
     {
       name: "Selecto",
@@ -72,8 +74,8 @@ export function MembershipTeaser() {
             </h2>
             <p className="mt-4 max-w-md text-base text-ink-soft md:text-lg">
               {locale === "es"
-                ? "Ahorra en cada orden, gana puntos, y sé el primero en probar nuevos batches. Cuatro planes para ti."
-                : "Save on every order, earn points, and get first pick on new batches. Four plans to fit your life."}
+                ? "Ahorra en cada orden, gana puntos, y sé el primero en probar nuevos batches. Artesano es gratis el primer año."
+                : "Save on every order, earn points, and get first pick on new batches. Artesano is free for the first year."}
             </p>
             <Link
               href="/memberships"
@@ -91,6 +93,8 @@ export function MembershipTeaser() {
                 className={`rounded-2xl border p-5 ${
                   t.featured
                     ? "border-gold bg-cream shadow-lg"
+                    : t.highlight
+                    ? "border-canela-dark bg-cream shadow-md"
                     : "border-canela/20 bg-cream/60"
                 }`}
               >
@@ -99,10 +103,18 @@ export function MembershipTeaser() {
                     {locale === "es" ? "Popular" : "Most loved"}
                   </span>
                 )}
+                {t.highlight && (
+                  <span className="mb-2 inline-block rounded-full bg-canela-dark/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-canela-dark">
+                    {locale === "es" ? "1er año gratis" : "1st year free"}
+                  </span>
+                )}
                 <p className="font-display text-xl">{t.name}</p>
                 <p className="mt-1 text-sm font-bold text-canela-dark">
                   {t.price}
                 </p>
+                {t.priceSub && (
+                  <p className="text-[10px] text-ink-soft">{t.priceSub}</p>
+                )}
                 <p className="mt-2 text-xs leading-snug text-ink-soft">
                   {t.perks}
                 </p>

@@ -4,7 +4,7 @@ import { Crown, Sparkles } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
 export function MembershipsHero() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   return (
     <section className="relative overflow-hidden bg-cream py-20 md:py-28">
       <div className="grain absolute inset-0 opacity-50" />
@@ -26,6 +26,16 @@ export function MembershipsHero() {
         <p className="mx-auto mt-6 max-w-2xl text-lg text-ink-soft">
           {t("membership.heroSubtitle")}
         </p>
+
+        {/* First year free callout */}
+        <div className="mx-auto mt-8 inline-flex items-center gap-3 rounded-full border border-gold/40 bg-gold/10 px-6 py-3">
+          <Sparkles className="h-4 w-4 text-gold" />
+          <span className="text-sm font-medium text-ink">
+            {locale === "es"
+              ? "Artesano: primer año completamente gratis — solo necesitas tarjeta en file"
+              : "Artesano: first year completely free — just add a card on file"}
+          </span>
+        </div>
       </div>
     </section>
   );

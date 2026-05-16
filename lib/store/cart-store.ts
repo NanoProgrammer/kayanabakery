@@ -12,6 +12,7 @@ type CartState = {
 
   setOpen: (open: boolean) => void;
   setCoupon: (code: string | null) => void;
+  setAppliedCoupon: (code: string | null) => void;
   setPointsToRedeem: (points: number) => void;
 
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
@@ -22,6 +23,7 @@ type CartState = {
   decrement: (productId: string) => void;
   replaceItems: (items: CartItem[]) => void;
   clear: () => void;
+  clearCart: () => void;
   getItem: (productId: string) => CartItem | undefined;
   getQuantity: (productId: string) => number;
   getSubtotal: () => number;
@@ -38,6 +40,7 @@ export const useCartStore = create<CartState>()(
 
       setOpen: (open) => set({ isOpen: open }),
       setCoupon: (code) => set({ appliedCouponCode: code }),
+      setAppliedCoupon: (code) => set({ appliedCouponCode: code }),
       setPointsToRedeem: (points) =>
         set({ pointsToRedeem: Math.max(0, Math.floor(points)) }),
 
@@ -94,6 +97,9 @@ export const useCartStore = create<CartState>()(
       replaceItems: (items) => set({ items }),
 
       clear: () =>
+        set({ items: [], appliedCouponCode: null, pointsToRedeem: 0 }),
+
+      clearCart: () =>
         set({ items: [], appliedCouponCode: null, pointsToRedeem: 0 }),
 
       getItem: (productId) =>

@@ -19,10 +19,12 @@ export function MembershipPricingTable({
   cmsPlans,
   currentTier,
   loggedIn,
+  membership,
 }: {
   cmsPlans: MembershipPlanCMS[];
   currentTier: MembershipTier;
   loggedIn: boolean;
+  membership?: any;
 }) {
   const { t, locale } = useLocale();
   const cmsByTier = Object.fromEntries(cmsPlans.map((p) => [p.tier, p]));
@@ -39,18 +41,29 @@ export function MembershipPricingTable({
           const isFeatured = cms?.isFeatured || tier === "SELECTO";
           const isCurrent = currentTier === tier;
 
-          const priceStr =
-            data.cadence === "FREE"
-              ? data.needsApproval
-                ? t("membership.needsApproval")
-                : t("membership.free")
-              : `$${(data.priceCents / 100).toFixed(0)}`;
-          const cadenceStr =
-            data.cadence === "MONTHLY"
-              ? t("membership.perMonth")
-              : data.cadence === "YEARLY"
-              ? t("membership.perYear")
-              : "";
+          // Price display — Artesano shows "FREE" with "$39/yr after"
+          let priceStr: string;
+          let cadenceStr: string;
+          let promoNote: string | null = null;
+
+          if (tier === "ARTESANO") {
+            priceStr = locale === "es" ? "GRATIS" : "FREE";
+            cadenceStr = locale === "es" ? "primer año" : "first year";
+            promoNote = locale === "es"
+              ? "Luego $39/año · Tarjeta requerida"
+              : "Then $39/year · Card required";
+          } else if (data.cadence === "FREE") {
+            priceStr = data.needsApproval
+              ? t("membership.needsApproval")
+              : t("membership.free");
+            cadenceStr = "";
+          } else {
+            priceStr = `$${(data.priceCents / 100).toFixed(0)}`;
+            cadenceStr =
+              data.cadence === "MONTHLY"
+                ? t("membership.perMonth")
+                : t("membership.perYear");
+          }
 
           const benefits: { ok: boolean; label: string }[] = [
             {
@@ -158,7 +171,6 @@ export function MembershipPricingTable({
             },
           ];
 
-          // Add ambassador special row
           if (data.paidForDelivery) {
             benefits.push({
               ok: true,
@@ -169,9 +181,10 @@ export function MembershipPricingTable({
             });
           }
 
+          // CTA
           let ctaLabel = t("membership.subscribe");
           let ctaHref = loggedIn
-            ? `/account/membership?upgrade=${tier}`
+            ? `/membership/checkout?tier=${tier}`
             : `/login?callbackUrl=/memberships`;
 
           if (tier === "BASICO") {
@@ -187,6 +200,10 @@ export function MembershipPricingTable({
           } else if (isCurrent) {
             ctaLabel = t("membership.currentPlan");
             ctaHref = "/account/membership";
+          } else if (tier === "ARTESANO") {
+            ctaLabel = locale === "es"
+              ? "Empezar gratis"
+              : "Start free";
           }
 
           return (
@@ -197,10 +214,19 @@ export function MembershipPricingTable({
                 isFeatured
                   ? "border-gold bg-gradient-to-b from-cream to-canela-light shadow-xl md:scale-[1.03]"
                   : "border-canela/20 bg-cream",
+                tier === "ARTESANO" && !isFeatured && "border-canela",
                 tier === "EMBAJADOR" && "border-canela-dark/40"
               )}
             >
-              {(highlight || isFeatured) && (
+              {/* Artesano promo badge */}
+              {tier === "ARTESANO" && !isCurrent && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-canela-dark px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-cream shadow">
+                  <Sparkles className="mr-1 inline h-3 w-3" />
+                  {locale === "es" ? "1er año gratis" : "1st year free"}
+                </span>
+              )}
+
+              {(highlight || isFeatured) && tier !== "ARTESANO" && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gold px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-cream shadow">
                   <Sparkles className="mr-1 inline h-3 w-3" />
                   {highlight || (locale === "es" ? "Más popular" : "Most loved")}
@@ -232,6 +258,9 @@ export function MembershipPricingTable({
                     <span className="text-sm text-ink-soft">{cadenceStr}</span>
                   )}
                 </div>
+                {promoNote && (
+                  <p className="mt-1 text-[11px] text-ink-soft">{promoNote}</p>
+                )}
                 {description && (
                   <p className="mt-3 text-xs text-ink-soft">{description}</p>
                 )}
@@ -262,6 +291,8 @@ export function MembershipPricingTable({
                   "mt-6 inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium transition-all",
                   isCurrent
                     ? "bg-ink/10 text-ink-soft"
+                    : tier === "ARTESANO" && !isCurrent
+                    ? "bg-canela-dark text-cream hover:bg-ink"
                     : isFeatured
                     ? "bg-gold text-cream hover:bg-gold/90"
                     : "bg-canela text-ink hover:bg-canela-dark"
@@ -276,8 +307,8 @@ export function MembershipPricingTable({
 
       <p className="mt-10 text-center text-xs text-ink-soft">
         {locale === "es"
-          ? "100 pts = $1. Pagos via Square. Cancela cuando quieras."
-          : "100 pts = $1. Payments via Square. Cancel anytime."}
+          ? "100 pts = $1. Pagos via Square. Cancela cuando quieras. Artesano: primer año sin cargo."
+          : "100 pts = $1. Payments via Square. Cancel anytime. Artesano: first year no charge."}
       </p>
     </section>
   );

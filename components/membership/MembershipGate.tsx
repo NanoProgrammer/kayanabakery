@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { Lock, Crown, CreditCard, Loader2, Check } from "lucide-react";
+import { Lock, Crown, CreditCard, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { toast } from "sonner";
 
 /**
  * Blocks checkout when member-only items are in cart but user
@@ -12,9 +10,8 @@ import { toast } from "sonner";
  *
  * Flow:
  *   1. Not logged in → "Sign up / Sign in to continue"
- *   2. Logged in, no membership → "Subscribe to Artesano (free first year, card on file)"
- *      Calls POST /api/membership/subscribe which creates ARTESANO with Square card-on-file.
- *      On success, reloads page so the server re-fetches user.tier.
+ *   2. Logged in, no membership → Redirect to /membership/checkout?tier=ARTESANO
+ *      where they enter their card. No free pass without card on file.
  */
 export function MembershipGate({
   isLoggedIn,
@@ -24,36 +21,6 @@ export function MembershipGate({
   memberOnlyItems: string[];
 }) {
   const { locale } = useLocale();
-  const [subscribing, setSubscribing] = useState(false);
-  const [done, setDone] = useState(false);
-
-  async function handleSubscribe() {
-    setSubscribing(true);
-    try {
-      const res = await fetch("/api/membership/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier: "ARTESANO" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Could not subscribe");
-        setSubscribing(false);
-        return;
-      }
-      setDone(true);
-      toast.success(
-        locale === "es"
-          ? "¡Bienvenido al plan Artesano!"
-          : "Welcome to the Artesano plan!"
-      );
-      // Reload to re-fetch session + user tier
-      setTimeout(() => window.location.reload(), 1200);
-    } catch {
-      toast.error("Network error");
-      setSubscribing(false);
-    }
-  }
 
   return (
     <div className="mb-8 rounded-3xl border-2 border-canela bg-canela-light/50 p-6 md:p-8">
@@ -91,7 +58,7 @@ export function MembershipGate({
               </Link>
               <Link
                 href="/login?callbackUrl=/checkout"
-                className="btn-outline inline-flex items-center gap-2"
+                className="btn-ghost inline-flex items-center gap-2"
               >
                 {locale === "es" ? "Iniciar sesión" : "Sign in"}
               </Link>
@@ -105,8 +72,8 @@ export function MembershipGate({
                     <p className="font-display text-lg">Artesano</p>
                     <p className="text-xs text-ink-soft">
                       {locale === "es"
-                        ? "Primer año GRATIS · Luego $39/año · Tarjeta en file"
-                        : "First year FREE · Then $39/year · Card on file"}
+                        ? "Primer año GRATIS · Luego $39/año · Tarjeta requerida"
+                        : "First year FREE · Then $39/year · Card required"}
                     </p>
                   </div>
                 </div>
@@ -119,37 +86,27 @@ export function MembershipGate({
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3 w-3 text-canela-dark" />
-                    {locale === "es" ? "1.5× puntos" : "1.5× points"}
+                    {locale === "es" ? "2× puntos" : "2× points"}
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3 w-3 text-canela-dark" />
                     {locale === "es"
-                      ? "Envío gratis en pedidos +$50"
-                      : "Free delivery on orders $50+"}
+                      ? "Envío gratis en pedidos +$32"
+                      : "Free delivery on orders $32+"}
                   </li>
                 </ul>
               </div>
 
-              <button
-                onClick={handleSubscribe}
-                disabled={subscribing || done}
+              {/* Redirect to membership checkout — requires card on file */}
+              <Link
+                href="/membership/checkout?tier=ARTESANO&callbackUrl=/checkout"
                 className="btn-primary inline-flex w-full items-center justify-center gap-2"
               >
-                {subscribing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : done ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <CreditCard className="h-4 w-4" />
-                )}
-                {done
-                  ? locale === "es"
-                    ? "¡Suscrito!"
-                    : "Subscribed!"
-                  : locale === "es"
-                  ? "Suscribirme gratis"
-                  : "Subscribe free"}
-              </button>
+                <CreditCard className="h-4 w-4" />
+                {locale === "es"
+                  ? "Suscribirme — primer año gratis"
+                  : "Subscribe — first year free"}
+              </Link>
 
               <p className="mt-2 text-center text-[10px] text-ink-soft">
                 {locale === "es"

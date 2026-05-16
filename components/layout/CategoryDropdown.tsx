@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
+import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
 export type CategoryItem = {
@@ -14,17 +14,11 @@ export type CategoryItem = {
   image?: string;
 };
 
-/**
- * Dropdown for site header showing ALL categories from Sanity.
- *
- * Categories are fetched once via /api/categories (cached).
- * Or pass them as a prop from a server component.
- */
 export function CategoryDropdown({
   categories: initialCategories,
 }: {
   categories?: CategoryItem[];
-}) {
+} = {}) {
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryItem[]>(
@@ -32,7 +26,6 @@ export function CategoryDropdown({
   );
   const ref = useRef<HTMLDivElement>(null);
 
-  // Fetch categories if not passed as prop
   useEffect(() => {
     if (initialCategories && initialCategories.length > 0) return;
     fetch("/api/categories")
@@ -41,7 +34,6 @@ export function CategoryDropdown({
       .catch(() => {});
   }, [initialCategories]);
 
-  // Click outside to close
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -69,9 +61,8 @@ export function CategoryDropdown({
 
       {open && (
         <div className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl">
-          {/* All products link */}
           <Link
-            href="/products"
+            href="/shop"
             onClick={() => setOpen(false)}
             className="block border-b border-canela/10 px-4 py-3 text-sm font-medium transition-colors hover:bg-canela-light"
           >
@@ -87,7 +78,7 @@ export function CategoryDropdown({
               return (
                 <Link
                   key={cat._id}
-                  href={`/products?category=${cat.slug}`}
+                  href={`/category/${cat.slug}`}
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-canela-light"
                 >

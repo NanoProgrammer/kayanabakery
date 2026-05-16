@@ -471,11 +471,10 @@ export async function POST(req: Request) {
   // 10. Reserve delivery slot in Google Calendar
   // ============================================================
   let deliveryReservation: {
-    slotStart: string;
-    slotEnd: string;
-    eventId: string;
-  } | null = null;
-
+  slotStart: string;
+  slotEnd: string;
+  eventId: string | null | undefined;
+} | null = null;
   if (data.fulfillmentType === "DELIVERY") {
     const itemsSummary = items
       .map(

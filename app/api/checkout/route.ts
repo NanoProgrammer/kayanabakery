@@ -488,7 +488,7 @@ export async function POST(req: Request) {
 
     try {
       deliveryReservation = await reserveDeliverySlot({
-        windowId: data.deliverySlotId,
+        windowId: data.deliverySlotId!,
         customerName:
           user?.name || data.guestName,
         customerPhone:

@@ -1,5 +1,5 @@
 import { defineConfig } from "sanity";
-import { structureTool } from "sanity/structure";
+import { deskTool as structureTool } from "sanity/desk";
 import { visionTool } from "@sanity/vision";
 import { schemaTypes } from "./sanity/schemas";
 import { karyanaStructure } from "./sanity/structure";

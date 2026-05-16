@@ -1,19 +1,64 @@
 "use client";
 
-import { Calendar, Clock } from "lucide-react";
+import { useMemo } from "react";
+import { Calendar, Clock, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { cn } from "@/lib/utils";
 
-const PICKUP_TIMES = [
-  "10:00 AM",
-  "11:00 AM",
-  "12:00 PM",
-  "1:00 PM",
-  "2:00 PM",
-  "3:00 PM",
-  "4:00 PM",
-  "5:00 PM",
-  "6:00 PM",
-];
+type PickupDay = {
+  date: string;
+  dayLabel: string;
+  windowLabel: string;
+};
+
+function generatePickupDays(minLeadHours: number): PickupDay[] {
+  const now = new Date();
+  const earliest = new Date(now.getTime() + minLeadHours * 60 * 60 * 1000);
+  const days: PickupDay[] = [];
+
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + i);
+    d.setHours(0, 0, 0, 0);
+    const dow = d.getDay();
+
+    let startH: number, endH: number;
+    if (dow === 0) {
+      startH = 13;
+      endH = 15;
+    } else if (dow >= 1 && dow <= 6) {
+      startH = 16;
+      endH = 18;
+    } else {
+      continue;
+    }
+
+    const windowEnd = new Date(d);
+    windowEnd.setHours(endH, 0, 0, 0);
+    if (windowEnd <= earliest) continue;
+
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayLabel = d.toLocaleDateString("en-CA", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    });
+
+    const fmt = (h: number) => {
+      const p = h >= 12 ? "PM" : "AM";
+      const h12 = h > 12 ? h - 12 : h;
+      return `${h12}:00 ${p}`;
+    };
+
+    days.push({
+      date: dateStr,
+      dayLabel,
+      windowLabel: `${fmt(startH)} – ${fmt(endH)}`,
+    });
+  }
+
+  return days;
+}
 
 export function PickupSlotPicker({
   date,
@@ -29,60 +74,71 @@ export function PickupSlotPicker({
   minLeadHours?: number;
 }) {
   const { locale } = useLocale();
-  const today = new Date();
-  today.setHours(today.getHours() + minLeadHours);
-  const minDate = today.toISOString().slice(0, 10);
+  const pickupDays = useMemo(() => generatePickupDays(minLeadHours), [minLeadHours]);
 
-  const maxDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  function handleSelect(day: PickupDay) {
+    onDateChange(day.date);
+    onTimeChange(day.windowLabel);
+  }
+
+  if (pickupDays.length === 0) {
+    return (
+      <div className="rounded-2xl border border-canela/15 bg-cream p-4 text-sm text-ink-soft">
+        {locale === "es"
+          ? "No hay horarios de recolección disponibles ahora."
+          : "No pickup times available right now."}
+      </div>
+    );
+  }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div>
-        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
-          <Calendar className="h-3 w-3" />
-          {locale === "es" ? "Fecha" : "Date"}
-        </label>
-        <input
-          type="date"
-          required
-          min={minDate}
-          max={maxDate}
-          value={date}
-          onChange={(e) => onDateChange(e.target.value)}
-          className="mt-2 w-full rounded-full border border-canela/30 bg-cream px-5 py-3 text-sm focus:border-canela-dark focus:outline-none"
-        />
-      </div>
-      <div>
-        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
-          <Clock className="h-3 w-3" />
-          {locale === "es" ? "Hora" : "Time"}
-        </label>
-        <select
-          required
-          value={time}
-          onChange={(e) => onTimeChange(e.target.value)}
-          className="mt-2 w-full rounded-full border border-canela/30 bg-cream px-5 py-3 text-sm focus:border-canela-dark focus:outline-none"
-        >
-          <option value="">
-            {locale === "es" ? "Selecciona…" : "Select…"}
-          </option>
-          {PICKUP_TIMES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="space-y-2">
       {minLeadHours > 0 && (
-        <p className="sm:col-span-2 text-xs text-ink-soft">
+        <p className="mb-3 text-xs text-ink-soft">
           ⏱{" "}
           {locale === "es"
             ? `Algunos productos requieren ${minLeadHours}h de anticipación.`
             : `Some items need ${minLeadHours}h advance notice.`}
         </p>
       )}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {pickupDays.map((day) => {
+          const isSelected = date === day.date;
+          return (
+            <button
+              type="button"
+              key={day.date}
+              onClick={() => handleSelect(day)}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl border p-4 text-left transition-all",
+                isSelected
+                  ? "border-canela-dark bg-canela-light"
+                  : "border-canela/30 bg-cream hover:border-canela"
+              )}
+            >
+              <div
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-full",
+                  isSelected ? "bg-canela-dark text-cream" : "bg-canela-light"
+                )}
+              >
+                {isSelected ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Calendar className="h-4 w-4" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{day.dayLabel}</p>
+                <p className="flex items-center gap-1 text-xs text-ink-soft">
+                  <Clock className="h-3 w-3" />
+                  {day.windowLabel}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

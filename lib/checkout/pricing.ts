@@ -1,9 +1,7 @@
 /**
  * Pricing engine for Karyana Bakery checkout.
- * Pure functions — no DB, no fetch. Use the same logic on client (preview)
- * and server (final calculation, source of truth).
- *
- * All amounts in CENTS (integers) to avoid float math.
+ * Pure functions — no DB, no fetch. Same logic client + server.
+ * All amounts in CENTS.
  */
 
 import { TIERS, pointsToCents, type MembershipTier } from "@/lib/membership/tiers";
@@ -11,28 +9,21 @@ import { TIERS, pointsToCents, type MembershipTier } from "@/lib/membership/tier
 export type FulfillmentType = "PICKUP" | "DELIVERY";
 
 export type PricingInput = {
-  /** Cart items with price (in cents) and quantity */
   items: { price: number; quantity: number; productId: string }[];
   fulfillmentType: FulfillmentType;
-  /** Customer's tier (defaults BASICO) */
   tier: MembershipTier;
-  /** Whether the delivery address is in Southeast Calgary */
   isSouthEastCalgary: boolean;
-  /** Whether this customer has used their first-free-delivery already */
   hasUsedFirstFreeDelivery: boolean;
-  /** Coupon if any (already validated). Discount applied to subtotal. */
+  isGuest?: boolean;
   coupon?: {
     code: string;
-    discountType: "PERCENT" | "FIXED";
-    /** percent (0-100) or cents */
+    discountType: "PERCENT" | "FIXED" | "FREE_SHIPPING";
     discountValue: number;
     minOrderCents?: number;
   } | null;
-  /** Points the customer wants to redeem */
   pointsToRedeem?: number;
-  /** Pickup is free; delivery has a base fee */
+  tipCents?: number;
   baseDeliveryFeeCents?: number;
-  /** GST rate. Alberta = 5% */
   gstRate?: number;
 };
 
@@ -41,29 +32,30 @@ export type PricingBreakdown = {
   couponDiscountCents: number;
   pointsDiscountCents: number;
   deliveryFeeCents: number;
-  /** Reason free delivery was applied (or null) */
   freeDeliveryReason:
     | null
     | "MEMBER_FREE_DELIVERY"
     | "FIRST_SE_DELIVERY"
+    | "COUPON_FREE_SHIPPING"
     | "PICKUP";
+  tipCents: number;
   taxableCents: number;
   gstCents: number;
   totalCents: number;
   pointsEarned: number;
-  /** Errors that prevent checkout */
   errors: string[];
 };
 
-const DEFAULT_DELIVERY_FEE_CENTS = 700; // $7
+const DEFAULT_DELIVERY_FEE = 700;
 const DEFAULT_GST = 0.05;
 
 export function computePricing(input: PricingInput): PricingBreakdown {
   const errors: string[] = [];
-  const baseDelivery =
-    input.baseDeliveryFeeCents ?? DEFAULT_DELIVERY_FEE_CENTS;
+  const baseDelivery = input.baseDeliveryFeeCents ?? DEFAULT_DELIVERY_FEE;
   const gstRate = input.gstRate ?? DEFAULT_GST;
   const tierData = TIERS[input.tier];
+  const isGuest = input.isGuest ?? false;
+  const tipCents = Math.max(0, Math.round(input.tipCents ?? 0));
 
   // 1. Subtotal
   const subtotalCents = input.items.reduce(
@@ -71,10 +63,14 @@ export function computePricing(input: PricingInput): PricingBreakdown {
     0
   );
 
-  // 2. Coupon discount (apply against subtotal)
+  // 2. Coupon
   let couponDiscountCents = 0;
+  let couponIsFreeShipping = false;
+
   if (input.coupon) {
-    if (
+    if (input.coupon.discountType === "FREE_SHIPPING") {
+      couponIsFreeShipping = true;
+    } else if (
       input.coupon.minOrderCents &&
       subtotalCents < input.coupon.minOrderCents
     ) {
@@ -86,14 +82,11 @@ export function computePricing(input: PricingInput): PricingBreakdown {
         (subtotalCents * Math.min(100, input.coupon.discountValue)) / 100
       );
     } else {
-      couponDiscountCents = Math.min(
-        input.coupon.discountValue,
-        subtotalCents
-      );
+      couponDiscountCents = Math.min(input.coupon.discountValue, subtotalCents);
     }
   }
 
-  // 3. Points discount
+  // 3. Points
   let pointsDiscountCents = 0;
   if (input.pointsToRedeem && input.pointsToRedeem > 0) {
     pointsDiscountCents = Math.min(
@@ -106,46 +99,44 @@ export function computePricing(input: PricingInput): PricingBreakdown {
   const subtotalAfterDiscounts =
     subtotalCents - couponDiscountCents - pointsDiscountCents;
 
-  // 4. Delivery fee logic
+  // 4. Delivery fee
   let deliveryFeeCents = 0;
   let freeDeliveryReason: PricingBreakdown["freeDeliveryReason"] = null;
 
   if (input.fulfillmentType === "PICKUP") {
     freeDeliveryReason = "PICKUP";
-    deliveryFeeCents = 0;
+  } else if (couponIsFreeShipping) {
+    freeDeliveryReason = "COUPON_FREE_SHIPPING";
+  } else if (isGuest) {
+    // Guests ALWAYS pay delivery — no free-first, no member perks
+    deliveryFeeCents = baseDelivery;
   } else {
-    // Member free delivery (with min order check)
     if (
       tierData.freeDelivery &&
       tierData.freeDeliveryMinOrderCents &&
       subtotalAfterDiscounts >= tierData.freeDeliveryMinOrderCents
     ) {
       freeDeliveryReason = "MEMBER_FREE_DELIVERY";
-      deliveryFeeCents = 0;
-    } else if (
-      // First-time SE Calgary customer free delivery
-      input.isSouthEastCalgary &&
-      !input.hasUsedFirstFreeDelivery
-    ) {
+    } else if (input.isSouthEastCalgary && !input.hasUsedFirstFreeDelivery) {
       freeDeliveryReason = "FIRST_SE_DELIVERY";
-      deliveryFeeCents = 0;
     } else {
       deliveryFeeCents = baseDelivery;
     }
   }
 
-  // 5. Tax (GST 5% on subtotal-after-discounts + delivery)
+  // 5. Tax (GST on subtotal-after-discounts + delivery, NOT on tips)
   const taxableCents = subtotalAfterDiscounts + deliveryFeeCents;
   const gstCents = Math.round(taxableCents * gstRate);
 
-  // 6. Total
-  const totalCents = taxableCents + gstCents;
+  // 6. Total (tip NOT taxed)
+  const totalCents = taxableCents + gstCents + tipCents;
 
-  // 7. Points earned (1pt per dollar × tier multiplier, on subtotal pre-tax pre-discount)
+  // 7. Points earned (guests don't earn)
   const dollars = Math.floor(subtotalCents / 100);
-  const pointsEarned = Math.floor(dollars * tierData.pointsMultiplier);
+  const pointsEarned = isGuest
+    ? 0
+    : Math.floor(dollars * tierData.pointsMultiplier);
 
-  // 8. Validations
   if (subtotalCents <= 0) errors.push("Cart is empty");
   if (totalCents < 0) errors.push("Total cannot be negative");
 
@@ -155,6 +146,7 @@ export function computePricing(input: PricingInput): PricingBreakdown {
     pointsDiscountCents,
     deliveryFeeCents,
     freeDeliveryReason,
+    tipCents,
     taxableCents,
     gstCents,
     totalCents,

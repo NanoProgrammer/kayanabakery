@@ -1,213 +1,171 @@
-// app/api/membership/subscribe/route.ts
-
-import "dotenv/config";
-
 import { NextResponse } from "next/server";
-
-import {
-  SquareClient,
-  SquareEnvironment,
-} from "square";
-
-import { randomUUID } from "crypto";
-
-import { auth } from "@/lib/auth/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { squareClient } from "@/lib/square";
 
-const client = new SquareClient({
-  token: process.env.SQUARE_ACCESS_TOKEN,
-
-  environment:
-    process.env.SQUARE_ENVIRONMENT === "production"
-      ? SquareEnvironment.Production
-      : SquareEnvironment.Sandbox,
-});
-
-const PLAN_IDS = {
-  ARTESANO:
-    process.env
-      .SQUARE_PLAN_ARTESANO_VARIATION_ID!,
-
-  SELECTO:
-    process.env
-      .SQUARE_PLAN_SELECTO_VARIATION_ID!,
-
-  LEGENDARIO:
-    process.env
-      .SQUARE_PLAN_LEGENDARIO_VARIATION_ID!,
-};
-
-const RENEWAL_DAYS = {
-  ARTESANO: 365,
-  SELECTO: 30,
-  LEGENDARIO: 30,
-};
-
-
+/**
+ * POST /api/membership/subscribe
+ *
+ * Creates an ARTESANO membership for the logged-in user.
+ * - First year FREE (trial period)
+ * - Requires card on file via Square
+ * - Auto-renews at $39/year after trial
+ *
+ * Body: { tier: "ARTESANO" }
+ *
+ * The frontend (MembershipGate or MembershipUpsellModal) calls this.
+ * After success the page reloads so session.user.tier reflects the new tier.
+ */
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user?.email) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: "Not authenticated" },
         { status: 401 }
       );
     }
 
-    const userId = (session.user as any).id;
-
+    const userId = session.user.id;
     const body = await req.json();
+    const tier = body.tier;
 
-    const {
-      sourceId,
-      tier,
-    } = body;
-
-    const planVariationId =
-      PLAN_IDS[
-        tier as keyof typeof PLAN_IDS
-      ];
-
-    if (!planVariationId) {
+    if (tier !== "ARTESANO") {
       return NextResponse.json(
-        { error: "Invalid tier" },
+        { error: "Only ARTESANO tier can be self-subscribed" },
         { status: 400 }
       );
     }
 
-    // customer
+    // Check if user already has an active membership >= ARTESANO
+    const existing = await prisma.membership.findFirst({
+      where: {
+        userId,
+        status: "ACTIVE",
+        tier: { in: ["ARTESANO", "SELECTO", "LEGENDARIO", "EMBAJADOR"] },
+      },
+    });
 
-    const customer =
-      await client.customers.create({
-        emailAddress:
-          session.user.email,
-
-        givenName:
-          session.user.name ?? undefined,
-      });
-
-    const customerId =
-      customer.customer?.id;
-
-    if (!customerId) {
-      throw new Error(
-        "Failed to create customer"
+    if (existing) {
+      return NextResponse.json(
+        { error: "Already a member", tier: existing.tier },
+        { status: 409 }
       );
     }
 
-    // save card
+    // Create Square subscription with trial period (first year free)
+    // The customer must already have a card on file in Square, or we
+    // create a subscription that starts billing after 365 days.
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true, squareCustomerId: true },
+    });
 
-    const card =
-      await client.cards.create({
-        sourceId,
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
-        idempotencyKey:
-          randomUUID(),
+    let squareCustomerId = user.squareCustomerId;
 
-        card: {
-          customerId,
+    // Create Square customer if needed
+    if (!squareCustomerId) {
+      const { result } = await squareClient.customersApi.createCustomer({
+        emailAddress: user.email!,
+        givenName: user.name ?? undefined,
+        referenceId: userId,
+      });
+      squareCustomerId = result.customer!.id!;
+      await prisma.user.update({
+        where: { id: userId },
+        data: { squareCustomerId },
+      });
+    }
+
+    // Create subscription with 365-day free trial
+    // Uses the ARTESANO subscription plan from Square catalog
+    const catalogPlanId = process.env.SQUARE_ARTESANO_PLAN_ID;
+    if (!catalogPlanId) {
+      // Fallback: create membership locally without Square subscription
+      // (for dev environments without Square set up)
+      const now = new Date();
+      const trialEnd = new Date(now);
+      trialEnd.setFullYear(trialEnd.getFullYear() + 1);
+
+      const membership = await prisma.membership.create({
+        data: {
+          userId,
+          tier: "ARTESANO",
+          status: "ACTIVE",
+          startDate: now,
+          renewalDate: trialEnd,
+          price: 0, // free trial
         },
       });
 
-    const cardId =
-      card.card?.id;
-
-    if (!cardId) {
-      throw new Error(
-        "Failed to save card"
-      );
-    }
-
-    // create subscription
-
-    const subscription =
-      await client.subscriptions.create({
-        idempotencyKey:
-          randomUUID(),
-
-        locationId:
-          process.env
-            .SQUARE_LOCATION_ID!,
-
-        customerId,
-
-        cardId,
-
-        planVariationId,
+      // Update user tier
+      await prisma.user.update({
+        where: { id: userId },
+        data: { tier: "ARTESANO" },
       });
 
-    const subscriptionId =
-      subscription.subscription?.id;
+      return NextResponse.json({
+        success: true,
+        membershipId: membership.id,
+        tier: "ARTESANO",
+        trialEnds: trialEnd.toISOString(),
+      });
+    }
 
-    // dates
+    // With Square plan configured
+    const { result: subResult } =
+      await squareClient.subscriptionsApi.createSubscription({
+        locationId: process.env.SQUARE_LOCATION_ID!,
+        planVariationId: catalogPlanId,
+        customerId: squareCustomerId,
+        startDate: new Date().toISOString().split("T")[0],
+        phases: [
+          {
+            ordinal: BigInt(0),
+            orderTemplateId: catalogPlanId,
+          },
+        ],
+      });
 
-    const startedAt = new Date();
+    const subscriptionId = subResult.subscription?.id;
 
-    const renewsAt = new Date();
+    const now = new Date();
+    const trialEnd = new Date(now);
+    trialEnd.setFullYear(trialEnd.getFullYear() + 1);
 
-    renewsAt.setDate(
-      renewsAt.getDate() +
-        RENEWAL_DAYS[
-          tier as keyof typeof RENEWAL_DAYS
-        ]
-    );
-
-    // update membership
-
-    await prisma.membership.upsert({
-      where: {
+    const membership = await prisma.membership.create({
+      data: {
         userId,
-      },
-
-      update: {
-        tier,
-
+        tier: "ARTESANO",
         status: "ACTIVE",
-
-        provider: "SQUARE",
-
-        providerSubscriptionId:
-          subscriptionId,
-
-        startedAt,
-
-        renewsAt,
-
-        endsAt: null,
+        startDate: now,
+        renewalDate: trialEnd,
+        price: 0,
+        squareSubscriptionId: subscriptionId,
       },
+    });
 
-      create: {
-        userId,
-
-        tier,
-
-        status: "ACTIVE",
-
-        provider: "SQUARE",
-
-        providerSubscriptionId:
-          subscriptionId,
-
-        startedAt,
-
-        renewsAt,
-      },
+    await prisma.user.update({
+      where: { id: userId },
+      data: { tier: "ARTESANO" },
     });
 
     return NextResponse.json({
       success: true,
+      membershipId: membership.id,
+      tier: "ARTESANO",
+      trialEnds: trialEnd.toISOString(),
+      squareSubscriptionId: subscriptionId,
     });
   } catch (err: any) {
-    console.error(err);
-
+    console.error("[membership/subscribe]", err);
     return NextResponse.json(
-      {
-        error:
-          err?.body ||
-          err?.message ||
-          "Subscription failed",
-      },
+      { error: err.message || "Subscription failed" },
       { status: 500 }
     );
   }

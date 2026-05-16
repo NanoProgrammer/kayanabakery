@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Truck, ShoppingBag, ChevronRight } from "lucide-react";
+import { Truck, ShoppingBag, ChevronRight, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { useCartStore } from "@/lib/store/cart-store";
@@ -16,6 +16,9 @@ import { DeliverySlotPicker } from "./DeliverySlotPicker";
 import { PickupSlotPicker } from "./PickupSlotPicker";
 import { CouponInput } from "./CouponInput";
 import { PointsSlider } from "./PointsSlider";
+import { TipInput } from "./TipInput";
+import { GuestSignupNudge } from "./GuestSignupNudge";
+import { MembershipGate } from "../membership/MembershipGate";
 import { AddressPicker, type AddressData, type SavedAddress } from "./AddressPicker";
 import { SquarePaymentForm } from "./SquarePaymentForm";
 import { OrderSummarySidebar } from "./OrderSummarySidebar";
@@ -38,7 +41,7 @@ export function CheckoutForm({
   addresses: SavedAddress[];
 }) {
   const router = useRouter();
-  const { t, locale } = useLocale();
+  const { locale } = useLocale();
 
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clearCart);
@@ -47,9 +50,7 @@ export function CheckoutForm({
   const setCartCoupon = useCartStore((s) => s.setAppliedCoupon);
   const setCartPoints = useCartStore((s) => s.setPointsToRedeem);
 
-  const [fulfillment, setFulfillment] = useState<"PICKUP" | "DELIVERY">(
-    "PICKUP"
-  );
+  const [fulfillment, setFulfillment] = useState<"PICKUP" | "DELIVERY">("PICKUP");
 
   // Address
   const [addresses] = useState(initialAddresses);
@@ -77,19 +78,26 @@ export function CheckoutForm({
   } | null>(null);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
 
-  // Hydrate from cart store on mount
+  // Tips
+  const [tipCents, setTipCents] = useState(0);
+
+  // Guest nudge
+  const [showGuestNudge, setShowGuestNudge] = useState(false);
+
+  // Member-only items gate
+  const hasMemberOnlyItems = items.some((it) => it.membersOnly);
+  const userIsMember = user ? tierMeets(user.tier, "ARTESANO") : false;
+  const needsMembership = hasMemberOnlyItems && !userIsMember;
+
+  // Hydrate coupon from cart store
   useEffect(() => {
     if (cartCouponCode && !coupon) {
-      // Re-validate coupon against current subtotal
       fetch("/api/coupon/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: cartCouponCode,
-          subtotalCents: items.reduce(
-            (s, it) => s + it.price * 100 * it.quantity,
-            0
-          ),
+          subtotalCents: items.reduce((s, it) => s + it.price * 100 * it.quantity, 0),
         }),
       })
         .then((r) => r.json())
@@ -110,14 +118,17 @@ export function CheckoutForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Empty cart redirect
+  // Empty cart → back to cart
   useEffect(() => {
-    if (items.length === 0) {
-      router.push("/cart");
-    }
+    if (items.length === 0) router.push("/cart");
   }, [items.length, router]);
 
-  // Determine SE Calgary
+  // Guest nudge on delivery
+  useEffect(() => {
+    if (!user && fulfillment === "DELIVERY") setShowGuestNudge(true);
+  }, [user, fulfillment]);
+
+  // SE Calgary
   const isSECustomer = useMemo(() => {
     if (fulfillment !== "DELIVERY") return false;
     if (addressId) {
@@ -128,13 +139,9 @@ export function CheckoutForm({
     return false;
   }, [fulfillment, addressId, addresses, guestAddress]);
 
-  // Maximum lead time across cart
-  const maxLeadTime = items.reduce(
-    (max, it) => Math.max(max, it.leadTime ?? 0),
-    0
-  );
+  const maxLeadTime = items.reduce((max, it) => Math.max(max, it.leadTime ?? 0), 0);
 
-  // Pricing computation
+  // Pricing
   const pricing = useMemo(() => {
     return computePricing({
       items: items.map((it) => ({
@@ -146,45 +153,36 @@ export function CheckoutForm({
       tier: user?.tier ?? "BASICO",
       isSouthEastCalgary: isSECustomer,
       hasUsedFirstFreeDelivery: user?.hasUsedFirstFreeDelivery ?? false,
+      isGuest: !user,
       coupon: coupon
-        ? {
-            code: coupon.code,
-            discountType: coupon.discountType,
-            discountValue: coupon.discountValue,
-          }
+        ? { code: coupon.code, discountType: coupon.discountType, discountValue: coupon.discountValue }
         : null,
       pointsToRedeem,
+      tipCents,
     });
-  }, [items, fulfillment, user, isSECustomer, coupon, pointsToRedeem]);
+  }, [items, fulfillment, user, isSECustomer, coupon, pointsToRedeem, tipCents]);
 
   const isMember = user ? tierMeets(user.tier, "ARTESANO") : false;
 
-  // Validation gate
+  // Validation
   const canPay =
     items.length > 0 &&
+    !needsMembership &&
     pricing.errors.length === 0 &&
     (fulfillment === "PICKUP"
       ? !!pickupDate && !!pickupTime
       : !!deliverySlotId &&
-        ((user && addressId) ||
-          (!user &&
-            guestAddress?.street &&
-            guestAddress?.postalCode))) &&
-    (!!user ||
-      (guestEmail && guestName && guestPhone)); // guests need contact info
+        ((user && addressId) || (!user && guestAddress?.street && guestAddress?.postalCode))) &&
+    (!!user || (guestEmail && guestName && guestPhone));
 
   async function handlePayment(token: string) {
-    const cartItemsForApi = items.map((it) => ({
-      productId: it.productId,
-      quantity: it.quantity,
-    }));
-
     const payload: any = {
       paymentToken: token,
       fulfillmentType: fulfillment,
-      items: cartItemsForApi,
+      items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
       couponCode: coupon?.code,
       pointsToRedeem: pointsToRedeem || undefined,
+      tipCents: tipCents || undefined,
       clientReferenceId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     };
 
@@ -193,11 +191,8 @@ export function CheckoutForm({
       payload.pickupTime = pickupTime;
     } else {
       payload.deliverySlotId = deliverySlotId;
-      if (user && addressId) {
-        payload.addressId = addressId;
-      } else if (guestAddress) {
-        payload.guestAddress = guestAddress;
-      }
+      if (user && addressId) payload.addressId = addressId;
+      else if (guestAddress) payload.guestAddress = guestAddress;
     }
 
     if (!user) {
@@ -217,7 +212,6 @@ export function CheckoutForm({
         toast.error(data.error || "Checkout failed");
         return;
       }
-      // Clear local cart state
       clearCart();
       setCartCoupon(null);
       setCartPoints(0);
@@ -228,6 +222,9 @@ export function CheckoutForm({
   }
 
   if (items.length === 0) return null;
+
+  let sectionNum = 0;
+  const nextNum = () => ++sectionNum;
 
   return (
     <div className="container-bakery py-8 md:py-12">
@@ -243,43 +240,28 @@ export function CheckoutForm({
         </h1>
       </header>
 
-      <div className="grid gap-10 lg:grid-cols-[1fr_400px]">
+      {/* Membership gate — blocks checkout if member-only items in cart */}
+      {needsMembership && (
+        <MembershipGate
+          isLoggedIn={!!user}
+          memberOnlyItems={items.filter((it) => it.membersOnly).map((it) => it.name)}
+        />
+      )}
+
+      <div className={cn("grid gap-10 lg:grid-cols-[1fr_400px]", needsMembership && "pointer-events-none opacity-50")}>
         {/* Left: form */}
         <div className="space-y-8">
-          {/* Guest contact — only if no user */}
+          {/* Guest contact */}
           {!user && (
-            <Section
-              num={1}
-              title={locale === "es" ? "Tus datos" : "Your details"}
-            >
+            <Section num={nextNum()} title={locale === "es" ? "Tus datos" : "Your details"}>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Input
-                  label={locale === "es" ? "Nombre" : "Name"}
-                  value={guestName}
-                  onChange={setGuestName}
-                  required
-                />
-                <Input
-                  label="Email"
-                  type="email"
-                  value={guestEmail}
-                  onChange={setGuestEmail}
-                  required
-                />
-                <Input
-                  label={locale === "es" ? "Teléfono" : "Phone"}
-                  type="tel"
-                  value={guestPhone}
-                  onChange={setGuestPhone}
-                  required
-                />
+                <Input label={locale === "es" ? "Nombre" : "Name"} value={guestName} onChange={setGuestName} required />
+                <Input label="Email" type="email" value={guestEmail} onChange={setGuestEmail} required />
+                <Input label={locale === "es" ? "Teléfono" : "Phone"} type="tel" value={guestPhone} onChange={setGuestPhone} required />
               </div>
               <p className="mt-3 text-xs text-ink-soft">
                 {locale === "es" ? "¿Ya tienes cuenta?" : "Have an account?"}{" "}
-                <Link
-                  href="/login?callbackUrl=/checkout"
-                  className="font-medium text-canela-dark underline"
-                >
+                <Link href="/login?callbackUrl=/checkout" className="font-medium text-canela-dark underline">
                   {locale === "es" ? "Inicia sesión" : "Sign in"}
                 </Link>
               </p>
@@ -287,10 +269,7 @@ export function CheckoutForm({
           )}
 
           {/* Fulfillment toggle */}
-          <Section
-            num={user ? 1 : 2}
-            title={locale === "es" ? "Recolección o envío" : "Pickup or delivery"}
-          >
+          <Section num={nextNum()} title={locale === "es" ? "Recolección o envío" : "Pickup or delivery"}>
             <div className="grid gap-3 sm:grid-cols-2">
               <FulfillmentTile
                 active={fulfillment === "PICKUP"}
@@ -305,13 +284,11 @@ export function CheckoutForm({
                 icon={Truck}
                 title={locale === "es" ? "Envío" : "Delivery"}
                 desc={
-                  isMember
-                    ? locale === "es"
-                      ? "Gratis con tu plan"
-                      : "Free with your plan"
-                    : locale === "es"
-                    ? "$7 · 1ra gratis en SE"
-                    : "$7 · 1st free in SE"
+                  !user
+                    ? "$7 CAD"
+                    : isMember
+                    ? locale === "es" ? "Gratis con tu plan" : "Free with your plan"
+                    : locale === "es" ? "$7 · 1ra gratis en SE" : "$7 · 1st free in SE"
                 }
               />
             </div>
@@ -319,15 +296,11 @@ export function CheckoutForm({
 
           {/* Slot picker */}
           <Section
-            num={user ? 2 : 3}
+            num={nextNum()}
             title={
               fulfillment === "PICKUP"
-                ? locale === "es"
-                  ? "¿Cuándo recoges?"
-                  : "When to pick up?"
-                : locale === "es"
-                ? "¿Cuándo entregamos?"
-                : "When to deliver?"
+                ? locale === "es" ? "¿Cuándo recoges?" : "When to pick up?"
+                : locale === "es" ? "¿Cuándo entregamos?" : "When to deliver?"
             }
           >
             {fulfillment === "PICKUP" ? (
@@ -339,19 +312,13 @@ export function CheckoutForm({
                 minLeadHours={maxLeadTime}
               />
             ) : (
-              <DeliverySlotPicker
-                selectedId={deliverySlotId}
-                onChange={setDeliverySlotId}
-              />
+              <DeliverySlotPicker selectedId={deliverySlotId} onChange={setDeliverySlotId} />
             )}
           </Section>
 
           {/* Address — delivery only */}
           {fulfillment === "DELIVERY" && (
-            <Section
-              num={user ? 3 : 4}
-              title={locale === "es" ? "Dirección" : "Address"}
-            >
+            <Section num={nextNum()} title={locale === "es" ? "Dirección" : "Address"}>
               <AddressPicker
                 addresses={addresses}
                 selectedId={addressId}
@@ -364,66 +331,34 @@ export function CheckoutForm({
           )}
 
           {/* Discounts */}
-          <Section
-            num={
-              user
-                ? fulfillment === "DELIVERY"
-                  ? 4
-                  : 3
-                : fulfillment === "DELIVERY"
-                ? 5
-                : 4
-            }
-            title={locale === "es" ? "Descuentos" : "Discounts"}
-          >
+          <Section num={nextNum()} title={locale === "es" ? "Descuentos" : "Discounts"}>
             <div className="space-y-4">
               <CouponInput
                 applied={coupon}
-                onApply={(c) => {
-                  setCoupon(c);
-                  setCartCoupon(c.code);
-                }}
-                onRemove={() => {
-                  setCoupon(null);
-                  setCartCoupon(null);
-                }}
+                onApply={(c) => { setCoupon(c); setCartCoupon(c.code); }}
+                onRemove={() => { setCoupon(null); setCartCoupon(null); }}
                 subtotalCents={pricing.subtotalCents}
               />
               {user && (
                 <PointsSlider
                   available={user.pointsBalance}
                   current={pointsToRedeem}
-                  maxRedeemable={Math.floor(
-                    (pricing.subtotalCents - pricing.couponDiscountCents) / 1
-                  )}
-                  onChange={(n) => {
-                    setPointsToRedeem(n);
-                    setCartPoints(n);
-                  }}
+                  maxRedeemable={Math.floor((pricing.subtotalCents - pricing.couponDiscountCents) / 1)}
+                  onChange={(n) => { setPointsToRedeem(n); setCartPoints(n); }}
                 />
               )}
             </div>
           </Section>
 
+          {/* Tip */}
+          <Section num={nextNum()} title={locale === "es" ? "Propina" : "Tip"}>
+            <TipInput subtotalCents={pricing.subtotalCents} tipCents={tipCents} onChange={setTipCents} />
+          </Section>
+
           {/* Payment */}
-          <Section
-            num={
-              user
-                ? fulfillment === "DELIVERY"
-                  ? 5
-                  : 4
-                : fulfillment === "DELIVERY"
-                ? 6
-                : 5
-            }
-            title={locale === "es" ? "Pago" : "Payment"}
-          >
-            <SquarePaymentForm
-              totalCents={pricing.totalCents}
-              onTokenReady={handlePayment}
-              disabled={!canPay}
-            />
-            {!canPay && pricing.errors.length === 0 && (
+          <Section num={nextNum()} title={locale === "es" ? "Pago" : "Payment"}>
+            <SquarePaymentForm totalCents={pricing.totalCents} onTokenReady={handlePayment} disabled={!canPay} />
+            {!canPay && pricing.errors.length === 0 && !needsMembership && (
               <p className="mt-3 text-xs text-ink-soft">
                 {locale === "es"
                   ? "Completa los pasos anteriores para continuar."
@@ -441,25 +376,19 @@ export function CheckoutForm({
         {/* Right: summary */}
         <OrderSummarySidebar pricing={pricing} />
       </div>
+
+      <GuestSignupNudge show={showGuestNudge} onDismiss={() => setShowGuestNudge(false)} />
     </div>
   );
 }
 
-function Section({
-  num,
-  title,
-  children,
-}: {
-  num: number;
-  title: string;
-  children: React.ReactNode;
-}) {
+// ─── Subcomponents ───────────────────────────────────────────
+
+function Section({ num, title, children }: { num: number; title: string; children: React.ReactNode }) {
   return (
     <section>
       <header className="mb-4 flex items-center gap-3">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-canela text-xs font-bold">
-          {num}
-        </span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-canela text-xs font-bold">{num}</span>
         <h2 className="font-display text-xl">{title}</h2>
       </header>
       <div className="ml-10">{children}</div>
@@ -468,17 +397,9 @@ function Section({
 }
 
 function FulfillmentTile({
-  active,
-  onClick,
-  icon: Icon,
-  title,
-  desc,
+  active, onClick, icon: Icon, title, desc,
 }: {
-  active: boolean;
-  onClick: () => void;
-  icon: any;
-  title: string;
-  desc: string;
+  active: boolean; onClick: () => void; icon: any; title: string; desc: string;
 }) {
   return (
     <button
@@ -486,51 +407,29 @@ function FulfillmentTile({
       onClick={onClick}
       className={cn(
         "flex items-center gap-3 rounded-2xl border p-4 text-left transition-all",
-        active
-          ? "border-canela-dark bg-canela-light"
-          : "border-canela/30 bg-cream hover:border-canela"
+        active ? "border-canela-dark bg-canela-light" : "border-canela/30 bg-cream hover:border-canela"
       )}
     >
-      <div
-        className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-full",
-          active ? "bg-canela-dark text-cream" : "bg-canela-light"
-        )}
-      >
+      <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", active ? "bg-canela-dark text-cream" : "bg-canela-light")}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1">
         <p className="font-medium">{title}</p>
         <p className="text-xs text-ink-soft">{desc}</p>
       </div>
-      <ChevronRight
-        className={cn(
-          "h-4 w-4 transition-transform",
-          active && "rotate-90 text-canela-dark"
-        )}
-      />
+      <ChevronRight className={cn("h-4 w-4 transition-transform", active && "rotate-90 text-canela-dark")} />
     </button>
   );
 }
 
 function Input({
-  label,
-  type = "text",
-  value,
-  onChange,
-  required,
+  label, type = "text", value, onChange, required,
 }: {
-  label: string;
-  type?: string;
-  value: string;
-  onChange: (v: string) => void;
-  required?: boolean;
+  label: string; type?: string; value: string; onChange: (v: string) => void; required?: boolean;
 }) {
   return (
     <div>
-      <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
-        {label} {required && "*"}
-      </label>
+      <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">{label} {required && "*"}</label>
       <input
         type={type}
         value={value}

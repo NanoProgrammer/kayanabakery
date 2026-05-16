@@ -91,7 +91,7 @@ export default function AmbassadorDecision(props: Props) {
                 <ul
                   style={{ margin: 0, padding: "0 0 0 20px", color: "#2B2B2B" }}
                 >
-                  {t.list.map((b, i) => (
+                  {t.list?.map((b, i) => (
                     <li
                       key={i}
                       style={{ fontSize: 14, marginBottom: 6, lineHeight: 1.5 }}

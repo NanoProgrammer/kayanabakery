@@ -168,9 +168,9 @@ model Order {
   deliverySlotId  String?
   deliverySlot    DeliverySlot? @relation(fields: [deliverySlotId], references: [id])
   notes           String?
-
-  addressId  String?
-  address    Address?  @relation(fields: [addressId], references: [id])
+  tipCents        Int           @default(0)
+  addressId       String?
+  address         Address?      @relation(fields: [addressId], references: [id])
 
   status          OrderStatus   @default(PENDING)
   paymentStatus   PaymentStatus @default(PENDING)

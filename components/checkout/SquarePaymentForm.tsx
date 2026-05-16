@@ -5,11 +5,6 @@ import Script from "next/script";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { CreditCard } from "lucide-react";
 
-declare global {
-  interface Window {
-    Square?: any;
-  }
-}
 
 export function SquarePaymentForm({
   onTokenReady,
@@ -29,7 +24,7 @@ export function SquarePaymentForm({
 
   useEffect(() => {
     if (!scriptLoaded) return;
-    if (!window.Square) return;
+    if (!(window as any).Square) return;
     if (card) return;
 
     const appId = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
@@ -42,7 +37,7 @@ export function SquarePaymentForm({
     let mounted = true;
     (async () => {
       try {
-        const payments = window.Square.payments(appId, locId);
+        const payments = (window as any).Square.payments(appId, locId);
         const cardInstance = await payments.card({
           style: {
             input: {

@@ -70,7 +70,8 @@ export default async function MembershipAccountPage() {
 
         <MembershipManager
           currentTier={tier as any}
-          status={membership?.status ?? null}
+          isActive={membership?.status === "ACTIVE"}
+          hasSquareSubscription={!!membership?.squareSubscriptionId}
         />
       </div>
 

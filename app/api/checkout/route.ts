@@ -372,20 +372,20 @@ export async function POST(req: Request) {
   let paymentId: string | undefined;
 
   try {
-    const { result } = await squareClient.paymentsApi.createPayment({
-      sourceId: data.paymentToken,
-      idempotencyKey,
-      amountMoney: {
-        amount: BigInt(pricing.totalCents),
-        currency: "CAD",
-      },
-      locationId,
-      buyerEmailAddress: user?.email ?? data.guestEmail ?? undefined,
-      note: `Karyana order — ${pricing.totalCents / 100} CAD`,
-      autocomplete: true,
-    });
+    const result = await squareClient.payments.create({
+  sourceId: data.paymentToken,
+  idempotencyKey,
+  amountMoney: {
+    amount: BigInt(pricing.totalCents),
+    currency: "CAD",
+  },
+  locationId,
+  buyerEmailAddress: user?.email ?? data.guestEmail ?? undefined,
+  note: `Karyana order — ${pricing.totalCents / 100} CAD`,
+  autocomplete: true,
+});
 
-    paymentId = result.payment?.id ?? undefined;
+paymentId = result.payment?.id ?? undefined;
 
     if (!paymentId) {
       throw new Error("Square did not return payment id");

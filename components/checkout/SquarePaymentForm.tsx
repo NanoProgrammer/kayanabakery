@@ -7,7 +7,7 @@ import { CreditCard } from "lucide-react";
 
 declare global {
   interface Window {
-    Square: any;
+    Square?: any;
   }
 }
 

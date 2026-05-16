@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { sanityFetch } from "@/sanity/lib/fetch";
-import { squareClient, locationId } from "@/lib/square/client";
+import { squareClient, SQUARE_LOCATION_ID as locationId } from "@/lib/square/client";
 import { computePricing } from "@/lib/checkout/pricing";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
 import { generateOrderNumber } from "@/lib/checkout/order-number";

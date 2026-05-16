@@ -5,7 +5,6 @@ export default defineType({
   title: "Orders",
   type: "document",
   // Read-only fields are synced from Prisma — only status is editable by Karyana
-  __experimental_actions: ["update", "publish"],
   fields: [
     defineField({
       name: "orderNumber",

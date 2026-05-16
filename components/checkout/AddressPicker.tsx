@@ -19,6 +19,7 @@ export type AddressData = {
 export type SavedAddress = AddressData & {
   id: string;
   isSE: boolean;
+  isDefault?: boolean;
 };
 
 export function AddressPicker({

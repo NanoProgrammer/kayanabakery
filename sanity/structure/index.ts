@@ -1,4 +1,4 @@
-import type { StructureBuilder } from "sanity/structure";
+import type { StructureBuilder } from "sanity/desk";
 import {
   Cookie,
   Tag,

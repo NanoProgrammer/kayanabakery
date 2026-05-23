@@ -1,10 +1,10 @@
 /**
  * Karyana — Membership tiers source of truth
  *
- * All business rules for memberships live here. Other parts of the app
- * import from this file rather than hardcoding tier logic.
- *
- * Money values are in CENTS unless suffixed _DOLLARS.
+ * CHANGE: Artesano free delivery is NO LONGER automatic.
+ * Artesano members receive a FREE_SHIPPING coupon code via newsletter.
+ * Only Selecto, Legendario get automatic free delivery with min order.
+ * New field: freeDeliveryAutomatic (boolean) — true only for Selecto+.
  */
 
 export type MembershipTier =
@@ -36,6 +36,8 @@ export interface TierBenefits {
 
   // Delivery
   freeDelivery: boolean;
+  /** NEW: Whether free delivery is automatic or requires a coupon */
+  freeDeliveryAutomatic: boolean;
   freeDeliveryMinOrderCents: number | null;
   pickupOnly: boolean;
 
@@ -55,7 +57,7 @@ export interface TierBenefits {
 
   // Ambassador-specific
   paidForDelivery: boolean;
-  ambassadorPayoutCents: number; // 0 if not applicable
+  ambassadorPayoutCents: number;
   personalizedService: boolean;
 }
 
@@ -77,6 +79,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     preferralSeasonalAccess: false,
 
     freeDelivery: false,
+    freeDeliveryAutomatic: false,
     freeDeliveryMinOrderCents: null,
     pickupOnly: false,
 
@@ -99,7 +102,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     tier: "ARTESANO",
     name: "Artesano",
     cadence: "YEARLY",
-    priceCents: 3900, // $39/year
+    priceCents: 3900,
     needsApproval: false,
 
     includedBreadWithPayment: false,
@@ -111,8 +114,11 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     offSeasonAccess: true,
     preferralSeasonalAccess: true,
 
+    // CHANGED: freeDelivery is technically available but NOT automatic
+    // Artesano must use a newsletter coupon code for free shipping
     freeDelivery: true,
-    freeDeliveryMinOrderCents: 3200, // $32 minimum
+    freeDeliveryAutomatic: false, // <-- KEY CHANGE
+    freeDeliveryMinOrderCents: 3200,
     pickupOnly: false,
 
     birthdayPoints: 500,
@@ -134,7 +140,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     tier: "SELECTO",
     name: "Selecto",
     cadence: "MONTHLY",
-    priceCents: 3000, // $30/month
+    priceCents: 3000,
     needsApproval: false,
 
     includedBreadWithPayment: true,
@@ -147,7 +153,8 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     preferralSeasonalAccess: true,
 
     freeDelivery: true,
-    freeDeliveryMinOrderCents: 2500, // $25
+    freeDeliveryAutomatic: true, // Selecto gets it automatically
+    freeDeliveryMinOrderCents: 2500,
     pickupOnly: false,
 
     birthdayPoints: 500,
@@ -169,7 +176,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     tier: "LEGENDARIO",
     name: "Legendario",
     cadence: "MONTHLY",
-    priceCents: 5000, // $50/month
+    priceCents: 5000,
     needsApproval: false,
 
     includedBreadWithPayment: true,
@@ -182,6 +189,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     preferralSeasonalAccess: true,
 
     freeDelivery: true,
+    freeDeliveryAutomatic: true, // Legendario gets it automatically
     freeDeliveryMinOrderCents: 2500,
     pickupOnly: false,
 
@@ -216,13 +224,14 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     offSeasonAccess: true,
     preferralSeasonalAccess: true,
 
-    freeDelivery: false, // pickup only
+    freeDelivery: false,
+    freeDeliveryAutomatic: false,
     freeDeliveryMinOrderCents: null,
     pickupOnly: true,
 
     birthdayPoints: 500,
 
-    freeNewBreadPerMonth: 4, // once per week ≈ 4/month
+    freeNewBreadPerMonth: 4,
     freeNewBreadOnlyFirstOrder: false,
 
     autoMonthlyPromos: true,
@@ -231,15 +240,13 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     pointsMultiplier: 10,
 
     paidForDelivery: true,
-    ambassadorPayoutCents: 800, // $8 default; bumped to $10 by tier of recipient
+    ambassadorPayoutCents: 800,
     personalizedService: true,
   },
 };
 
 /**
  * Ambassador payout depends on the tier of the customer they delivered TO.
- * - Artesano / Selecto recipient → $8
- * - Legendario recipient → $10
  */
 export function ambassadorPayoutCents(
   recipientTier: MembershipTier
@@ -247,11 +254,6 @@ export function ambassadorPayoutCents(
   return recipientTier === "LEGENDARIO" ? 1000 : 800;
 }
 
-/**
- * Points earned for an order:
- *   floor(orderTotalDollars) × tier.pointsMultiplier
- * Points are NOT earned on the membership fee itself or on points-redeemed amount.
- */
 export function calculatePointsEarned(
   eligibleSubtotalCents: number,
   tier: MembershipTier
@@ -260,18 +262,16 @@ export function calculatePointsEarned(
   return dollars * TIERS[tier].pointsMultiplier;
 }
 
-/** Convert points to dollar value: 100 pts = $1 */
 export function pointsToDollars(points: number): number {
   return points / 100;
 }
 export function pointsToCents(points: number): number {
-  return points; // 100 pts = $1 = 100¢ → 1 pt = 1¢
+  return points;
 }
 export function dollarsToPoints(dollars: number): number {
   return Math.floor(dollars * 100);
 }
 
-/** Display label including price */
 export function tierPriceLabel(tier: MembershipTier): string {
   const t = TIERS[tier];
   if (t.cadence === "FREE") return t.needsApproval ? "Free (approval)" : "Free";
@@ -279,13 +279,12 @@ export function tierPriceLabel(tier: MembershipTier): string {
   return t.cadence === "YEARLY" ? `$${dollars}/year` : `$${dollars}/month`;
 }
 
-/** Tier hierarchy for "Selecto+" style checks */
 const TIER_RANK: Record<MembershipTier, number> = {
   BASICO: 0,
   ARTESANO: 1,
   SELECTO: 2,
   LEGENDARIO: 3,
-  EMBAJADOR: 2, // treat ambassador roughly = Selecto for catalog perks
+  EMBAJADOR: 2,
 };
 
 export function tierMeets(

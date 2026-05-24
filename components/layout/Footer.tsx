@@ -1,189 +1,154 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { Instagram, Mail, MapPin, Phone } from "lucide-react";
+import { Heart } from "lucide-react";
 
-export function Footer({
-  contactEmail,
-  contactPhone,
-  pickupAddress,
-}: {
-  contactEmail?: string;
-  contactPhone?: string;
-  pickupAddress?: string;
-}) {
-  const { t, locale } = useLocale();
-  const tagline = t("footer.tagline");
+export function Footer() {
+  const { locale } = useLocale();
+
+  const shopLinks = [
+    { href: "/shop", label: locale === "es" ? "Tienda" : "Shop" },
+    { href: "/category/conchas", label: "Conchas" },
+    { href: "/category/cakes", label: locale === "es" ? "Pasteles" : "Cakes" },
+    { href: "/category/churros", label: "Churros" },
+    {
+      href: "/category/traditional-mexican-bread",
+      label: locale === "es" ? "Pan tradicional" : "Traditional bread",
+    },
+    {
+      href: "/category/boxes",
+      label: locale === "es" ? "Cajas" : "Boxes",
+    },
+  ];
+
+  const aboutLinks = [
+    { href: "/about", label: locale === "es" ? "Nosotros" : "About us" },
+    { href: "/events", label: locale === "es" ? "Eventos" : "Events" },
+    { href: "/memberships", label: locale === "es" ? "Membresías" : "Memberships" },
+    {
+      href: "/refer-a-friend",
+      label: locale === "es" ? "Refiere un amigo" : "Refer a friend",
+    },
+    { href: "/faq", label: "FAQ" },
+    { href: "/contact", label: locale === "es" ? "Contacto" : "Contact" },
+  ];
+
+  const helpLinks = [
+    {
+      href: "/how-to-order",
+      label: locale === "es" ? "Cómo ordenar" : "How to order",
+    },
+    {
+      href: "/track",
+      label: locale === "es" ? "Rastrear orden" : "Track order",
+    },
+    {
+      href: "/account",
+      label: locale === "es" ? "Mi cuenta" : "My account",
+    },
+  ];
 
   return (
-    <footer className="relative mt-32 overflow-hidden border-t border-canela/15 bg-masa">
-      <div className="grain absolute inset-0" />
-      <div className="container-bakery relative grid gap-14 py-20 md:grid-cols-12">
-        {/* Brand */}
-        <div className="md:col-span-5">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="Karyana Ruiz Bakery"
-              width={64}
-              height={64}
-              className="h-16 w-16 object-contain"
-            />
-            <div>
-              <p className="font-display text-2xl">Karyana Ruiz</p>
-              <p className="font-script text-xl text-canela-dark">Bakery</p>
-            </div>
+    <footer className="border-t border-canela/15 bg-masa/40">
+      <div className="container-bakery py-16 md:py-20">
+        {/* Top: brand + columns */}
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
+          {/* Brand */}
+          <div className="lg:col-span-2">
+            <Link href="/" className="font-display text-2xl text-ink">
+              Karyana
+              <span className="ml-1 text-sm font-normal text-canela">
+                Bakery
+              </span>
+            </Link>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink-soft">
+              {locale === "es"
+                ? "Más que pan, un recuerdo de casa. Pan mexicano artesanal horneado con amor en Calgary desde 2018."
+                : "More than bread, a home memory. Handmade Mexican bread baked with love in Calgary since 2018."}
+            </p>
+            <p className="mt-4 text-xs text-ink-soft">Calgary, AB 🇨🇦</p>
           </div>
-          <p className="mt-6 max-w-sm font-script text-2xl text-ink">
-            {tagline}
+
+          {/* Shop */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-canela-dark">
+              {locale === "es" ? "Tienda" : "Shop"}
+            </h3>
+            <ul className="mt-4 space-y-2.5">
+              {shopLinks.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    className="text-sm text-ink-soft transition-colors hover:text-canela-dark"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* About */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-canela-dark">
+              {locale === "es" ? "Karyana" : "Karyana"}
+            </h3>
+            <ul className="mt-4 space-y-2.5">
+              {aboutLinks.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    className="text-sm text-ink-soft transition-colors hover:text-canela-dark"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Help */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-canela-dark">
+              {locale === "es" ? "Ayuda" : "Help"}
+            </h3>
+            <ul className="mt-4 space-y-2.5">
+              {helpLinks.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    className="text-sm text-ink-soft transition-colors hover:text-canela-dark"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Dicho */}
+        <div className="mt-14 border-t border-canela/15 pt-8 text-center">
+          <p className="font-script text-xl text-canela-dark">
+            "Las penas con pan son menos."
           </p>
-          <p className="mt-2 text-xs uppercase tracking-[0.3em] text-ink-soft">
-            Est. 2018
+        </div>
+
+        {/* Bottom */}
+        <div className="mt-6 flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-between">
+          <p className="text-[11px] uppercase tracking-widest text-ink-soft">
+            © {new Date().getFullYear()} Karyana Bakery.{" "}
+            {locale === "es"
+              ? "Todos los derechos reservados."
+              : "All rights reserved."}
           </p>
-
-          <div className="mt-8 space-y-3 text-sm text-ink-soft">
-            {pickupAddress && (
-              <p className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-canela-dark" />
-                <span>{pickupAddress}</span>
-              </p>
-            )}
-            {contactPhone && (
-              <p className="flex items-center gap-2">
-                <Phone className="h-4 w-4 shrink-0 text-canela-dark" />
-                <a href={`tel:${contactPhone}`} className="hover:text-ink">
-                  {contactPhone}
-                </a>
-              </p>
-            )}
-            {contactEmail && (
-              <p className="flex items-center gap-2">
-                <Mail className="h-4 w-4 shrink-0 text-canela-dark" />
-                <a href={`mailto:${contactEmail}`} className="hover:text-ink">
-                  {contactEmail}
-                </a>
-              </p>
-            )}
-          </div>
-
-          <div className="mt-8 flex gap-3">
-            <a
-              href="https://instagram.com/karyanabakery"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-canela transition-transform hover:scale-110"
-              aria-label="Instagram"
-            >
-              <Instagram className="h-4 w-4 text-ink" />
-            </a>
-          </div>
+          <p className="inline-flex items-center gap-1 text-[11px] text-ink-soft">
+            {locale === "es" ? "Hecho con" : "Made with"}
+            <Heart className="h-3 w-3 fill-otomi-red text-otomi-red" />
+            {locale === "es" ? "en Calgary" : "in Calgary"}
+          </p>
         </div>
-
-        {/* Shop */}
-        <div className="md:col-span-2">
-          <h4 className="mb-4 text-xs font-bold uppercase tracking-[0.2em]">
-            {t("footer.shop")}
-          </h4>
-          <ul className="space-y-2.5 text-sm text-ink-soft">
-            <li>
-              <Link href="/shop" className="hover:text-ink">
-                {t("nav.shop")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/category/conchas" className="hover:text-ink">
-                {t("nav.conchas")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/category/cakes" className="hover:text-ink">
-                {t("nav.cakes")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/memberships" className="hover:text-ink">
-                {t("nav.memberships")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/events" className="hover:text-ink">
-                {t("nav.events")}
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Help */}
-        <div className="md:col-span-2">
-          <h4 className="mb-4 text-xs font-bold uppercase tracking-[0.2em]">
-            {t("footer.help")}
-          </h4>
-          <ul className="space-y-2.5 text-sm text-ink-soft">
-            <li>
-              <Link href="/faq" className="hover:text-ink">
-                {t("nav.faq")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/how-to-order" className="hover:text-ink">
-                {t("nav.howToOrder")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/track-order" className="hover:text-ink">
-                {locale === "es" ? "Rastrear orden" : "Track order"}
-              </Link>
-            </li>
-            <li>
-              <Link href="/refer-a-friend" className="hover:text-ink">
-                {t("nav.referAFriend")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact" className="hover:text-ink">
-                {t("nav.contact")}
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Company */}
-        <div className="md:col-span-3">
-          <h4 className="mb-4 text-xs font-bold uppercase tracking-[0.2em]">
-            {t("footer.company")}
-          </h4>
-          <ul className="space-y-2.5 text-sm text-ink-soft">
-            <li>
-              <Link href="/about" className="hover:text-ink">
-                {t("nav.about")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/ambassador" className="hover:text-ink">
-                {t("nav.ambassador")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/privacy" className="hover:text-ink">
-                {locale === "es" ? "Privacidad" : "Privacy"}
-              </Link>
-            </li>
-            <li>
-              <Link href="/terms" className="hover:text-ink">
-                {locale === "es" ? "Términos" : "Terms"}
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="container-bakery relative flex flex-col items-center justify-between gap-3 border-t border-canela/15 py-6 text-xs text-ink-soft md:flex-row">
-        <p>
-          © {new Date().getFullYear()} Karyana Ruiz Bakery — {t("footer.rights")}
-        </p>
-        <p className="font-script text-base text-canela-dark">{tagline}</p>
       </div>
     </footer>
   );

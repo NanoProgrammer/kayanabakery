@@ -111,7 +111,7 @@ export default function TermsPage() {
         <Section title={locale === "es" ? "10. Cambios a estos Términos" : "10. Changes to these Terms"}>
           {locale === "es"
             ? "Podemos revisar estos Términos en cualquier momento. Tu uso continuado del Sitio después de dichos cambios constituye tu aceptación de los Términos revisados."
-            : "We may revise these Terms at any time. The "Last updated" date at the top will reflect when changes were made. Your continued use of the Site after such changes constitutes your acceptance of the revised Terms."}
+            : `We may revise these Terms at any time. The "Last updated" date at the top will reflect when changes were made. Your continued use of the Site after such changes constitutes your acceptance of the revised Terms.`}
         </Section>
 
         <Section title={locale === "es" ? "11. Contacto" : "11. Contact Us"}>

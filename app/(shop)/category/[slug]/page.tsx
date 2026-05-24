@@ -84,7 +84,7 @@ export default async function CategoryPage({
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href="/product/custom-celebration-cake"
+                  href="/custom-cake"
                   className="inline-flex items-center gap-2 rounded-full bg-cream px-6 py-3 text-sm font-medium text-canela-dark transition-colors hover:bg-white"
                 >
                   Order a custom cake →

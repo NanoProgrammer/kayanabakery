@@ -97,9 +97,6 @@ export default async function RootLayout({
             <Navbar />
             <main className="min-h-screen">{children}</main>
             <Footer
-              contactEmail={settings?.contactEmail}
-              contactPhone={settings?.contactPhone}
-              pickupAddress={settings?.pickupAddress}
             />
             <CartDrawer />
             {popup && <PopupBannerProvider banner={popup} />}

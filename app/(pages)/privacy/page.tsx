@@ -80,7 +80,7 @@ export default function PrivacyPage() {
         <Section title={locale === "es" ? "9. Cambios a esta Política" : "9. Changes to this Privacy Policy"}>
           {locale === "es"
             ? "Podemos actualizar esta política en cualquier momento. La fecha en la parte superior reflejará la revisión más reciente."
-            : "We may update this policy from time to time. The "Last updated" date at the top will reflect the most recent revision."}
+            :  'We may update this policy from time to time. The "Last updated" date at the top will reflect the most recent revision.'}
         </Section>
 
         <Section title={locale === "es" ? "10. Contacto" : "10. Contact Us"}>

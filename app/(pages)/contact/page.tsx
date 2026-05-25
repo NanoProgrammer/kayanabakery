@@ -59,8 +59,8 @@ export default function ContactPage() {
             <ContactItem
               icon={Mail}
               label="Email"
-              value="hola@karyanabakery.ca"
-              href="mailto:hola@karyanabakery.ca"
+              value="hello@karyanabakery.ca"
+              href="mailto:hello@karyanabakery.ca"
             />
             <ContactItem
               icon={Phone}

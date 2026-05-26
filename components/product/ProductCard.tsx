@@ -77,7 +77,7 @@ export function ProductCard({ product }: { product: Product }) {
         className="group block"
         aria-label={name}
       >
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-canela-light shadow-xl hover:shadow-2xs">
+        <div className="relative aspect-square overflow-hidden rounded-2xl bg-canela-light shadow-xl hover:shadow-xs transition-shadow border-2 border-gray-100 ">
           {product.image && (
             <Image
               src={urlFor(product.image).width(600).height(600).url()}
@@ -147,7 +147,7 @@ export function ProductCard({ product }: { product: Product }) {
               {description}
             </p>
           )}
-          <div className="mt-1.5 flex items-center justify-between text-center">
+          <div className="mt-1.5 flex items-center justify-center text-center">
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-bold">
                 {formatPrice(product.price, locale)}

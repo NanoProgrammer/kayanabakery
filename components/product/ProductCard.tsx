@@ -77,7 +77,7 @@ export function ProductCard({ product }: { product: Product }) {
         className="group block"
         aria-label={name}
       >
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-canela-light">
+        <div className="relative aspect-square overflow-hidden rounded-2xl bg-canela-light shadow-md hover:shadow-2xs">
           {product.image && (
             <Image
               src={urlFor(product.image).width(600).height(600).url()}
@@ -141,13 +141,13 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
 
         <div className="mt-3 px-1">
-          <h3 className="line-clamp-1 text-sm font-medium">{name}</h3>
+          <h3 className="line-clamp-1 text-sm font-medium text-center">{name}</h3>
           {description && (
             <p className="mt-0.5 line-clamp-1 text-xs text-ink-soft">
               {description}
             </p>
           )}
-          <div className="mt-1.5 flex items-center justify-between">
+          <div className="mt-1.5 flex items-center justify-between text-center">
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-bold">
                 {formatPrice(product.price, locale)}

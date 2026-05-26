@@ -77,7 +77,7 @@ export function ProductCard({ product }: { product: Product }) {
         className="group block"
         aria-label={name}
       >
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-canela-light shadow-xl hover:shadow-xs transition-shadow border-2 border-gray-100 ">
+        <div className="relative aspect-square overflow-hidden rounded-2xl bg-canela-light shadow-xl border-2 border-gray-100 ">
           {product.image && (
             <Image
               src={urlFor(product.image).width(600).height(600).url()}

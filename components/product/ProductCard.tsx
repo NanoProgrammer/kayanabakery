@@ -77,7 +77,7 @@ export function ProductCard({ product }: { product: Product }) {
         className="group block"
         aria-label={name}
       >
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-canela-light shadow-md hover:shadow-2xs">
+        <div className="relative aspect-square overflow-hidden rounded-2xl bg-canela-light shadow-xl hover:shadow-2xs">
           {product.image && (
             <Image
               src={urlFor(product.image).width(600).height(600).url()}
@@ -113,7 +113,7 @@ export function ProductCard({ product }: { product: Product }) {
           )}
 
           {product.compareAtPrice && product.compareAtPrice > product.price && (
-            <span className="absolute bottom-3 left-3 rounded-full bg-canela-dark px-2.5 py-1 text-[10px] font-bold uppercase text-cream shadow-sm">
+            <span className="absolute bottom-3 left-3 rounded-full bg-canela-dark px-2.5 py-1 text-[10px] font-bold uppercase text-cream shadow-sm text-center">
               -
               {Math.round(
                 ((product.compareAtPrice - product.price) /

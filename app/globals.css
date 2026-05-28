@@ -51,10 +51,11 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 
   /* KARYANA BRAND COLORS */
-  --color-cream: #FBF6EE;
-  --color-masa: #FAEFE8;
+    --color-cream: #FAD9D5;
+  --color-masa: #EED8DD;
   --color-canela: #6B4423;
-  --color-canela-light: #FBB7C5;
+  --color-canela-light: #F8DCE3;
+  --color-canela-light: #F7D9E0;
   --color-canela-dark: #D98FA2;
   --color-concha-rosa: #E8B4B8;
   --color-concha-rosa-dark: #D99499;

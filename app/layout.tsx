@@ -95,7 +95,9 @@ export default async function RootLayout({
               <AnnouncementBar messages={announcements} />
             )}
             <Navbar />
-            <main className="min-h-screen">{children}</main>
+            <main className="min-h-screen">
+  {children}
+</main>
             <Footer
             />
             <CartDrawer />

@@ -4,7 +4,7 @@ import { SignatureProducts } from "@/components/home/SignatureProducts";
 import { HolidayBanner } from "@/components/home/HolidayBanner";
 import { UpcomingEvents } from "@/components/home/UpcomingEvents";
 import { ReferralBanner } from "@/components/home/ReferralBanner";
-import { Testimonials } from "@/components/home/Testimonials";
+import { ConchaVideoSection } from "@/components/home/VideoConchaEmoji";
 import { GoogleReviewsSection } from "@/components/home/GoogleReviewsSection";
 import { Newsletter } from "@/components/home/Newsletter";
 import { MembershipTeaser } from "@/components/home/MembershipTeaser";
@@ -72,16 +72,16 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero settings={settings} />
-      <FeaturedCategories categories={categories} />
+      <Hero settings={settings} categories={categories} />
+      <Newsletter />
       <SignatureProducts products={products} />
       {promo && <HolidayBanner promo={promo} />}
       <MembershipTeaser />
       <UpcomingEvents events={events} />
-      <ReferralBanner discount={settings?.referralDiscount ?? 10} />
+      <ReferralBanner discount={settings?.referralDiscount ?? 3} />
       <GoogleReviewsSection  />
-      <Testimonials testimonials={testimonials} />
-      <Newsletter />
+      <ConchaVideoSection />
+    
     </>
   );
 }

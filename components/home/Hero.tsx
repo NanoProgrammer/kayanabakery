@@ -46,7 +46,7 @@ export function Hero({
 
   useEffect(() => {
     if (paused) return;
-    const delay = slides[current].type === "video" ? 12000 : 6000;
+    const delay = slides[current].type === "video" ? 3000 : 2000;
     const timer = setTimeout(next, delay);
     return () => clearTimeout(timer);
   }, [current, paused, next, slides]);

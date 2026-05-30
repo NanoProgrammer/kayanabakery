@@ -29,7 +29,7 @@ export function Navbar() {
         <Link
           href="/"
           aria-label="Karyana Bakery"
-          className="flex items-center gap-2 md:gap-3"
+          className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 md:gap-3 md:relative md:left-auto md:translate-x-0"?
         >
           <Image
             src="/logo.png"
@@ -80,7 +80,7 @@ export function Navbar() {
           {/* Search — mobile */}
           <Link
             href="/shop"
-            className="inline-flex items-center justify-center rounded-full p-2 hover:bg-canela-light lg:hidden"
+            className="hidden"
             aria-label="Search"
           >
             <Search className="h-5 w-5 md:h-4 md:w-4" />

@@ -24,7 +24,7 @@ export function Navbar() {
 
   return (
     <header className="sticky z-10 top-0 left-0 right-0 z-[9999] overflow-visible border-b border-canela/15 bg-cream/90 ">
-      <div className="container-bakery relative overflow-visible flex h-16 items-center justify-between gap-3 md:h-20 md:gap-4">
+      <div className="container-bakery relative overflow-visible flex h-28 items-center justify-between gap-3 md:h-20 md:gap-4">
         {/* Logo */}
         <Link
           href="/"
@@ -34,8 +34,8 @@ export function Navbar() {
           <Image
             src="/logo.png"
             alt="Karyana Ruiz Bakery"
-            width={90}
-            height={90}
+            width={100}
+            height={100}
             priority
             className="h-25 w-25 object-contain md:h-25 md:w-25"
           />

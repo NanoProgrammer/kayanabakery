@@ -34,8 +34,8 @@ export function Navbar() {
           <Image
             src="/logo.png"
             alt="Karyana Ruiz Bakery"
-            width={100}
-            height={100}
+            width={90}
+            height={90}
             priority
             className="h-30 w-30 object-contain md:h-30 md:w-30"
           />

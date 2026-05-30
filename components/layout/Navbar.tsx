@@ -29,7 +29,7 @@ export function Navbar() {
         <Link
           href="/"
           aria-label="Karyana Bakery"
-          className="absolute left-1/2 -translate-x-1/2"
+          className="flex items-center gap-2 md:gap-3"
         >
           <Image
             src="/logo.png"

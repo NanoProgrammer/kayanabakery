@@ -34,10 +34,10 @@ export function Navbar() {
           <Image
             src="/logo.png"
             alt="Karyana Ruiz Bakery"
-            width={90}
-            height={90}
+            width={110}
+            height={110}
             priority
-            className="h-20 w-20 object-contain md:h-20 md:w-20"
+            className="h-30 w-30 object-contain md:h-20 md:w-20"
           />
           <div className="hidden flex-col leading-tight md:flex">
             <span className="font-display text-lg tracking-tight">

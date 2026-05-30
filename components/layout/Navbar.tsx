@@ -37,7 +37,7 @@ export function Navbar() {
             width={130}
             height={130}
             priority
-            className="h-50 w-50 object-contain md:h-20 md:w-20"
+            className="h-50 w-50 object-contain md:h-50 md:w-50"
           />
           <div className="hidden flex-col leading-tight md:flex">
             <span className="font-display text-lg tracking-tight">

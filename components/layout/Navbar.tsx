@@ -24,7 +24,7 @@ export function Navbar() {
 
   return (
     <header className="sticky z-10 top-0 left-0 right-0 z-[9999] overflow-visible border-b border-canela/15 bg-cream/90 ">
-      <div className="container-bakery relative overflow-visible flex h-28 items-center justify-between gap-3 md:h-20 md:gap-4">
+      <div className="container-bakery relative overflow-visible flex h-30 items-center justify-between gap-3 md:h-20 md:gap-4">
         {/* Logo */}
         <Link
           href="/"

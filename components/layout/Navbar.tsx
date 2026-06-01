@@ -102,10 +102,10 @@ export function Navbar() {
           <Image
             src="/logo.png"
             alt="Karyana Ruiz Bakery"
-            width={90}
-            height={90}
+            width={100}
+            height={100}
             priority
-            className="h-12 w-12 object-contain"
+            className="h-14 w-14 object-contain"
           />
         </Link>
 

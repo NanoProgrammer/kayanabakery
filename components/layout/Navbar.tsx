@@ -27,7 +27,7 @@ export function Navbar() {
       {/* Desktop layout */}
       <div className="container-bakery hidden h-20 items-center justify-between gap-4 lg:flex">
         <Link href="/" aria-label="Karyana Bakery" className="flex items-center gap-2">
-          <Image src="/logo.png" alt="Karyana Ruiz Bakery" width={90} height={90} priority className="h-16 w-16 object-contain" />
+          <Image src="/logo.png" alt="Karyana Ruiz Bakery" width={90} height={90} priority className="h-24 w-24 object-contain" />
           <div className="flex flex-col leading-tight">
             <span className="font-display text-lg tracking-tight">Karyana Ruiz</span>
             <span className="font-script text-base text-canela-dark">Bakery</span>
@@ -105,7 +105,7 @@ export function Navbar() {
             width={90}
             height={90}
             priority
-            className="h-12 w-12 object-contain"
+            className="h-18 w-18 object-contain"
           />
         </Link>
 
@@ -179,34 +179,52 @@ export function Navbar() {
             </button>
           </div>
 
-          <nav className="flex flex-col px-4 py-4">
-            {[
-              { href: "/shop", label: t("nav.shop") },
-              { href: "/category/conchas", label: "Conchas" },
-              { href: "/category/cakes", label: "Cakes" },
-              { href: "/category/churros", label: "Churros" },
-              { href: "/category/boxes", label: "Boxes" },
-              { href: "/memberships", label: t("nav.memberships") },
-              { href: "/events", label: t("nav.events") },
-              { href: "/about", label: t("nav.about") },
-              { href: "/contact", label: t("nav.contact") },
-            ].map((l) => (
-              <Link key={l.href} href={l.href} className="rounded-xl px-4 py-3.5 text-base font-medium hover:bg-canela-light" onClick={() => setMobileOpen(false)}>
-                {l.label}
-              </Link>
-            ))}
-            <div className="my-3 border-t border-canela/15" />
-            {[
-              { href: "/how-to-order", label: t("nav.howToOrder") },
-              { href: "/refer-a-friend", label: t("nav.referAFriend") },
-              { href: "/faq", label: t("nav.faq") },
-              { href: "/track", label: "Track order" },
-            ].map((l) => (
-              <Link key={l.href} href={l.href} className="rounded-xl px-4 py-3 text-sm text-ink-soft hover:bg-canela-light" onClick={() => setMobileOpen(false)}>
-                {l.label}
-              </Link>
-            ))}
-          </nav>
+         <nav className="flex flex-col px-4 py-4">
+  <Link
+    href="/shop"
+    className="rounded-xl px-4 py-3.5 text-base font-medium hover:bg-canela-light"
+    onClick={() => setMobileOpen(false)}
+  >
+    {t("nav.shop")}
+  </Link>
+
+  <div className="px-4 py-2">
+    <CategoryDropdown mobile/>
+  </div>
+
+  <Link
+    href="/memberships"
+    className="flex items-center gap-2 rounded-xl px-4 py-3.5 text-base font-medium hover:bg-canela-light"
+    onClick={() => setMobileOpen(false)}
+  >
+    <Crown className="h-4 w-4 text-gold" />
+    {t("nav.memberships")}
+  </Link>
+
+  <Link
+    href="/events"
+    className="rounded-xl px-4 py-3.5 text-base font-medium hover:bg-canela-light"
+    onClick={() => setMobileOpen(false)}
+  >
+    {t("nav.events")}
+  </Link>
+
+  <Link
+    href="/about"
+    className="rounded-xl px-4 py-3.5 text-base font-medium hover:bg-canela-light"
+    onClick={() => setMobileOpen(false)}
+  >
+    {t("nav.about")}
+  </Link>
+
+  <Link
+    href="/contact"
+    className="rounded-xl px-4 py-3.5 text-base font-medium hover:bg-canela-light"
+    onClick={() => setMobileOpen(false)}
+  >
+    {t("nav.contact")}
+  </Link>
+</nav>
 
           <div className="border-t border-canela/15 px-6 py-5">
             <LanguageToggle />

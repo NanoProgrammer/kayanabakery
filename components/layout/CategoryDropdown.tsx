@@ -16,8 +16,10 @@ export type CategoryItem = {
 
 export function CategoryDropdown({
   categories: initialCategories,
+  mobile = false,
 }: {
   categories?: CategoryItem[];
+  mobile?: boolean;
 } = {}) {
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
@@ -59,49 +61,82 @@ export function CategoryDropdown({
         />
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl">
+      {open &&
+  (mobile ? (
+    <div className="mt-2 flex flex-col pl-4">
+      <Link
+        href="/shop"
+        onClick={() => setOpen(false)}
+        className="py-3 text-sm font-medium text-ink-soft"
+      >
+        {locale === "es" ? "Ver todos" : "View all"}
+      </Link>
+
+      {categories.map((cat) => {
+        const name =
+          locale === "es" && cat.titleEs
+            ? cat.titleEs
+            : cat.title;
+
+        return (
           <Link
-            href="/shop"
+            key={cat._id}
+            href={`/category/${cat.slug}`}
             onClick={() => setOpen(false)}
-            className="block border-b border-canela/10 px-4 py-3 text-sm font-medium transition-colors hover:bg-canela-light"
+            className="flex items-center gap-3 py-3"
           >
-            {locale === "es" ? "Ver todos" : "View all"}
+            {cat.image && (
+              <img
+                src={cat.image}
+                alt={name}
+                className="h-8 w-8 rounded-lg object-cover"
+              />
+            )}
+
+            <span className="text-sm">{name}</span>
           </Link>
+        );
+      })}
+    </div>
+  ) : (
+    <div className="absolute left-0 top-full z-50 mt-3 w-72 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl">
+      <Link
+        href="/shop"
+        onClick={() => setOpen(false)}
+        className="block border-b border-canela/10 px-4 py-3 text-sm font-medium transition-colors hover:bg-canela-light"
+      >
+        {locale === "es" ? "Ver todos" : "View all"}
+      </Link>
 
-          <div className="max-h-[60vh] overflow-y-auto py-1">
-            {categories.map((cat) => {
-              const name =
-                locale === "es" && cat.titleEs
-                  ? cat.titleEs
-                  : cat.title;
-              return (
-                <Link
-                  key={cat._id}
-                  href={`/category/${cat.slug}`}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-canela-light"
-                >
-                  {cat.image && (
-                    <img
-                      src={cat.image}
-                      alt={name}
-                      className="h-8 w-8 rounded-lg object-cover"
-                    />
-                  )}
-                  <span>{name}</span>
-                </Link>
-              );
-            })}
-          </div>
+      <div className="max-h-[60vh] overflow-y-auto py-1">
+        {categories.map((cat) => {
+          const name =
+            locale === "es" && cat.titleEs
+              ? cat.titleEs
+              : cat.title;
 
-          {categories.length === 0 && (
-            <p className="px-4 py-4 text-center text-xs text-ink-soft">
-              {locale === "es" ? "Cargando…" : "Loading…"}
-            </p>
-          )}
-        </div>
-      )}
+          return (
+            <Link
+              key={cat._id}
+              href={`/category/${cat.slug}`}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-canela-light"
+            >
+              {cat.image && (
+                <img
+                  src={cat.image}
+                  alt={name}
+                  className="h-8 w-8 rounded-lg object-cover"
+                />
+              )}
+
+              <span>{name}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  ))}
     </div>
   );
 }

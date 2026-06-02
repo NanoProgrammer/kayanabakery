@@ -144,7 +144,7 @@ export function Hero({
                     {title.split("\n").map((line, li, arr) => (
                       <span key={li} className="block">
                         {li === arr.length - 1 ? (
-                          <span className="font-script text-canela">{line}</span>
+                          <span className="font-script text-cream">{line}</span>
                         ) : (
                           line
                         )}

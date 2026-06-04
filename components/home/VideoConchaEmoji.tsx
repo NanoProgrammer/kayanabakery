@@ -19,8 +19,8 @@ export function ConchaVideoSection() {
             {locale === "es" ? "Ayúdanos a hacer historia" : "Help us make history "}
           </span>
           <h2 className="section-title mt-2 text-cream">
-            {locale === "es" ? "La concha merece su " : "The concha deserves its "}
-            <span className="font-script text-canela">concha.</span>
+            {locale === "es" ? "La concha merece su propio " : "The concha deserves its own "}
+            <span className="font-script text-canela">Emoji.</span>
           </h2>
           <p className="mt-4 text-base text-cream/70">
             {locale === "es"

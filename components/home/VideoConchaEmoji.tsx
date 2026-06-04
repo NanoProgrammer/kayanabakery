@@ -16,16 +16,16 @@ export function ConchaVideoSection() {
       <div className="container-bakery">
         <div className="mb-10 max-w-2xl text-cream">
           <span className="eyebrow text-canela">
-            {locale === "es" ? "Mira cómo las hacemos" : "Watch how we make them"}
+            {locale === "es" ? "Ayúdanos a hacer historia" : "Help us make history "}
           </span>
           <h2 className="section-title mt-2 text-cream">
-            {locale === "es" ? "El arte de la " : "The art of the "}
+            {locale === "es" ? "La concha merece su " : "The concha deserves its "}
             <span className="font-script text-canela">concha.</span>
           </h2>
           <p className="mt-4 text-base text-cream/70">
             {locale === "es"
-              ? "Cada concha es formada a mano, con la misma técnica que se usa en las panaderías de México. Mira el proceso."
-              : "Every concha is hand-shaped using the same technique from Mexican panaderías. Watch the process."}
+              ? "La concha es más que pan dulce: es cultura, memoria y hogar. Apóyanos firmando la petición para que la concha tenga su propio emoji."
+              : "The concha is more than sweet bread: it is culture, memory, and home. Support us by signing the petition to give the concha its own emoji."}
           </p>
         </div>
 

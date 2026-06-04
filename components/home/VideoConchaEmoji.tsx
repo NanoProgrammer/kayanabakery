@@ -63,6 +63,16 @@ export function ConchaVideoSection() {
             </button>
           )}
         </div>
+<div className="mt-8 flex justify-center">
+  <a
+    href="https://change.org/emojiconcha"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="rounded-full border-2 border-[#F8D7A8] bg-[#FBB7C5] px-10 py-4 text-lg font-bold text-[#4A1F0F] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+  >
+    🐚✍️ Support the Concha Emoji Movement
+  </a>
+</div>
       </div>
     </section>
   );

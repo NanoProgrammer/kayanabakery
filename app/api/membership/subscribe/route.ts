@@ -6,6 +6,7 @@ import {
   saveCardOnFile,
   createSquareSubscription,
 } from "@/lib/square/subscriptions";
+import { syncMembershipChange } from "@/lib/brevo/sync";
 
 /**
  * POST /api/membership/subscribe
@@ -134,8 +135,13 @@ export async function POST(req: Request) {
         squareSubscriptionId: subscriptionId,
         endsAt: null,
       },
-    });
-
+    }
+  );
+  syncMembershipChange({
+    email: user.email,
+    tier,
+    status: "ACTIVE",
+  });
     return NextResponse.json({
       success: true,
       membershipId: membership.id,

@@ -12,6 +12,7 @@ import { sendOrderEmails } from "@/lib/email/send-order-emails";
 import { randomUUID } from "crypto";
 import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calendar";
 import { getUpcomingWindows, findNextAvailableSlot, SLOT_DURATION_MIN } from "@/lib/google/delivery-windows";
+import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
 
 async function reserveDeliverySlot({
   windowId,
@@ -493,6 +494,8 @@ paymentId = result.payment?.id ?? undefined;
       },
     });
 
+    
+
     // Points redemption
     if (data.pointsToRedeem && data.pointsToRedeem > 0 && userId) {
       await tx.user.update({
@@ -561,6 +564,32 @@ paymentId = result.payment?.id ?? undefined;
 
     return created;
   });
+  // ============================================================
+  // 12.5 Sync to Brevo (fire-and-forget)
+  // ============================================================
+  if (userId && user?.email) {
+    const orderCount = await prisma.order.count({
+      where: { userId, paymentStatus: "PAID" },
+    });
+    const totalSpent = await prisma.order.aggregate({
+      where: { userId, paymentStatus: "PAID" },
+      _sum: { total: true },
+    });
+    syncOrderCompleted({
+      email: user.email,
+      name: user.name,
+      totalOrders: orderCount,
+      totalSpentCents: totalSpent._sum.total ?? 0,
+      lastOrderDate: new Date().toISOString(),
+    });
+  } else if (data.guestEmail) {
+    syncGuestOrder({
+      email: data.guestEmail,
+      name: data.guestName,
+      phone: data.guestPhone,
+      totalCents: pricing.totalCents,
+    });
+  }
 
   // ============================================================
   // 13. Fire-and-forget emails

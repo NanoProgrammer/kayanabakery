@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { syncMembershipChange } from "@/lib/brevo/sync";
 
 const VALID_TIERS = [
   "BASICO",
-  "ARTESANO", 
+  "ARTESANO",
   "SELECTO",
   "LEGENDARIO",
   "EMBAJADOR",
@@ -23,8 +24,18 @@ export async function POST(req: Request) {
     );
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
   if (tier === "BASICO") {
     await prisma.membership.deleteMany({ where: { userId } });
+
+    if (user?.email) {
+      syncMembershipChange({ email: user.email, tier: "BASICO", status: "INACTIVE" });
+    }
+
     return NextResponse.json({ ok: true, tier: "BASICO" });
   }
 
@@ -45,6 +56,10 @@ export async function POST(req: Request) {
       renewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   });
+
+  if (user?.email) {
+    syncMembershipChange({ email: user.email, tier, status: "ACTIVE" });
+  }
 
   return NextResponse.json({ ok: true, membership });
 }

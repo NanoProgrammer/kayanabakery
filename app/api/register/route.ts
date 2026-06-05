@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { syncUserRegistered } from "@/lib/brevo/sync";
 
 const schema = z.object({
   name: z.string().min(2),
@@ -53,6 +54,11 @@ export async function POST(req: Request) {
       },
     },
   });
+  syncUserRegistered({
+  email: parsed.data.email,
+  name: parsed.data.name,
+  language: "en",
+});
 
   return NextResponse.json({ ok: true, id: user.id });
 }

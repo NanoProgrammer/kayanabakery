@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resend } from "@/lib/email/resend";
 import { z } from "zod";
+import { syncNewsletterSubscribe } from "@/lib/brevo/sync";
 
 const schema = z.object({
   email: z.string().email(),
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
     },
     update: { active: true, language: language || "en" },
   });
-
+  syncNewsletterSubscribe(email, language);
   // Optional: add to Resend audience
   if (process.env.RESEND_AUDIENCE_ID && process.env.RESEND_API_KEY) {
     try {

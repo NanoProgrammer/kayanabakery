@@ -82,56 +82,62 @@ export default function ReferAFriendPage() {
     }
   }
 
-  // ============ TRANSLATIONS ============
-  const t = {
-    eyebrow:
-      locale === "es"
-        ? "Comparte Karyana"
-        : "Share Karyana",
+// ============ TRANSLATIONS ============
+const t = {
+  eyebrow:
+    locale === "es"
+      ? "Programa comunitario"
+      : "Community Program",
 
-    titleStart: locale === "es" ? "Las " : "Sorrows ",
-    titleScript: locale === "es" ? "penas con pan" : "with bread",
-    titleEnd: locale === "es" ? " son menos." : " are less.",
+  titleStart: locale === "es" ? "Las " : "A little bread ",
+  titleScript: locale === "es" ? "penas con pan" : "for heavy days",
+  titleEnd: locale === "es" ? " son menos." : "",
 
-    subtitle:
-      locale === "es"
-        ? "Un dicho viejo que entendemos bien: el pan se hace para compartir. Si Karyana te trajo un pedacito de casa, mándale el sabor a alguien que quieras."
-        : "An old saying we know well: bread is meant to be shared. If Karyana brought you a piece of home, send that taste to someone you love.",
+  subtitle:
+    locale === "es"
+      ? "Todos pasamos por momentos difíciles. A veces, una caja de pan puede recordarle a alguien que no está solo. Nomina a una persona que esté atravesando una situación complicada y Karyana Bakery revisará las historias para enviar un gesto de cariño y comunidad."
+      : "We all go through difficult moments. Sometimes, a box of bread can remind someone they are not alone. Nominate someone going through a hard time and Karyana Bakery will review the stories to send a gesture of kindness and community.",
 
-    formIntro:
-      locale === "es"
-        ? "Llena los datos y le mandamos a tu amigo un mensaje contándole de Karyana — con tus palabras, no las nuestras."
-        : "Fill in the details and we'll send your friend a note about Karyana — in your words, not ours.",
+  formIntro:
+    locale === "es"
+      ? "Cuéntanos a quién quieres nominar y por qué. Revisaremos cada historia con respeto y cariño."
+      : "Tell us who you would like to nominate and why. We will review each story with care and respect.",
 
-    yourName: locale === "es" ? "Tu nombre" : "Your name",
-    yourEmail: locale === "es" ? "Tu correo" : "Your email",
-    friendName: locale === "es" ? "Nombre de tu amigo" : "Friend's name",
-    friendEmail: locale === "es" ? "Correo de tu amigo" : "Friend's email",
-    message:
-      locale === "es"
-        ? "Tu mensaje (opcional)"
-        : "Your message (optional)",
-    messagePlaceholder:
-      locale === "es"
-        ? "Cuéntale por qué te encanta Karyana…"
-        : "Tell them why you love Karyana…",
+  yourName: locale === "es" ? "Tu nombre" : "Your name",
+  yourEmail: locale === "es" ? "Tu correo" : "Your email",
+  friendName:
+    locale === "es"
+      ? "Nombre de la persona nominada"
+      : "Nominee's name",
+  friendEmail:
+    locale === "es"
+      ? "Correo de la persona nominada"
+      : "Nominee's email",
+  message:
+    locale === "es"
+      ? "¿Por qué quieres nominar a esta persona?"
+      : "Why would you like to nominate this person?",
+  messagePlaceholder:
+    locale === "es"
+      ? "Cuéntanos brevemente qué está viviendo esta persona y por qué crees que una caja de pan podría alegrarle el día…"
+      : "Briefly tell us what this person is going through and why a box of bread could brighten their day…",
 
-    send: locale === "es" ? "Mandar mensaje" : "Send message",
-    sending: locale === "es" ? "Enviando…" : "Sending…",
-    requiredHint:
-      locale === "es" ? "* campos requeridos" : "* required fields",
+  send: locale === "es" ? "Enviar nominación" : "Submit nomination",
+  sending: locale === "es" ? "Enviando…" : "Sending…",
+  requiredHint:
+    locale === "es" ? "* campos requeridos" : "* required fields",
 
-    successTitleA: locale === "es" ? "Pan " : "Bread ",
-    successTitleB: locale === "es" ? "compartido" : "shared",
-    successDesc:
-      locale === "es"
-        ? "Le mandamos a tu amigo el mensaje. Gracias por hacer crecer la familia Karyana 🫶"
-        : "We sent your friend the message. Thank you for growing the Karyana family 🫶",
-    sendAnother:
-      locale === "es" ? "Mandar otro mensaje" : "Send another",
-    backHome: locale === "es" ? "Volver al inicio" : "Back home",
-  };
-
+  successTitleA: locale === "es" ? "Nominación " : "Nomination ",
+  successTitleB: locale === "es" ? "recibida" : "received",
+  successDesc:
+    locale === "es"
+      ? "Gracias por compartir esta historia con nosotros. Revisaremos la nominación con mucho respeto y cariño."
+      : "Thank you for sharing this story with us. We will review the nomination with care and respect.",
+  sendAnother:
+    locale === "es" ? "Nominar a otra persona" : "Nominate someone else",
+  backHome: locale === "es" ? "Volver al inicio" : "Back home",
+};
+  
   // ============ SUCCESS STATE ============
   if (submitted) {
     return (
@@ -241,12 +247,12 @@ export default function ReferAFriendPage() {
               value={form.personalMessage}
               onChange={(e) => update("personalMessage", e.target.value)}
               rows={4}
-              maxLength={300}
+              maxLength={800}
               placeholder={t.messagePlaceholder}
               className="mt-1.5 w-full rounded-2xl border border-canela/30 bg-white px-5 py-3 text-sm leading-relaxed focus:border-canela-dark focus:outline-none"
             />
             <p className="mt-1 text-right text-[10px] text-ink-soft">
-              {form.personalMessage.length}/300
+              {form.personalMessage.length}/800
             </p>
           </div>
 

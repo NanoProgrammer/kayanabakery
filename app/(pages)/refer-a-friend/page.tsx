@@ -268,7 +268,7 @@ other: locale === "es" ? "Otra situación" : "Other",
           />
 <div>
   <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
-    {t.situation}
+    {t.situation + " *"}
   </label>
 
   <select
@@ -282,43 +282,43 @@ other: locale === "es" ? "Otra situación" : "Other",
     </option>
 
     <option value="Illness">
-      {locale === "es" ? "Enfermedad" : "Illness"}
+      {t.illness}
     </option>
 
     <option value="Grief">
-      {locale === "es" ? "Duelo" : "Grief"}
+      {t.grief}
     </option>
 
     <option value="Unemployment">
-      {locale === "es" ? "Desempleo" : "Unemployment"}
+      {t.unemployment}
     </option>
 
     <option value="Loneliness">
-      {locale === "es" ? "Soledad" : "Loneliness"}
+      {t.loneliness}
     </option>
 
     <option value="Divorce">
-      {locale === "es" ? "Divorcio" : "Divorce"}
+      {t.divorce}
     </option>
 
     <option value="Depression">
-      {locale === "es" ? "Depresión" : "Depression"}
+      {t.depression}
     </option>
 
     <option value="Moving">
-      {locale === "es" ? "Mudanza" : "Moving"}
+      {t.moving}
     </option>
 
     <option value="Recent Immigration">
-      {locale === "es" ? "Inmigración reciente" : "Recent Immigration"}
+     {t.immigration}
     </option>
 
     <option value="Financial Hardship">
-      {locale === "es" ? "Dificultades económicas" : "Financial hardship"}
+      {t.financialHardship}
     </option>
 
     <option value="Other">
-      {locale === "es" ? "Otra situación" : "Other"}
+      {t.other}
     </option>
   </select>
 </div>

@@ -78,7 +78,7 @@ export default async function HomePage() {
       {promo && <HolidayBanner promo={promo} />}
       <MembershipTeaser />
       <UpcomingEvents events={events} />
-      <ReferralBanner discount={settings?.referralDiscount ?? 3} />
+      <ReferralBanner  />
       <GoogleReviewsSection  />
       <ConchaVideoSection />
     

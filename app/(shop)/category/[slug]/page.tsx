@@ -6,11 +6,24 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import { cookies } from "next/headers";
 import type { Category, Product } from "@/types";
 
 export const revalidate = 60;
 
 type CategoryWithProducts = Category & { products: Product[] };
+
+function pickI18n<T extends Record<string, any>>(
+  doc: T,
+  key: keyof T & string,
+  locale: string
+): string {
+  if (locale === "es") {
+    const esKey = `${key}Es` as keyof T;
+    if (doc[esKey]) return doc[esKey] as string;
+  }
+  return doc[key] as string;
+}
 
 export default async function CategoryPage({
   params,
@@ -19,6 +32,9 @@ export default async function CategoryPage({
 }) {
   const { slug } = await params;
 
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
+
   const category = await sanityFetch<CategoryWithProducts | null>({
     query: categoryBySlugQuery,
     params: { slug },
@@ -26,6 +42,10 @@ export default async function CategoryPage({
   });
 
   if (!category) notFound();
+
+  const name        = pickI18n(category, "name", locale);
+  const tagline     = pickI18n(category, "tagline", locale);
+  const description = pickI18n(category, "description", locale);
 
   const heroImage = category.image
     ? urlFor(category.image).width(1600).height(600).url()
@@ -41,7 +61,7 @@ export default async function CategoryPage({
           <div className="absolute inset-0">
             <Image
               src={heroImage}
-              alt={category.name}
+              alt={name}
               fill
               priority
               className="object-cover opacity-30"
@@ -50,15 +70,15 @@ export default async function CategoryPage({
           </div>
         )}
         <div className="container-bakery relative text-center">
-          {category.tagline && (
-            <span className="eyebrow mb-3">{category.tagline}</span>
+          {tagline && (
+            <span className="eyebrow mb-3">{tagline}</span>
           )}
           <h1 className="font-display text-[length:var(--text-display-lg)] leading-[var(--text-display-lg--line-height)] tracking-[var(--text-display-lg--letter-spacing)] text-ink">
-            {category.name}
+            {name}
           </h1>
-          {category.description && (
+          {description && (
             <p className="mx-auto mt-5 max-w-xl text-ink/70">
-              {category.description}
+              {description}
             </p>
           )}
         </div>
@@ -71,33 +91,33 @@ export default async function CategoryPage({
             <div className="relative z-10 max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cream">
                 <Sparkles className="h-3 w-3" />
-                Custom orders
+                {locale === "es" ? "Pedidos personalizados" : "Custom orders"}
               </div>
               <h2 className="font-display text-3xl text-cream md:text-4xl">
-                Dream it. We'll bake it.
+                {locale === "es"
+                  ? "Imagínalo. Nosotros lo horneamos."
+                  : "Dream it. We'll bake it."}
               </h2>
               <p className="mt-4 max-w-lg text-sm leading-relaxed text-cream/80">
-                Birthdays, quinceañeras, baby showers, or just because — tell us
-                your theme, flavors, and date and we'll create something
-                unforgettable. Custom cakes start at $85 and need 72h advance
-                notice.
+                {locale === "es"
+                  ? "Cumpleaños, quinceañeras, baby showers o simplemente porque sí — cuéntanos tu tema, sabores y fecha y crearemos algo inolvidable. Pasteles personalizados desde $85, con 72h de anticipación."
+                  : "Birthdays, quinceañeras, baby showers, or just because — tell us your theme, flavors, and date and we'll create something unforgettable. Custom cakes start at $85 and need 72h advance notice."}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/custom-cake"
                   className="inline-flex items-center gap-2 rounded-full bg-cream px-6 py-3 text-sm font-medium text-canela-dark transition-colors hover:bg-white"
                 >
-                  Order a custom cake →
+                  {locale === "es" ? "Ordenar pastel →" : "Order a custom cake →"}
                 </Link>
                 <Link
                   href="/contact"
                   className="inline-flex items-center rounded-full border border-cream/40 px-6 py-3 text-sm font-medium text-cream transition-colors hover:bg-white/10"
                 >
-                  Have questions? Contact us
+                  {locale === "es" ? "¿Tienes preguntas? Contáctanos" : "Have questions? Contact us"}
                 </Link>
               </div>
             </div>
-            {/* Decorative circle */}
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/5" />
             <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-white/5" />
           </div>
@@ -109,7 +129,9 @@ export default async function CategoryPage({
         {!category.products?.length ? (
           <div className="py-12 text-center">
             <p className="text-ink/60">
-              No products in this category yet. Check back soon!
+              {locale === "es"
+                ? "Sin productos en esta categoría por ahora. ¡Vuelve pronto!"
+                : "No products in this category yet. Check back soon!"}
             </p>
           </div>
         ) : (

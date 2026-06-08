@@ -104,7 +104,7 @@ const t = {
   formIntro:
     locale === "es"
       ? "Cuéntanos a quién quieres nominar y por qué. Revisaremos cada historia con respeto y cariño."
-      : "Tell us who you would like to nominate and why. We will review each story with care and respect.",
+      : "TEST RUBEN 123456.",
 
   yourName: locale === "es" ? "Tu nombre" : "Your name",
   yourEmail: locale === "es" ? "Tu correo" : "Your email",

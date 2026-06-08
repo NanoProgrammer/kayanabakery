@@ -11,6 +11,7 @@ type FormState = {
   yourEmail: string;
   friendName: string;
   friendEmail: string;
+  situation: string;
   personalMessage: string;
 };
 
@@ -19,6 +20,7 @@ const INITIAL: FormState = {
   yourEmail: "",
   friendName: "",
   friendEmail: "",
+  situation: "",
   personalMessage: "",
 };
 
@@ -39,7 +41,8 @@ export default function ReferAFriendPage() {
       !form.yourName ||
       !form.yourEmail ||
       !form.friendName ||
-      !form.friendEmail
+      !form.friendEmail ||
+      !form.situation
     ) {
       toast.error(
         locale === "es"
@@ -113,6 +116,31 @@ const t = {
     locale === "es"
       ? "Correo de la persona nominada"
       : "Nominee's email",
+  situation:
+  locale === "es"
+    ? "¿Qué situación está atravesando?"
+    : "What situation are they going through?",
+
+situationPlaceholder:
+  locale === "es"
+    ? "Selecciona una opción"
+    : "Select an option",
+  illness: locale === "es" ? "Enfermedad" : "Illness",
+grief: locale === "es" ? "Duelo" : "Grief",
+unemployment: locale === "es" ? "Desempleo" : "Unemployment",
+loneliness: locale === "es" ? "Soledad" : "Loneliness",
+divorce: locale === "es" ? "Divorcio" : "Divorce",
+depression: locale === "es" ? "Depresión" : "Depression",
+moving: locale === "es" ? "Mudanza" : "Moving",
+immigration:
+  locale === "es"
+    ? "Inmigración reciente"
+    : "Recent Immigration",
+financialHardship:
+  locale === "es"
+    ? "Dificultades económicas"
+    : "Financial hardship",
+other: locale === "es" ? "Otra situación" : "Other",
   message:
     locale === "es"
       ? "¿Por qué quieres nominar a esta persona?"
@@ -238,7 +266,62 @@ const t = {
             onChange={(v) => update("friendEmail", v)}
             required
           />
+<div>
+  <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+    {t.situation}
+  </label>
 
+  <select
+    value={form.situation}
+    onChange={(e) => update("situation", e.target.value)}
+    required
+    className="mt-1.5 w-full rounded-2xl border border-canela/30 bg-white px-5 py-3 text-sm focus:border-canela-dark focus:outline-none"
+  >
+    <option value="">
+      {t.situationPlaceholder}
+    </option>
+
+    <option value="Illness">
+      {locale === "es" ? "Enfermedad" : "Illness"}
+    </option>
+
+    <option value="Grief">
+      {locale === "es" ? "Duelo" : "Grief"}
+    </option>
+
+    <option value="Unemployment">
+      {locale === "es" ? "Desempleo" : "Unemployment"}
+    </option>
+
+    <option value="Loneliness">
+      {locale === "es" ? "Soledad" : "Loneliness"}
+    </option>
+
+    <option value="Divorce">
+      {locale === "es" ? "Divorcio" : "Divorce"}
+    </option>
+
+    <option value="Depression">
+      {locale === "es" ? "Depresión" : "Depression"}
+    </option>
+
+    <option value="Moving">
+      {locale === "es" ? "Mudanza" : "Moving"}
+    </option>
+
+    <option value="Recent Immigration">
+      {locale === "es" ? "Inmigración reciente" : "Recent Immigration"}
+    </option>
+
+    <option value="Financial Hardship">
+      {locale === "es" ? "Dificultades económicas" : "Financial hardship"}
+    </option>
+
+    <option value="Other">
+      {locale === "es" ? "Otra situación" : "Other"}
+    </option>
+  </select>
+</div>
           <div className="md:col-span-2">
             <label className="text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
               {t.message}

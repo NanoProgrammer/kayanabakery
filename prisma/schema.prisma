@@ -259,6 +259,11 @@ model Membership {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  squareCardId       String?
+squareCustomerId   String?
+isTrial            Boolean  @default(false)
+lastPaymentId      String?
+lastRenewedAt      DateTime?
 }
 
 enum MembershipTier {

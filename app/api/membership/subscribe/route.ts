@@ -4,55 +4,31 @@ import { prisma } from "@/lib/prisma";
 import {
   ensureSquareCustomer,
   saveCardOnFile,
-  createSquareSubscription,
+  chargeCardOnFile,
+  tierPriceCents,
+  nextRenewDate,
 } from "@/lib/square/subscriptions";
 import { syncMembershipChange } from "@/lib/brevo/sync";
 
-/**
- * POST /api/membership/subscribe
- *
- * Creates a membership for the logged-in user.
- * REQUIRES a sourceId (card token from Square Web Payments SDK).
- * No card on file = no membership. Period.
- *
- * Body: { sourceId: string, tier: "ARTESANO" | "SELECTO" | "LEGENDARIO" }
- *
- * For ARTESANO: first year free (trial), then $39/year auto-renew.
- * For SELECTO/LEGENDARIO: charges immediately.
- */
 export async function POST(req: Request) {
   try {
     const session = await auth();
     const userId = (session?.user as any)?.id;
-
     if (!userId) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { sourceId, tier } = body;
+    const { sourceId, tier } = await req.json();
 
-    // Validate tier
     const validTiers = ["ARTESANO", "SELECTO", "LEGENDARIO"];
     if (!validTiers.includes(tier)) {
-      return NextResponse.json(
-        { error: `Invalid tier. Must be one of: ${validTiers.join(", ")}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
     }
-
-    // REQUIRE card token
     if (!sourceId || typeof sourceId !== "string") {
-      return NextResponse.json(
-        { error: "Card is required. Please enter your payment details." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Card is required" }, { status: 400 });
     }
 
-    // Check existing active membership at this tier or higher
+    // Check existing membership
     const existing = await prisma.membership.findFirst({
       where: {
         userId,
@@ -60,7 +36,6 @@ export async function POST(req: Request) {
         tier: { in: ["ARTESANO", "SELECTO", "LEGENDARIO", "EMBAJADOR"] },
       },
     });
-
     if (existing) {
       return NextResponse.json(
         { error: "Already a member", tier: existing.tier },
@@ -68,22 +43,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get user
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        email: true,
-        name: true,
-        phone: true,
-        squareCustomerId: true,
-      },
+      select: { email: true, name: true, phone: true, squareCustomerId: true },
     });
-
-    if (!user || !user.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // 1. Ensure Square Customer exists
+    // 1. Ensure Square customer
     const squareCustomerId = await ensureSquareCustomer({
       existingCustomerId: user.squareCustomerId,
       email: user.email,
@@ -91,8 +59,6 @@ export async function POST(req: Request) {
       familyName: user.name?.split(" ").slice(1).join(" "),
       phone: user.phone,
     });
-
-    // Save Square customer ID if new
     if (squareCustomerId !== user.squareCustomerId) {
       await prisma.user.update({
         where: { id: userId },
@@ -106,17 +72,25 @@ export async function POST(req: Request) {
       sourceId,
     });
 
-    // 3. Create Square subscription (handles trial for Artesano)
-    const { subscriptionId, renewDate } = await createSquareSubscription({
-      customerId: squareCustomerId,
-      cardId,
-      tier: tier as any,
-    });
-
-    // 4. Create membership in DB
+    // 3. Charge (or skip for Artesano free trial)
     const now = new Date();
-    const renewsAt = renewDate ? new Date(renewDate) : null;
+    const renewsAt = nextRenewDate(tier as any, now);
+    const priceCents = tierPriceCents(tier as any);
+    const isFreeTrial = tier === "ARTESANO"; // first year free
 
+    let squarePaymentId: string | null = null;
+
+    if (!isFreeTrial && priceCents > 0) {
+      const { paymentId } = await chargeCardOnFile({
+        customerId: squareCustomerId,
+        cardId,
+        amountCents: priceCents,
+        note: `Karyana ${tier} membership`,
+      });
+      squarePaymentId = paymentId;
+    }
+
+    // 4. Save membership in DB
     const membership = await prisma.membership.upsert({
       where: { userId },
       create: {
@@ -125,45 +99,40 @@ export async function POST(req: Request) {
         status: "ACTIVE",
         startedAt: now,
         renewsAt,
-        squareSubscriptionId: subscriptionId,
+        squareCardId: cardId,
+        squareCustomerId,
+        isTrial: isFreeTrial,
+        lastPaymentId: squarePaymentId,
       },
       update: {
         tier,
         status: "ACTIVE",
         startedAt: now,
         renewsAt,
-        squareSubscriptionId: subscriptionId,
+        squareCardId: cardId,
+        squareCustomerId,
+        isTrial: isFreeTrial,
+        lastPaymentId: squarePaymentId,
         endsAt: null,
       },
-    }
-  );
-  syncMembershipChange({
-    email: user.email,
-    tier,
-    status: "ACTIVE",
-  });
+    });
+
+    syncMembershipChange({ email: user.email, tier, status: "ACTIVE" });
+
     return NextResponse.json({
       success: true,
       membershipId: membership.id,
       tier,
-      squareSubscriptionId: subscriptionId,
-      renewDate,
+      renewsAt: renewsAt.toISOString(),
+      charged: !isFreeTrial,
+      amountCents: isFreeTrial ? 0 : priceCents,
     });
   } catch (err: any) {
     console.error("[membership/subscribe]", err);
-
-    // Square-specific errors
     const squareError = err?.errors?.[0]?.detail;
-    if (squareError) {
-      return NextResponse.json(
-        { error: squareError },
-        { status: 400 }
-      );
-    }
-
     return NextResponse.json(
-      { error: err.message || "Subscription failed" },
-      { status: 500 }
+      { error: squareError || err.message || "Subscription failed" },
+      { status: squareError ? 400 : 500 }
     );
   }
 }

@@ -123,6 +123,13 @@ export function MembershipPricingTable({
                 : "Free delivery",
             },
             {
+  ok: tier === "SELECTO" || tier === "LEGENDARIO",
+  label:
+    locale === "es"
+      ? "Entrega gratuita antes de las 6 PM"
+      : "FREE priority delivery before 6 PM",
+},
+            {
               ok: data.birthdayPoints > 0,
               label:
                 data.birthdayPoints > 0

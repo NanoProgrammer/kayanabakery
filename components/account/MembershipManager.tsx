@@ -9,7 +9,6 @@ import type { MembershipTier } from "@/lib/membership/tiers";
 export function MembershipManager({
   currentTier,
   isActive,
-  hasSquareSubscription,
 }: {
   currentTier: MembershipTier;
   isActive: boolean;
@@ -39,9 +38,9 @@ export function MembershipManager({
     setBusy(true);
 
     try {
-      const res = await fetch("/api/membership/subscribe", {
-        method: "DELETE",
-      });
+      const res = await fetch("/api/membership/cancel", {
+  method: "DELETE",
+});
 
       const data = await res.json();
 
@@ -102,8 +101,7 @@ export function MembershipManager({
           </button>
         </>
       )}
-
-      {isActive && hasSquareSubscription && (
+{isActive && (
         <button
           onClick={cancel}
           disabled={busy}

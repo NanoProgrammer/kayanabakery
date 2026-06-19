@@ -69,10 +69,9 @@ export default async function MembershipAccountPage() {
         </div>
 
         <MembershipManager
-          currentTier={tier as any}
-          isActive={membership?.status === "ACTIVE"}
-          hasSquareSubscription={!!membership?.squareSubscriptionId}
-        />
+  currentTier={tier as any}
+  isActive={membership?.status === "ACTIVE"}
+/>
       </div>
 
       <p className="mt-6 text-sm text-ink-soft">

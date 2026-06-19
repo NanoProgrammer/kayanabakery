@@ -46,6 +46,19 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
               No charge today — first year completely free
             </li>
           )}
+          {(tier === "SELECTO" || tier === "LEGENDARIO") && (
+  <>
+    <li className="flex items-center gap-2 font-medium text-canela-dark">
+      <Check className="h-3.5 w-3.5 text-canela-dark" />
+       FREE Welcome Box with 12 artisan breads ($35 value)
+    </li>
+
+    <li className="flex items-center gap-2 font-medium text-canela-dark">
+      <Check className="h-3.5 w-3.5 text-canela-dark" />
+       FREE Priority Delivery before 6 PM
+    </li>
+  </>
+)}
           <li className="flex items-center gap-2">
             <Check className="h-3.5 w-3.5 text-canela-dark" />
             Access to exclusive & members-only products

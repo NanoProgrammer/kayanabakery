@@ -86,3 +86,4 @@ export async function GET(req: Request) {
   console.log("[cron] renewal results:", results);
   return NextResponse.json(results);
 }
+

@@ -119,8 +119,8 @@ export function MembershipPricingTable({
                   ? "Solo recolección"
                   : "Pickup only"
                 : locale === "es"
-                ? "Sin envío gratis"
-                : "No free delivery",
+                ? "Envío gratis"
+                : "Free delivery",
             },
             {
               ok: data.birthdayPoints > 0,
@@ -130,8 +130,8 @@ export function MembershipPricingTable({
                     ? `${data.birthdayPoints} pts de cumpleaños`
                     : `${data.birthdayPoints} birthday pts`
                   : locale === "es"
-                  ? "Sin puntos de cumpleaños"
-                  : "No birthday points",
+                  ? "500 Pts de cumpleaños"
+                  : "500 Birthday points",
             },
             {
               ok: data.freeNewBreadPerMonth > 0,
@@ -145,8 +145,8 @@ export function MembershipPricingTable({
                     ? `${data.freeNewBreadPerMonth} pan nuevo/mes`
                     : `${data.freeNewBreadPerMonth} new bread/mo`
                   : locale === "es"
-                  ? "Sin pan nuevo gratis"
-                  : "No free new bread",
+                  ? "Pan nuevo gratis"
+                  : "Free new bread",
             },
             {
               ok: data.autoMonthlyPromos,

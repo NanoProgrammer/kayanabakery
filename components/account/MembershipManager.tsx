@@ -12,7 +12,6 @@ export function MembershipManager({
 }: {
   currentTier: MembershipTier;
   isActive: boolean;
-  hasSquareSubscription: boolean;
 }) {
   const router = useRouter();
   const { locale } = useLocale();

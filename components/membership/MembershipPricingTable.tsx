@@ -301,7 +301,7 @@ export function MembershipPricingTable({
                     : tier === "ARTESANO" && !isCurrent
                     ? "bg-canela-dark text-cream hover:bg-ink"
                     : isFeatured
-                    ? "bg-gold text-cream hover:bg-gold/90"
+                    ? "bg-canela-dark text-cream hover:bg-ink shadow-md"
                     : "bg-canela text-ink hover:bg-canela-dark"
                 )}
               >

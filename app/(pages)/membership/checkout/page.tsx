@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth";
 import { SquareSubscriptionCheckout } from "@/components/membership/SquareSubscriptionCheckout";
+import { CheckoutHeader } from "@/components/membership/CheckoutHeader";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { getServerLocale, getServerT } from "@/lib/i18n/server";
+import { getServerLocale } from "@/lib/i18n/server";
+
 
 export const metadata = { title: "Membership Checkout" };
 
@@ -28,7 +29,6 @@ export default async function MembershipCheckoutPage({
   const params = await searchParams;
   const tier = params.tier as string | undefined;
   const locale = await getServerLocale();
-  const t = await getServerT();
 
   if (!tier || !VALID_TIERS.includes(tier as ValidTier)) {
     return (
@@ -48,31 +48,8 @@ export default async function MembershipCheckoutPage({
   return (
     <div className="container-bakery py-12 md:py-16">
       <div className="mx-auto max-w-xl">
-        <Link
-          href="/memberships"
-          className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] text-ink-soft hover:underline"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          {locale === "es" ? "Volver a los planes" : "Back to plans"}
-        </Link>
-
-        <h1 className="mt-4 font-display text-4xl md:text-5xl">
-          {isArtesano
-            ? locale === "es" ? "Empieza tu año gratis" : "Start your free year"
-            : locale === "es" ? "Completa tu suscripción" : "Complete your subscription"}
-        </h1>
-
-        <p className="mt-3 text-ink-soft">
-          {isArtesano
-            ? locale === "es"
-              ? "Agrega una tarjeta para activar tu membresía Artesano. No se te cobra hoy — tu primer año es completamente gratis."
-              : "Add a card on file to activate your Artesano membership. You won't be charged today — your first year is completely free."
-            : locale === "es"
-            ? "Ingresa tus datos de pago para activar tu membresía."
-            : "Enter your payment details to activate your membership."}
-        </p>
-
-        <SquareSubscriptionCheckout tier={tier as ValidTier} locale={locale} />
+        <CheckoutHeader isArtesano={isArtesano} />
+        <SquareSubscriptionCheckout tier={tier as ValidTier} />
       </div>
     </div>
   );

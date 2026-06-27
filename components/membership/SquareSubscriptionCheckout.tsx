@@ -5,14 +5,14 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Crown, Check, Shield } from "lucide-react";
 import { TIERS } from "@/lib/membership/tiers";
-import type { Locale } from "@/lib/i18n/locale-provider";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 type Props = {
   tier: "ARTESANO" | "SELECTO" | "LEGENDARIO";
-  locale?: Locale;
 };
 
-export function SquareSubscriptionCheckout({ tier, locale = "en" }: Props) {
+export function SquareSubscriptionCheckout({ tier }: Props) {
+  const { locale } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();

@@ -8,4 +8,5 @@ node_modules
 dist
 build
 /coverage
+*.tsbuildinfo
 next-env.d.ts

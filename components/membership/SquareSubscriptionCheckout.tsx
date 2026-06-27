@@ -5,12 +5,14 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Crown, Check, Shield } from "lucide-react";
 import { TIERS } from "@/lib/membership/tiers";
+import { useLocale } from "@/lib/i18n/locale-provider";
 
 type Props = {
   tier: "ARTESANO" | "SELECTO" | "LEGENDARIO";
 };
 
 export function SquareSubscriptionCheckout({ tier }: Props) {
+  const { locale } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
@@ -19,9 +21,10 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
   const tierData = TIERS[tier];
   const isArtesano = tier === "ARTESANO";
 
+  const es = locale === "es";
   const priceLabel = isArtesano
-    ? "$0 today"
-    : `$${(tierData.priceCents / 100).toFixed(0)}/${tierData.cadence === "MONTHLY" ? "mo" : "yr"}`;
+    ? es ? "$0 hoy" : "$0 today"
+    : `$${(tierData.priceCents / 100).toFixed(0)}/${tierData.cadence === "MONTHLY" ? (es ? "mes" : "mo") : (es ? "año" : "yr")}`;
 
   return (
     <div className="mt-6 space-y-6">
@@ -33,8 +36,10 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
             <p className="font-display text-2xl">{tierData.name}</p>
             <p className="text-sm text-ink-soft">
               {isArtesano
-                ? "First year FREE · Then $39/year · Card on file required"
-                : `${priceLabel} · Billed ${tierData.cadence === "MONTHLY" ? "monthly" : "yearly"}`}
+                ? es
+                  ? "Primer año GRATIS · Luego $39/año · Tarjeta requerida"
+                  : "First year FREE · Then $39/year · Card on file required"
+                : `${priceLabel} · ${es ? "Facturado" : "Billed"} ${tierData.cadence === "MONTHLY" ? (es ? "mensualmente" : "monthly") : (es ? "anualmente" : "yearly")}`}
             </p>
           </div>
         </div>
@@ -43,40 +48,41 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
           {isArtesano && (
             <li className="flex items-center gap-2 font-medium text-canela-dark">
               <Check className="h-3.5 w-3.5" />
-              No charge today — first year completely free
+              {es ? "Sin cobro hoy — primer año completamente gratis" : "No charge today — first year completely free"}
             </li>
           )}
           {(tier === "SELECTO" || tier === "LEGENDARIO") && (
-  <>
-    <li className="flex items-center gap-2 font-medium text-canela-dark">
-      <Check className="h-3.5 w-3.5 text-canela-dark" />
-       FREE Welcome Box with 12 artisan breads ($35 value)
-    </li>
-
-    <li className="flex items-center gap-2 font-medium text-canela-dark">
-      <Check className="h-3.5 w-3.5 text-canela-dark" />
-       FREE Priority Delivery before 6 PM
-    </li>
-  </>
-)}
+            <>
+              <li className="flex items-center gap-2 font-medium text-canela-dark">
+                <Check className="h-3.5 w-3.5 text-canela-dark" />
+                {es ? "Caja de bienvenida GRATIS con 12 panes artesanales (valor $35)" : "FREE Welcome Box with 12 artisan breads ($35 value)"}
+              </li>
+              <li className="flex items-center gap-2 font-medium text-canela-dark">
+                <Check className="h-3.5 w-3.5 text-canela-dark" />
+                {es ? "Entrega prioritaria GRATIS antes de las 6 PM" : "FREE Priority Delivery before 6 PM"}
+              </li>
+            </>
+          )}
           <li className="flex items-center gap-2">
             <Check className="h-3.5 w-3.5 text-canela-dark" />
-            Access to exclusive & members-only products
+            {es ? "Acceso a productos exclusivos y solo para miembros" : "Access to exclusive & members-only products"}
           </li>
           <li className="flex items-center gap-2">
             <Check className="h-3.5 w-3.5 text-canela-dark" />
-            {tierData.pointsMultiplier}× points on every order
+            {tierData.pointsMultiplier}× {es ? "puntos en cada orden" : "points on every order"}
           </li>
           {tierData.freeDelivery && (
             <li className="flex items-center gap-2">
               <Check className="h-3.5 w-3.5 text-canela-dark" />
-              Free delivery on orders ${(tierData.freeDeliveryMinOrderCents ?? 0) / 100}+
+              {es
+                ? `Envío gratis en órdenes de $${(tierData.freeDeliveryMinOrderCents ?? 0) / 100}+`
+                : `Free delivery on orders $${(tierData.freeDeliveryMinOrderCents ?? 0) / 100}+`}
             </li>
           )}
           {tierData.birthdayPoints > 0 && (
             <li className="flex items-center gap-2">
               <Check className="h-3.5 w-3.5 text-canela-dark" />
-              {tierData.birthdayPoints} birthday points
+              {tierData.birthdayPoints} {es ? "puntos de cumpleaños" : "birthday points"}
             </li>
           )}
         </ul>
@@ -87,14 +93,15 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
         <div className="mb-4 flex items-center gap-2">
           <Shield className="h-4 w-4 text-canela-dark" />
           <h3 className="font-display text-xl">
-            {isArtesano ? "Card on file" : "Payment"}
+            {isArtesano ? (es ? "Tarjeta en archivo" : "Card on file") : (es ? "Pago" : "Payment")}
           </h3>
         </div>
 
         {isArtesano && (
           <p className="mb-4 rounded-2xl bg-canela-light/50 p-3 text-xs text-ink-soft">
-            Your card will NOT be charged today. It&apos;s saved securely for when your
-            free year ends. You can cancel anytime before renewal.
+            {es
+              ? "Tu tarjeta NO será cobrada hoy. Se guarda de forma segura para cuando termine tu año gratis. Puedes cancelar en cualquier momento antes de la renovación."
+              : "Your card will NOT be charged today. It's saved securely for when your free year ends. You can cancel anytime before renewal."}
           </p>
         )}
 
@@ -162,17 +169,21 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
                 },
               },
               children: loading
-                ? "Processing..."
+                ? (es ? "Procesando..." : "Processing...")
                 : isArtesano
-                ? "Save card & start free year"
-                : `Subscribe — ${priceLabel}`,
+                ? (es ? "Guardar tarjeta e iniciar año gratis" : "Save card & start free year")
+                : (es ? `Suscribirme — ${priceLabel}` : `Subscribe — ${priceLabel}`),
             }}
           />
         </PaymentForm>
 
         <p className="mt-4 text-center text-[10px] text-ink-soft">
           {isArtesano
-            ? "Secure via Square. $0 today. Auto-renews at $39/year after 12 months. Cancel anytime."
+            ? es
+              ? "Seguro con Square. $0 hoy. Se renueva a $39/año después de 12 meses. Cancela cuando quieras."
+              : "Secure via Square. $0 today. Auto-renews at $39/year after 12 months. Cancel anytime."
+            : es
+            ? "Seguro con Square. Cancela cuando quieras desde tu cuenta."
             : "Secure via Square. Cancel anytime from your account."}
         </p>
       </div>

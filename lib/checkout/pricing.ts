@@ -149,6 +149,12 @@ export function computePricing(input: PricingInput): PricingBreakdown {
     ? 0
     : Math.floor(dollars * tierData.pointsMultiplier);
 
+  // Minimum order for delivery
+  const MIN_DELIVERY_CENTS = 2500; // $25.00
+  if (input.fulfillmentType === "DELIVERY" && subtotalCents < MIN_DELIVERY_CENTS) {
+    errors.push(`Minimum order for delivery is $${(MIN_DELIVERY_CENTS / 100).toFixed(2)}`);
+  }
+
   if (subtotalCents <= 0) errors.push("Cart is empty");
   if (totalCents < 0) errors.push("Total cannot be negative");
 

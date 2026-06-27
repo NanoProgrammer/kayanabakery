@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, Clock, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ type PickupDay = {
   windowLabel: string;
 };
 
-function generatePickupDays(minLeadHours: number): PickupDay[] {
+function generatePickupDays(minLeadHours: number, locale = "en"): PickupDay[] {
   const now = new Date();
   const earliest = new Date(now.getTime() + minLeadHours * 60 * 60 * 1000);
   const days: PickupDay[] = [];
@@ -38,7 +38,7 @@ function generatePickupDays(minLeadHours: number): PickupDay[] {
     if (windowEnd <= earliest) continue;
 
     const dateStr = d.toISOString().slice(0, 10);
-    const dayLabel = d.toLocaleDateString("en-CA", {
+    const dayLabel = d.toLocaleDateString(locale === "es" ? "es-MX" : "en-CA", {
       weekday: "long",
       month: "short",
       day: "numeric",
@@ -74,7 +74,12 @@ export function PickupSlotPicker({
   minLeadHours?: number;
 }) {
   const { locale } = useLocale();
-  const pickupDays = useMemo(() => generatePickupDays(minLeadHours), [minLeadHours]);
+  const [pickupDays, setPickupDays] = useState<PickupDay[]>([]);
+
+  // Generate client-side only to avoid SSR/hydration mismatch with new Date()
+  useEffect(() => {
+    setPickupDays(generatePickupDays(minLeadHours, locale));
+  }, [minLeadHours, locale]);
 
   function handleSelect(day: PickupDay) {
     onDateChange(day.date);

@@ -92,6 +92,9 @@ export async function GET() {
         reserved,
         remaining,
         membersOnly: dbSlot.membersOnly,
+        isPriority: def.isPriority,
+        feeCentsBasico: def.feeCentsBasico,
+        feeCentsArtesano: def.feeCentsArtesano,
       });
     }
 

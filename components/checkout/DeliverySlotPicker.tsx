@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, ChevronLeft, ChevronRight, Check, Truck } from "lucide-react";
+import { Clock, ChevronLeft, ChevronRight, Check, Truck, Zap } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
+import type { MembershipTier } from "@/lib/membership/tiers";
 
 type SlotFromAPI = {
   id: string;
@@ -14,14 +15,26 @@ type SlotFromAPI = {
   capacity: number;
   reserved: number;
   remaining: number;
+  isPriority?: boolean;
+  feeCentsBasico?: number;
+  feeCentsArtesano?: number;
 };
+
+function getSlotFee(slot: SlotFromAPI, tier: MembershipTier): number {
+  if (!slot.isPriority) return 0;
+  if (tier === "SELECTO" || tier === "LEGENDARIO") return 0;
+  if (tier === "ARTESANO") return slot.feeCentsArtesano ?? 0;
+  return slot.feeCentsBasico ?? 0;
+}
 
 export function DeliverySlotPicker({
   selectedId,
+  userTier = "BASICO",
   onChange,
 }: {
   selectedId: string | null;
-  onChange: (id: string) => void;
+  userTier?: MembershipTier;
+  onChange: (id: string, feeCents: number) => void;
 }) {
   const { locale } = useLocale();
   const [slots, setSlots] = useState<SlotFromAPI[]>([]);
@@ -151,24 +164,32 @@ export function DeliverySlotPicker({
                       type="button"
                       key={slot.id}
                       disabled={isFull}
-                      onClick={() => onChange(slot.id)}
+                      onClick={() => onChange(slot.id, getSlotFee(slot, userTier))}
                       className={cn(
                         "flex items-center gap-3 rounded-xl border p-3 text-left transition-all",
                         isFull
                           ? "cursor-not-allowed border-canela/10 bg-cream/50 opacity-50"
                           : isSelected
                           ? "border-canela-dark bg-canela-light"
+                          : slot.isPriority
+                          ? "border-gold/60 bg-cream hover:border-gold"
                           : "border-canela/30 bg-cream hover:border-canela"
                       )}
                     >
                       <div
                         className={cn(
                           "flex h-8 w-8 items-center justify-center rounded-full",
-                          isSelected ? "bg-canela-dark text-cream" : "bg-canela-light"
+                          isSelected
+                            ? "bg-canela-dark text-cream"
+                            : slot.isPriority
+                            ? "bg-gold/20 text-canela-dark"
+                            : "bg-canela-light"
                         )}
                       >
                         {isSelected ? (
                           <Check className="h-3.5 w-3.5" />
+                        ) : slot.isPriority ? (
+                          <Zap className="h-3.5 w-3.5" />
                         ) : (
                           <Clock className="h-3.5 w-3.5" />
                         )}
@@ -181,6 +202,19 @@ export function DeliverySlotPicker({
                             : `${slot.remaining} ${locale === "es" ? "disponibles" : "spots left"}`}
                         </p>
                       </div>
+                      {slot.isPriority && (
+                        <div className="text-right">
+                          {getSlotFee(slot, userTier) === 0 ? (
+                            <span className="rounded-full bg-canela-dark px-2 py-0.5 text-[10px] font-bold text-cream">
+                              {locale === "es" ? "GRATIS" : "FREE"}
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold text-canela-dark">
+                              +${(getSlotFee(slot, userTier) / 100).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </button>
                   );
                 })}

@@ -29,6 +29,8 @@ export type PricingInput = {
   tipCents?: number;
   baseDeliveryFeeCents?: number;
   gstRate?: number;
+  /** Fee cents for the selected priority slot (0 = free for this tier) */
+  prioritySlotFeeCents?: number;
 };
 
 export type PricingBreakdown = {
@@ -42,6 +44,8 @@ export type PricingBreakdown = {
     | "FIRST_SE_DELIVERY"
     | "COUPON_FREE_SHIPPING"
     | "PICKUP";
+  /** Extra fee for priority (before-6-PM) delivery slot. 0 if standard slot or free tier */
+  prioritySlotFeeCents: number;
   tipCents: number;
   taxableCents: number;
   gstCents: number;
@@ -60,6 +64,7 @@ export function computePricing(input: PricingInput): PricingBreakdown {
   const tierData = TIERS[input.tier];
   const isGuest = input.isGuest ?? false;
   const tipCents = Math.max(0, Math.round(input.tipCents ?? 0));
+  const prioritySlotFeeCents = Math.max(0, input.prioritySlotFeeCents ?? 0);
 
   // 1. Subtotal
   const subtotalCents = input.items.reduce(
@@ -131,8 +136,8 @@ export function computePricing(input: PricingInput): PricingBreakdown {
     }
   }
 
-  // 5. Tax (GST on subtotal-after-discounts + delivery, NOT on tips)
-  const taxableCents = subtotalAfterDiscounts + deliveryFeeCents;
+  // 5. Tax (GST on subtotal-after-discounts + delivery + priority slot fee, NOT on tips)
+  const taxableCents = subtotalAfterDiscounts + deliveryFeeCents + prioritySlotFeeCents;
   const gstCents = Math.round(taxableCents * gstRate);
 
   // 6. Total (tip NOT taxed)
@@ -153,6 +158,7 @@ export function computePricing(input: PricingInput): PricingBreakdown {
     pointsDiscountCents,
     deliveryFeeCents,
     freeDeliveryReason,
+    prioritySlotFeeCents,
     tipCents,
     taxableCents,
     gstCents,

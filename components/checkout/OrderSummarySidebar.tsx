@@ -1,6 +1,6 @@
 "use client";
 
-import { Coins, Tag, Truck, Sparkles, Heart } from "lucide-react";
+import { Coins, Tag, Truck, Sparkles, Heart, Zap } from "lucide-react";
 import Image from "next/image";
 import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
 import { type PricingBreakdown, formatCents } from "@/lib/checkout/pricing";
@@ -78,6 +78,13 @@ export function OrderSummarySidebar({
           }
           highlight={pricing.deliveryFeeCents === 0 && pricing.freeDeliveryReason !== "PICKUP"}
         />
+        {pricing.prioritySlotFeeCents > 0 && (
+          <Row
+            icon={<Zap className="h-3 w-3 text-gold" />}
+            label={locale === "es" ? "Horario prioritario" : "Priority slot"}
+            value={formatCents(pricing.prioritySlotFeeCents, locale)}
+          />
+        )}
         {pricing.tipCents > 0 && (
           <Row
             icon={<Heart className="h-3 w-3 text-concha-rosa-dark" />}

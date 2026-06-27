@@ -61,6 +61,7 @@ export function CheckoutForm({
 
   // Slots
   const [deliverySlotId, setDeliverySlotId] = useState<string | null>(null);
+  const [deliverySlotFee, setDeliverySlotFee] = useState(0);
   const [pickupDate, setPickupDate] = useState("");
   const [pickupTime, setPickupTime] = useState("");
 
@@ -159,8 +160,9 @@ export function CheckoutForm({
         : null,
       pointsToRedeem,
       tipCents,
+      prioritySlotFeeCents: fulfillment === "DELIVERY" ? deliverySlotFee : 0,
     });
-  }, [items, fulfillment, user, isSECustomer, coupon, pointsToRedeem, tipCents]);
+  }, [items, fulfillment, user, isSECustomer, coupon, pointsToRedeem, tipCents, deliverySlotFee]);
 
   const isMember = user ? tierMeets(user.tier, "ARTESANO") : false;
 
@@ -312,7 +314,11 @@ export function CheckoutForm({
                 minLeadHours={maxLeadTime}
               />
             ) : (
-              <DeliverySlotPicker selectedId={deliverySlotId} onChange={setDeliverySlotId} />
+              <DeliverySlotPicker
+                selectedId={deliverySlotId}
+                userTier={user?.tier ?? "BASICO"}
+                onChange={(id, fee) => { setDeliverySlotId(id); setDeliverySlotFee(fee); }}
+              />
             )}
           </Section>
 

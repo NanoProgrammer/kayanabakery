@@ -40,6 +40,12 @@ export type DeliveryWindowDef = {
   endMinute: number;
   capacity: number;
   label: string;
+  /** Priority "before 6 PM" slot — carries an extra fee for lower tiers */
+  isPriority?: boolean;
+  /** Fee in cents for BASICO tier. 0 = free. Only set when isPriority = true */
+  feeCentsBasico?: number;
+  /** Fee in cents for ARTESANO tier. 0 = free. Only set when isPriority = true */
+  feeCentsArtesano?: number;
 };
 
 export type PickupSlotOption = {
@@ -59,6 +65,9 @@ export type DeliverySlotOption = {
   endISO: string;
   capacity: number;
   label: string;
+  isPriority: boolean;
+  feeCentsBasico: number;
+  feeCentsArtesano: number;
 };
 
 // ─── Constants ───────────────────────────────────────────────
@@ -73,7 +82,35 @@ export const PICKUP_WINDOWS: PickupWindow[] = [
   { dayOfWeek: 0, startHour: 13, startMinute: 0, endHour: 15, endMinute: 0 },
 ];
 
+/** Fee constants for priority (before-6-PM) delivery slots */
+export const PRIORITY_SLOT_FEE_BASICO = 899;   // $8.99
+export const PRIORITY_SLOT_FEE_ARTESANO = 499; // $4.99
+// SELECTO, LEGENDARIO → FREE (0)
+
+const PRIORITY = {
+  isPriority: true,
+  feeCentsBasico: PRIORITY_SLOT_FEE_BASICO,
+  feeCentsArtesano: PRIORITY_SLOT_FEE_ARTESANO,
+};
+
 export const DELIVERY_WINDOWS: DeliveryWindowDef[] = [
+  // ── Priority daytime slots (before 6 PM) — Tue–Sat ───────────
+  { dayOfWeek: 2, startHour: 13, startMinute: 0, endHour: 14, endMinute: 0, capacity: 5, label: "1–2 PM", ...PRIORITY },
+  { dayOfWeek: 3, startHour: 13, startMinute: 0, endHour: 14, endMinute: 0, capacity: 5, label: "1–2 PM", ...PRIORITY },
+  { dayOfWeek: 4, startHour: 13, startMinute: 0, endHour: 14, endMinute: 0, capacity: 5, label: "1–2 PM", ...PRIORITY },
+  { dayOfWeek: 5, startHour: 13, startMinute: 0, endHour: 14, endMinute: 0, capacity: 5, label: "1–2 PM", ...PRIORITY },
+  { dayOfWeek: 6, startHour: 13, startMinute: 0, endHour: 14, endMinute: 0, capacity: 5, label: "1–2 PM", ...PRIORITY },
+  { dayOfWeek: 2, startHour: 14, startMinute: 0, endHour: 16, endMinute: 0, capacity: 5, label: "2–4 PM", ...PRIORITY },
+  { dayOfWeek: 3, startHour: 14, startMinute: 0, endHour: 16, endMinute: 0, capacity: 5, label: "2–4 PM", ...PRIORITY },
+  { dayOfWeek: 4, startHour: 14, startMinute: 0, endHour: 16, endMinute: 0, capacity: 5, label: "2–4 PM", ...PRIORITY },
+  { dayOfWeek: 5, startHour: 14, startMinute: 0, endHour: 16, endMinute: 0, capacity: 5, label: "2–4 PM", ...PRIORITY },
+  { dayOfWeek: 6, startHour: 14, startMinute: 0, endHour: 16, endMinute: 0, capacity: 5, label: "2–4 PM", ...PRIORITY },
+  { dayOfWeek: 2, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0, capacity: 5, label: "4–6 PM", ...PRIORITY },
+  { dayOfWeek: 3, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0, capacity: 5, label: "4–6 PM", ...PRIORITY },
+  { dayOfWeek: 4, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0, capacity: 5, label: "4–6 PM", ...PRIORITY },
+  { dayOfWeek: 5, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0, capacity: 5, label: "4–6 PM", ...PRIORITY },
+  { dayOfWeek: 6, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0, capacity: 5, label: "4–6 PM", ...PRIORITY },
+  // ── Standard evening slots — Tue–Sat ─────────────────────────
   { dayOfWeek: 2, startHour: 18, startMinute: 0, endHour: 20, endMinute: 0, capacity: 5, label: "6–8 PM" },
   { dayOfWeek: 3, startHour: 18, startMinute: 0, endHour: 20, endMinute: 0, capacity: 5, label: "6–8 PM" },
   { dayOfWeek: 4, startHour: 18, startMinute: 0, endHour: 20, endMinute: 0, capacity: 5, label: "6–8 PM" },
@@ -84,6 +121,7 @@ export const DELIVERY_WINDOWS: DeliveryWindowDef[] = [
   { dayOfWeek: 4, startHour: 19, startMinute: 0, endHour: 21, endMinute: 0, capacity: 5, label: "7–9 PM" },
   { dayOfWeek: 5, startHour: 19, startMinute: 0, endHour: 21, endMinute: 0, capacity: 5, label: "7–9 PM" },
   { dayOfWeek: 6, startHour: 19, startMinute: 0, endHour: 21, endMinute: 0, capacity: 5, label: "7–9 PM" },
+  // ── Sunday ───────────────────────────────────────────────────
   { dayOfWeek: 0, startHour: 13, startMinute: 0, endHour: 15, endMinute: 0, capacity: 10, label: "1–3 PM" },
 ];
 
@@ -168,6 +206,9 @@ export function getDeliverySlotDefs({
         endISO: end.toISOString(),
         capacity: w.capacity,
         label: w.label,
+        isPriority: w.isPriority ?? false,
+        feeCentsBasico: w.feeCentsBasico ?? 0,
+        feeCentsArtesano: w.feeCentsArtesano ?? 0,
       });
     }
   }

@@ -287,10 +287,12 @@ export function CheckoutForm({
                 title={locale === "es" ? "Envío" : "Delivery"}
                 desc={
                   !user
-                    ? "$7 CAD"
-                    : isMember
-                    ? locale === "es" ? "Gratis con tu plan" : "Free with your plan"
-                    : locale === "es" ? "$7 · 1ra gratis en SE" : "$7 · 1st free in SE"
+                    ? locale === "es" ? "$7 · mín $25" : "$7 · min $25"
+                    : user.tier === "SELECTO" || user.tier === "LEGENDARIO"
+                    ? locale === "es" ? "Gratis desde $25 con tu plan" : "Free from $25 with your plan"
+                    : user.tier === "ARTESANO"
+                    ? locale === "es" ? "$4.99 · envío gratis con cupón" : "$4.99 slot · free shipping w/ coupon"
+                    : locale === "es" ? "$7 · 1ra gratis en SE Calgary" : "$7 · 1st free in SE Calgary"
                 }
               />
             </div>
@@ -373,7 +375,11 @@ export function CheckoutForm({
             )}
             {pricing.errors.length > 0 && (
               <div className="mt-3 rounded-2xl bg-red-50 p-3 text-xs text-red-700">
-                {pricing.errors.join("; ")}
+                {pricing.errors.map((e) =>
+                  locale === "es" && e.startsWith("Minimum order for delivery")
+                    ? "El pedido mínimo para envío es $25.00"
+                    : e
+                ).join("; ")}
               </div>
             )}
           </Section>

@@ -3,9 +3,8 @@
  * Pure functions — no DB, no fetch. Same logic client + server.
  * All amounts in CENTS.
  *
- * CHANGE: Artesano free delivery is NO LONGER automatic.
- * Artesano members receive a coupon code via newsletter for free delivery.
- * Only Selecto, Legendario, and Embajador get automatic free delivery.
+ * Free delivery tiers: Artesano at $32+, Selecto/Legendario at $25+.
+ * Básico: pays per delivery ($7), first free in SE Calgary.
  */
 
 import { TIERS, pointsToCents, type MembershipTier } from "@/lib/membership/tiers";
@@ -115,14 +114,11 @@ export function computePricing(input: PricingInput): PricingBreakdown {
   if (input.fulfillmentType === "PICKUP") {
     freeDeliveryReason = "PICKUP";
   } else if (couponIsFreeShipping) {
-    // This is how Artesano members get free delivery — via newsletter coupon
     freeDeliveryReason = "COUPON_FREE_SHIPPING";
   } else if (isGuest) {
     // Guests ALWAYS pay delivery
     deliveryFeeCents = baseDelivery;
   } else {
-    // CHANGED: Only Selecto+ gets automatic free delivery
-    // Artesano must use newsletter coupon code for FREE_SHIPPING
     if (
       tierData.freeDeliveryAutomatic &&
       tierData.freeDeliveryMinOrderCents &&

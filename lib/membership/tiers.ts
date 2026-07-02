@@ -1,10 +1,10 @@
 /**
  * Karyana — Membership tiers source of truth
  *
- * CHANGE: Artesano free delivery is NO LONGER automatic.
- * Artesano members receive a FREE_SHIPPING coupon code via newsletter.
- * Only Selecto, Legendario get automatic free delivery with min order.
- * New field: freeDeliveryAutomatic (boolean) — true only for Selecto+.
+ * Free delivery tiers:
+ * - Artesano: automatic free delivery at $32+ order
+ * - Selecto / Legendario: automatic free delivery at $25+
+ * - Básico / Embajador: pay per delivery (Básico gets 1st free in SE Calgary)
  */
 
 export type MembershipTier =
@@ -114,10 +114,8 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     offSeasonAccess: true,
     preferralSeasonalAccess: true,
 
-    // CHANGED: freeDelivery is technically available but NOT automatic
-    // Artesano must use a newsletter coupon code for free shipping
     freeDelivery: true,
-    freeDeliveryAutomatic: false, // <-- KEY CHANGE
+    freeDeliveryAutomatic: true,
     freeDeliveryMinOrderCents: 3200,
     pickupOnly: false,
 

@@ -136,7 +136,7 @@ export function AddressPicker({
 
       {adding && (
         <div className="rounded-2xl border border-canela/30 bg-cream p-4">
-          <AddressFormFields value={draft} onChange={setDraft} />
+          <AddressFormFields value={draft} onChange={(v) => { setDraft(v); onGuestAddressChange(v); }} />
           <div className="mt-4 flex gap-2">
             <button
               type="button"

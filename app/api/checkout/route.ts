@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { sanityFetch } from "@/sanity/lib/fetch";
+import { client as sanityClient } from "@/sanity/lib/client";
 import { squareClient, SQUARE_LOCATION_ID as locationId } from "@/lib/square/client";
 import { computePricing } from "@/lib/checkout/pricing";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
@@ -265,35 +266,61 @@ export async function POST(req: Request) {
   }
 
   // ============================================================
-  // 7. Validate coupon
+  // 7. Validate coupon (source of truth: Sanity)
   // ============================================================
   let coupon: any = null;
+  let prismaIoupon: any = null; // for redemption tracking only
 
   if (data.couponCode) {
-    coupon = await prisma.coupon.findUnique({
-      where: { code: data.couponCode.toUpperCase() },
-    });
+    const sanityCoupon = await sanityClient.fetch(
+      `*[_type == "coupon" && code == $code][0]{
+        code, discountType, discountValue,
+        minOrderDollars, maxUses, perUserLimit,
+        startsAt, expiresAt, active, membershipOnly
+      }`,
+      { code: data.couponCode.toUpperCase() }
+    );
 
-    if (!coupon || !coupon.active) {
+    if (!sanityCoupon || !sanityCoupon.active) {
       return NextResponse.json({ error: "Invalid coupon" }, { status: 400 });
     }
 
     const now = new Date();
-    if ((coupon.startsAt && now < coupon.startsAt) || (coupon.expiresAt && now > coupon.expiresAt)) {
+    if (sanityCoupon.startsAt && new Date(sanityCoupon.startsAt) > now) {
+      return NextResponse.json({ error: "Coupon is not active yet" }, { status: 400 });
+    }
+    if (sanityCoupon.expiresAt && new Date(sanityCoupon.expiresAt) < now) {
       return NextResponse.json({ error: "Coupon has expired" }, { status: 400 });
     }
-    if (coupon.maxRedemptions && coupon.redemptionCount >= coupon.maxRedemptions) {
-      return NextResponse.json({ error: "Coupon limit reached" }, { status: 400 });
+    if (sanityCoupon.membershipOnly && tier === "BASICO") {
+      return NextResponse.json({ error: "This coupon is for members only" }, { status: 403 });
     }
-    if (coupon.maxPerUser && userId) {
-      const used = await prisma.couponRedemption.count({ where: { couponId: coupon.id, userId } });
-      if (used >= coupon.maxPerUser) {
+
+    // Per-user limit (cross-check Prisma redemption log if coupon tracked there)
+    prismaIoupon = await prisma.coupon.findUnique({ where: { code: sanityCoupon.code } }).catch(() => null);
+    if (prismaIoupon && sanityCoupon.perUserLimit > 0 && userId) {
+      const used = await prisma.couponRedemption.count({ where: { couponId: prismaIoupon.id, userId } });
+      if (used >= sanityCoupon.perUserLimit) {
         return NextResponse.json({ error: "You have already used this coupon" }, { status: 400 });
       }
     }
-    if (coupon.requiredTier && coupon.requiredTier !== "BASICO" && tier === "BASICO") {
-      return NextResponse.json({ error: "This coupon is for members only" }, { status: 403 });
-    }
+
+    // Normalize for pricing engine
+    const discountValue =
+      sanityCoupon.discountType === "FIXED"
+        ? Math.round((sanityCoupon.discountValue ?? 0) * 100)
+        : sanityCoupon.discountValue ?? 0;
+    const minOrderCents = sanityCoupon.minOrderDollars
+      ? Math.round(sanityCoupon.minOrderDollars * 100)
+      : null;
+
+    coupon = {
+      id: prismaIoupon?.id ?? null,
+      code: sanityCoupon.code,
+      discountType: sanityCoupon.discountType,
+      discountValue,
+      minOrderCents,
+    };
   }
 
   // ============================================================
@@ -311,6 +338,14 @@ export async function POST(req: Request) {
   // ============================================================
   // 9. Compute pricing
   // ============================================================
+  // Priority slot fee based on tier (free for SELECTO/LEGENDARIO)
+  let prioritySlotFeeCents = 0;
+  if (deliverySlot?.isPriority) {
+    if (tier === "ARTESANO") prioritySlotFeeCents = deliverySlot.feeCentsArtesano ?? 0;
+    else if (tier === "BASICO") prioritySlotFeeCents = deliverySlot.feeCentsBasico ?? 0;
+    // SELECTO, LEGENDARIO, EMBAJADOR: 0
+  }
+
   const pricing = computePricing({
     items,
     fulfillmentType: data.fulfillmentType,
@@ -328,6 +363,7 @@ export async function POST(req: Request) {
       : null,
     pointsToRedeem: data.pointsToRedeem ?? 0,
     tipCents: data.tipCents ?? 0,
+    prioritySlotFeeCents,
   });
 
   if (pricing.errors.length) {
@@ -530,8 +566,8 @@ paymentId = result.payment?.id ?? undefined;
       });
     }
 
-    // Coupon redemption
-    if (coupon) {
+    // Coupon redemption (only tracked if coupon exists in Prisma DB)
+    if (coupon?.id) {
       await tx.couponRedemption.create({
         data: { couponId: coupon.id, userId: userId ?? null, orderId: created.id },
       });

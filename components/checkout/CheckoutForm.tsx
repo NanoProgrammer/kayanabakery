@@ -167,14 +167,17 @@ export function CheckoutForm({
   const isMember = user ? tierMeets(user.tier, "ARTESANO") : false;
 
   // Validation
+  const hasDeliveryAddress =
+    !!addressId ||
+    !!(guestAddress?.street && guestAddress?.postalCode);
+
   const canPay =
     items.length > 0 &&
     !needsMembership &&
     pricing.errors.length === 0 &&
     (fulfillment === "PICKUP"
       ? !!pickupDate && !!pickupTime
-      : !!deliverySlotId &&
-        ((user && addressId) || (!user && guestAddress?.street && guestAddress?.postalCode))) &&
+      : !!deliverySlotId && hasDeliveryAddress) &&
     (!!user || (guestEmail && guestName && guestPhone));
 
   async function handlePayment(token: string) {
@@ -193,8 +196,8 @@ export function CheckoutForm({
       payload.pickupTime = pickupTime;
     } else {
       payload.deliverySlotId = deliverySlotId;
-      if (user && addressId) payload.addressId = addressId;
-      else if (guestAddress) payload.guestAddress = guestAddress;
+      if (addressId) payload.addressId = addressId;
+      if (guestAddress && !addressId) payload.guestAddress = guestAddress;
     }
 
     if (!user) {
@@ -291,7 +294,7 @@ export function CheckoutForm({
                     : user.tier === "SELECTO" || user.tier === "LEGENDARIO"
                     ? locale === "es" ? "Gratis desde $25 con tu plan" : "Free from $25 with your plan"
                     : user.tier === "ARTESANO"
-                    ? locale === "es" ? "$4.99 · envío gratis con cupón" : "$4.99 slot · free shipping w/ coupon"
+                    ? locale === "es" ? "Gratis desde $32 · +$4.99 horario prioritario" : "Free from $32 · +$4.99 priority slot"
                     : locale === "es" ? "$7 · 1ra gratis en SE Calgary" : "$7 · 1st free in SE Calgary"
                 }
               />

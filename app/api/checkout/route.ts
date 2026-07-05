@@ -12,11 +12,11 @@ import { ambassadorPayoutCents } from "@/lib/membership/tiers";
 import { sendOrderEmails } from "@/lib/email/send-order-emails";
 import { randomUUID } from "crypto";
 import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calendar";
-import { getUpcomingWindows, findNextAvailableSlot, SLOT_DURATION_MIN } from "@/lib/google/delivery-windows";
 import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
 
 async function reserveDeliverySlot({
-  windowId,
+  slotStartTime,
+  slotEndTime,
   customerName,
   customerPhone,
   customerEmail,
@@ -24,7 +24,8 @@ async function reserveDeliverySlot({
   itemsSummary,
   orderNumber,
 }: {
-  windowId: string;
+  slotStartTime: Date;
+  slotEndTime: Date;
   customerName: string;
   customerPhone: string;
   customerEmail: string;
@@ -32,34 +33,7 @@ async function reserveDeliverySlot({
   itemsSummary: string;
   orderNumber: string;
 }): Promise<{ slotStart: string; slotEnd: string; eventId: string | null }> {
-  const windows = getUpcomingWindows();
-  const window = windows.find((w) => w.id === windowId);
-  if (!window) {
-    throw new Error("Selected delivery window is no longer available");
-  }
-
   const calendar = getCalendar();
-
-  const eventsRes = await calendar.events.list({
-    calendarId: KARYANA_CALENDAR_ID,
-    timeMin: window.windowStart,
-    timeMax: window.windowEnd,
-    singleEvents: true,
-    orderBy: "startTime",
-    maxResults: 50,
-  });
-
-  const busyStarts = (eventsRes.data.items || [])
-    .map((ev) => ev.start?.dateTime)
-    .filter(Boolean)
-    .map((s) => new Date(s as string));
-
-  const slotStart = findNextAvailableSlot(window, busyStarts);
-  if (!slotStart) {
-    throw new Error("This delivery window just filled up. Please pick another.");
-  }
-
-  const slotEnd = new Date(slotStart.getTime() + SLOT_DURATION_MIN * 60 * 1000);
 
   const event = await calendar.events.insert({
     calendarId: KARYANA_CALENDAR_ID,
@@ -77,14 +51,14 @@ async function reserveDeliverySlot({
         `Order: ${orderNumber}`,
       ].join("\n"),
       location: address,
-      start: { dateTime: slotStart.toISOString(), timeZone: TIMEZONE },
-      end: { dateTime: slotEnd.toISOString(), timeZone: TIMEZONE },
+      start: { dateTime: slotStartTime.toISOString(), timeZone: TIMEZONE },
+      end: { dateTime: slotEndTime.toISOString(), timeZone: TIMEZONE },
     },
   });
 
   return {
-    slotStart: slotStart.toISOString(),
-    slotEnd: slotEnd.toISOString(),
+    slotStart: slotStartTime.toISOString(),
+    slotEnd: slotEndTime.toISOString(),
     eventId: event.data.id ?? null,
   };
 }
@@ -388,7 +362,8 @@ export async function POST(req: Request) {
 
     try {
       deliveryReservation = await reserveDeliverySlot({
-        windowId: data.deliverySlotId!,
+        slotStartTime: deliverySlot.startTime,
+        slotEndTime: deliverySlot.endTime,
         customerName: user?.name ?? data.guestName ?? "Customer",
         customerPhone: (user as any)?.phone ?? data.guestPhone ?? "",
         customerEmail: user?.email ?? data.guestEmail ?? "",

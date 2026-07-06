@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Truck, ShoppingBag, ChevronRight, Lock } from "lucide-react";
@@ -42,6 +42,7 @@ export function CheckoutForm({
 }) {
   const router = useRouter();
   const { locale } = useLocale();
+  const submitted = useRef(false);
 
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clearCart);
@@ -119,9 +120,9 @@ export function CheckoutForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Empty cart → back to cart
+  // Empty cart → back to cart (but not after successful payment)
   useEffect(() => {
-    if (items.length === 0) router.push("/cart");
+    if (items.length === 0 && !submitted.current) router.push("/cart");
   }, [items.length, router]);
 
   // Guest nudge on delivery
@@ -217,6 +218,7 @@ export function CheckoutForm({
         toast.error(data.error || "Checkout failed");
         return;
       }
+      submitted.current = true;
       clearCart();
       setCartCoupon(null);
       setCartPoints(0);

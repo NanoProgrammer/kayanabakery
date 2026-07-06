@@ -576,8 +576,41 @@ paymentId = result.payment?.id ?? undefined;
     return created;
   });
   // ============================================================
-  // 12.5 Sync to Brevo (fire-and-forget)
+  // 12.5 Sync order to Sanity Studio (fire-and-forget)
   // ============================================================
+  const deliveryAddress = address
+    ? `${address.street}, ${address.city}, ${address.province} ${address.postalCode}`
+    : null;
+  const slotLabel = deliverySlot
+    ? deliverySlot.startTime.toLocaleString("en-CA", {
+        weekday: "long", month: "short", day: "numeric",
+        hour: "numeric", minute: "2-digit",
+      })
+    : data.pickupDate
+    ? `${data.pickupDate}${data.pickupTime ? " · " + data.pickupTime : ""}`
+    : null;
+
+  sanityClient.create({
+    _type: "order",
+    orderNumber,
+    prismaId: order.id,
+    customerName: user?.name ?? data.guestName ?? "Guest",
+    customerEmail: user?.email ?? data.guestEmail ?? "",
+    customerPhone: (user as any)?.phone ?? data.guestPhone ?? "",
+    fulfillmentType: data.fulfillmentType,
+    total: pricing.totalCents / 100,
+    items: items.map((it) => ({
+      _key: it.productId,
+      name: it.name,
+      quantity: it.quantity,
+      price: it.price / 100,
+    })),
+    deliveryAddress,
+    pickupDate: slotLabel,
+    status: "IN_PROGRESS",
+    createdAt: new Date().toISOString(),
+  }).catch((err: any) => console.warn("[checkout] sanity sync failed", err));
+
   if (userId && user?.email) {
     const orderCount = await prisma.order.count({
       where: { userId, paymentStatus: "PAID" },

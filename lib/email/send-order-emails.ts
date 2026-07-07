@@ -4,7 +4,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { resend, FROM_EMAIL, OWNER_EMAIL } from "@/lib/email/resend";
+import { resend, FROM_EMAIL, ORDERS_EMAIL } from "@/lib/email/resend";
 import { render } from "@react-email/render";
 import OrderConfirmation from "@/emails/OrderConfirmation";
 import OwnerNewOrder from "@/emails/OwnerNewOrder";
@@ -39,7 +39,7 @@ export async function sendOrderEmails(orderId: string): Promise<void> {
   const items = ((order.items as any[]) || []).map((it) => ({
     name: locale === "es" && it.nameEs ? it.nameEs : it.name,
     quantity: it.quantity,
-    lineTotal: formatCents(it.price * 100 * it.quantity, locale),
+    lineTotal: formatCents(it.price * it.quantity, locale), // price already in cents
   }));
 
   let fulfillmentLabel: string;
@@ -182,7 +182,7 @@ export async function sendOrderEmails(orderId: string): Promise<void> {
 
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: OWNER_EMAIL,
+      to: ORDERS_EMAIL,
       subject: `[New Order] ${order.orderNumber} — ${formatCents(order.total, "en")}`,
       html,
     });

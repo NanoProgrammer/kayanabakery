@@ -39,7 +39,7 @@ export async function sendOrderEmails(orderId: string): Promise<void> {
   const items = ((order.items as any[]) || []).map((it) => ({
     name: locale === "es" && it.nameEs ? it.nameEs : it.name,
     quantity: it.quantity,
-    lineTotal: formatCents(it.price * 100 * it.quantity, locale),
+    lineTotal: formatCents(it.price * it.quantity, locale), // price already in cents
   }));
 
   let fulfillmentLabel: string;

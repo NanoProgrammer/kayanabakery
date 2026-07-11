@@ -609,7 +609,7 @@ paymentId = result.payment?.id ?? undefined;
     pickupDate: slotLabel,
     status: "IN_PROGRESS",
     createdAt: new Date().toISOString(),
-  }).catch((err: any) => console.warn("[checkout] sanity sync failed", err));
+  }).catch((err: any) => console.error("[checkout] sanity sync failed:", err?.message, err?.statusCode));
 
   if (userId && user?.email) {
     const orderCount = await prisma.order.count({

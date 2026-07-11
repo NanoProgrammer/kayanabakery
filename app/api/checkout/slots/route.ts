@@ -8,9 +8,11 @@ import { getDeliverySlotDefs } from "@/lib/checkout/schedule";
  * Returns delivery windows for the next 14 days with live capacity.
  * Lazy-creates DeliverySlot rows if they don't exist yet.
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const slotDefs = getDeliverySlotDefs({ daysAhead: 14, minLeadHours: 24 });
+    const url = new URL(req.url);
+    const minLeadHours = Math.max(24, Number(url.searchParams.get("minLeadHours") ?? 24));
+    const slotDefs = getDeliverySlotDefs({ daysAhead: 14, minLeadHours });
 
     if (slotDefs.length === 0) {
       return NextResponse.json({ slots: [] });

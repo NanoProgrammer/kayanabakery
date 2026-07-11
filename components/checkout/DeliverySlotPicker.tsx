@@ -30,10 +30,12 @@ function getSlotFee(slot: SlotFromAPI, tier: MembershipTier): number {
 export function DeliverySlotPicker({
   selectedId,
   userTier = "BASICO",
+  minLeadHours = 24,
   onChange,
 }: {
   selectedId: string | null;
   userTier?: MembershipTier;
+  minLeadHours?: number;
   onChange: (id: string, feeCents: number) => void;
 }) {
   const { locale } = useLocale();
@@ -42,14 +44,14 @@ export function DeliverySlotPicker({
   const [weekOffset, setWeekOffset] = useState(0);
 
   useEffect(() => {
-    fetch("/api/checkout/slots")
+    fetch(`/api/checkout/slots?minLeadHours=${minLeadHours}`)
       .then((r) => r.json())
       .then((data) => {
         setSlots(data.slots || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [minLeadHours]);
 
   const slotsByDate = useMemo(() => {
     const map: Record<string, SlotFromAPI[]> = {};

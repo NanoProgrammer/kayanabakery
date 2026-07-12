@@ -12,6 +12,7 @@ type SlotFromAPI = {
   dayLabel: string;
   windowLabel: string;
   label: string;
+  endISO: string;
   capacity: number;
   reserved: number;
   remaining: number;
@@ -44,10 +45,15 @@ export function DeliverySlotPicker({
   const [weekOffset, setWeekOffset] = useState(0);
 
   useEffect(() => {
-    fetch(`/api/checkout/slots?minLeadHours=${minLeadHours}`)
+    fetch("/api/checkout/slots")
       .then((r) => r.json())
       .then((data) => {
-        setSlots(data.slots || []);
+        // Filter client-side using browser local time — same approach as PickupSlotPicker
+        const earliest = new Date(Date.now() + minLeadHours * 60 * 60 * 1000);
+        const filtered = (data.slots || []).filter(
+          (s: SlotFromAPI) => new Date(s.endISO) > earliest
+        );
+        setSlots(filtered);
         setLoading(false);
       })
       .catch(() => setLoading(false));

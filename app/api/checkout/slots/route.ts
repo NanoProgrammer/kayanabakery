@@ -8,11 +8,18 @@ import { getDeliverySlotDefs } from "@/lib/checkout/schedule";
  * Returns delivery windows for the next 14 days with live capacity.
  * Lazy-creates DeliverySlot rows if they don't exist yet.
  */
-export async function GET(req: Request) {
+const EDMONTON_OFFSET_MS = -6 * 60 * 60 * 1000; // MDT = UTC-6
+
+function nowInEdmonton(): Date {
+  const utc = Date.now();
+  return new Date(utc + EDMONTON_OFFSET_MS);
+}
+
+export async function GET() {
   try {
-    const url = new URL(req.url);
-    const minLeadHours = Math.max(24, Number(url.searchParams.get("minLeadHours") ?? 24));
-    const slotDefs = getDeliverySlotDefs({ daysAhead: 14, minLeadHours });
+    // Use Edmonton local time so dates match what customers see in Calgary.
+    // Lead time filtering happens client-side (browser local time) for accuracy.
+    const slotDefs = getDeliverySlotDefs({ from: nowInEdmonton(), daysAhead: 21, minLeadHours: 0 });
 
     if (slotDefs.length === 0) {
       return NextResponse.json({ slots: [] });
@@ -90,6 +97,7 @@ export async function GET(req: Request) {
         dayLabel: def.dayLabel,
         windowLabel: def.windowLabel,
         label: def.label,
+        endISO: def.endISO,
         capacity: dbSlot.capacity,
         reserved,
         remaining,

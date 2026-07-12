@@ -31,7 +31,7 @@ function getSlotFee(slot: SlotFromAPI, tier: MembershipTier): number {
 export function DeliverySlotPicker({
   selectedId,
   userTier = "BASICO",
-  minLeadHours = 24,
+  minLeadHours = 0,
   onChange,
 }: {
   selectedId: string | null;

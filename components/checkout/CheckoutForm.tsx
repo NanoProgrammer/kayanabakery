@@ -324,7 +324,7 @@ export function CheckoutForm({
               <DeliverySlotPicker
                 selectedId={deliverySlotId}
                 userTier={user?.tier ?? "BASICO"}
-                minLeadHours={Math.max(24, maxLeadTime)}
+                minLeadHours={maxLeadTime}
                 onChange={(id, fee) => { setDeliverySlotId(id); setDeliverySlotFee(fee); }}
               />
             )}

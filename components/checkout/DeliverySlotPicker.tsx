@@ -31,7 +31,7 @@ function getSlotFee(slot: SlotFromAPI, tier: MembershipTier): number {
 export function DeliverySlotPicker({
   selectedId,
   userTier = "BASICO",
-  minLeadHours = 0,
+  minLeadHours = 24,
   onChange,
 }: {
   selectedId: string | null;
@@ -48,10 +48,14 @@ export function DeliverySlotPicker({
     fetch("/api/checkout/slots")
       .then((r) => r.json())
       .then((data) => {
-        // Filter client-side using browser local time — same approach as PickupSlotPicker
-        const earliest = new Date(Date.now() + minLeadHours * 60 * 60 * 1000);
+        // Lead time in whole days: 24h lead ordered Monday (any hour) → Tuesday available.
+        // Uses browser local date, same approach as PickupSlotPicker.
+        const leadDays = Math.ceil(minLeadHours / 24);
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() + leadDays);
+        const cutoffStr = cutoff.toLocaleDateString("en-CA"); // YYYY-MM-DD local
         const filtered = (data.slots || []).filter(
-          (s: SlotFromAPI) => new Date(s.endISO) > earliest
+          (s: SlotFromAPI) => s.date >= cutoffStr
         );
         setSlots(filtered);
         setLoading(false);

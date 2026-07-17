@@ -41,6 +41,13 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
                   : "First year FREE · Then $39/year · Card on file required"
                 : `${priceLabel} · ${es ? "Facturado" : "Billed"} ${tierData.cadence === "MONTHLY" ? (es ? "mensualmente" : "monthly") : (es ? "anualmente" : "yearly")}`}
             </p>
+            {(tier === "SELECTO" || tier === "LEGENDARIO") && (
+  <p className="mt-2 text-sm font-medium text-canela-dark">
+    {es
+      ? "✨ Tu pago mensual se convierte en puntos. Úsalos en el checkout para obtener productos sin pagar dinero adicional."
+      : "✨ Your monthly payment is converted into points. Use them at checkout to get products without paying additional money."}
+  </p>
+)}
           </div>
         </div>
 

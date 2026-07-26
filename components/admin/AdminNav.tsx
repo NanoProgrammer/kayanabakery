@@ -8,6 +8,7 @@ import {
   Truck,
   Crown,
   Users,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export function AdminNav() {
     { href: "/admin/deliveries", icon: Truck, label: "Deliveries" },
     { href: "/admin/memberships", icon: Crown, label: "Memberships" },
     { href: "/admin/members", icon: Users, label: "Customers" },
+    { href: "/admin/credits", icon: Coins, label: "Credit Policy" },
   ];
 
   return (

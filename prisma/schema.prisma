@@ -264,6 +264,77 @@ squareCustomerId   String?
 isTrial            Boolean  @default(false)
 lastPaymentId      String?
 lastRenewedAt      DateTime?
+
+// Weekly Box Delivery (Selecto & Legendario only)
+weeklyMode           WeeklyBoxMode? // null until user completes onboarding
+autoDeliveryEnabled  Boolean        @default(false)
+
+weeklyLogs WeeklyOrderLog[]
+}
+
+enum WeeklyBoxMode {
+  REPEAT_LAST   // Mode 1 — repeats last completed weekly order
+  CURATED       // Mode 2 — Karyana's curated surprise box (+$5/wk)
+  MANUAL        // Mode 3 — must confirm each week or it's skipped
+}
+
+// One row per membership per ISO week — tracks the Thursday
+// send/skip decision so we never double-process a week.
+model WeeklyOrderLog {
+  id           String              @id @default(cuid())
+  membershipId String
+  membership   Membership          @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  userId       String
+
+  weekStart    DateTime            // Monday of the ISO week, 00:00 local
+  modeSnapshot WeeklyBoxMode       // mode at the time the notification was sent
+  status       WeeklyOrderStatus   @default(PENDING)
+  decidedBy    WeeklyDecisionActor?
+  decidedAt    DateTime?
+  orderId      String?             // set once an order is actually created
+  failureNote  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([membershipId, weekStart])
+  @@index([status, weekStart])
+}
+
+enum WeeklyOrderStatus {
+  PENDING            // notification sent, awaiting response or cutoff
+  CONFIRMED          // send confirmed — order created (or queued for staff curation)
+  SKIPPED            // skipped — by user click or default-skip at cutoff
+  FAILED             // confirmed but order creation failed (e.g. no prior order to repeat)
+}
+
+enum WeeklyDecisionActor {
+  USER    // clicked Send/Skip in the email
+  DEFAULT // cutoff passed, applied the membership's default behavior
+}
+
+// Admin-controlled annual policy for unused points/credits (Section 15 of the membership spec).
+// Decided once per year on Dec 2, executed Feb 1.
+model CreditExpirationPolicy {
+  id    String   @id @default(cuid())
+  year  Int      @unique // the February the policy applies to, e.g. 2027 for Feb 1 2027
+
+  mode  CreditExpirationMode
+
+  decidedAt    DateTime  @default(now())
+  decidedById  String?
+
+  executedAt              DateTime?
+  totalCreditsProcessedCents Int    @default(0)
+  usersAffected              Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CreditExpirationMode {
+  FORFEIT // unused points are removed permanently
+  DONATE  // unused points convert to gift cards donated to families in need
 }
 
 enum MembershipTier {

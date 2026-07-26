@@ -52,6 +52,23 @@ export async function GET(req: Request) {
         },
       });
 
+      // Convert renewal fee to points — same rule as new subscriptions:
+      // Selecto & Legendario only, 1 point = 1 cent, no multiplier.
+      if (m.tier === "SELECTO" || m.tier === "LEGENDARIO") {
+        await prisma.user.update({
+          where: { id: m.userId },
+          data: { pointsBalance: { increment: priceCents } },
+        });
+        await prisma.pointsTransaction.create({
+          data: {
+            userId: m.userId,
+            amount: priceCents,
+            type: "BONUS",
+            note: `${m.tier} renewal — membership fee converted to points`,
+          },
+        });
+      }
+
       if (m.user?.email) {
         syncMembershipChange({
           email: m.user.email,

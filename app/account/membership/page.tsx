@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { TIERS } from "@/lib/membership/tiers";
 import { MembershipManager } from "@/components/account/MembershipManager";
+import { WeeklyBoxPreferences } from "@/components/account/WeeklyBoxPreferences";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,14 @@ export default async function MembershipAccountPage() {
   isActive={membership?.status === "ACTIVE"}
 />
       </div>
+
+      {membership?.status === "ACTIVE" &&
+        (tier === "SELECTO" || tier === "LEGENDARIO") && (
+          <WeeklyBoxPreferences
+            initialMode={membership.weeklyMode}
+            initialAutoDelivery={membership.autoDeliveryEnabled}
+          />
+        )}
 
       <p className="mt-6 text-sm text-ink-soft">
         Want to compare all plans?{" "}

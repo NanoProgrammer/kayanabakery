@@ -28,7 +28,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Card is required" }, { status: 400 });
     }
 
-    // Check existing membership
+    // Check existing membership — block only if already on this exact tier.
+    // Switching between paid tiers (e.g. Artesano → Selecto) is allowed without cancelling first.
     const existing = await prisma.membership.findFirst({
       where: {
         userId,
@@ -36,12 +37,19 @@ export async function POST(req: Request) {
         tier: { in: ["ARTESANO", "SELECTO", "LEGENDARIO", "EMBAJADOR"] },
       },
     });
-    if (existing) {
+    if (existing && existing.tier === tier) {
       return NextResponse.json(
-        { error: "Already a member", tier: existing.tier },
+        { error: "Already a member of this plan", tier: existing.tier },
         { status: 409 }
       );
     }
+    if (existing?.tier === "EMBAJADOR") {
+      return NextResponse.json(
+        { error: "Ambassador membership can't be changed here — contact support" },
+        { status: 403 }
+      );
+    }
+    const isSwitching = !!existing;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -117,6 +125,27 @@ export async function POST(req: Request) {
       },
     });
 
+    // 5. Convert membership fee to points for Selecto & Legendario only
+    // (Artesano's fee does NOT convert — matches the membership benefits table).
+    // 1 point = 1 cent, so the fee paid becomes spendable balance at face value —
+    // no tier multiplier here, otherwise every renewal would mint free money.
+    let pointsGranted = 0;
+    if (!isFreeTrial && priceCents > 0 && (tier === "SELECTO" || tier === "LEGENDARIO")) {
+      pointsGranted = priceCents;
+      await prisma.user.update({
+        where: { id: userId },
+        data: { pointsBalance: { increment: pointsGranted } },
+      });
+      await prisma.pointsTransaction.create({
+        data: {
+          userId,
+          amount: pointsGranted,
+          type: "BONUS",
+          note: `${isSwitching ? "Switched to" : "Subscribed to"} ${tier} — membership fee converted to points`,
+        },
+      });
+    }
+
     syncMembershipChange({ email: user.email, tier, status: "ACTIVE" });
 
     return NextResponse.json({
@@ -126,6 +155,7 @@ export async function POST(req: Request) {
       renewsAt: renewsAt.toISOString(),
       charged: !isFreeTrial,
       amountCents: isFreeTrial ? 0 : priceCents,
+      pointsGranted,
     });
   } catch (err: any) {
     console.error("[membership/subscribe]", err);

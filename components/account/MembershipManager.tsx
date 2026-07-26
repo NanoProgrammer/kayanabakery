@@ -71,36 +71,44 @@ export function MembershipManager({
     );
   }
 
+  const ALL_PAID_TIERS: MembershipTier[] = ["ARTESANO", "SELECTO", "LEGENDARIO"];
+  const otherTiers = ALL_PAID_TIERS.filter((t) => t !== currentTier);
+  const tierLabel: Record<MembershipTier, string> = {
+    BASICO: "Básico",
+    ARTESANO: "Artesano",
+    SELECTO: "Selecto",
+    LEGENDARIO: "Legendario",
+    EMBAJADOR: "Embajador",
+  };
+
   return (
-    <div className="mt-6 flex flex-wrap gap-3">
-      {currentTier === "BASICO" && (
-        <>
+    <div className="mt-6 space-y-3">
+      <div className="flex flex-wrap gap-3">
+        {otherTiers.map((t) => (
           <button
-            onClick={() => startSubscription("ARTESANO")}
+            key={t}
+            onClick={() => startSubscription(t)}
             disabled={busy}
             className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white"
           >
-            Artesano
+            {isActive
+              ? locale === "es"
+                ? `Cambiar a ${tierLabel[t]}`
+                : `Switch to ${tierLabel[t]}`
+              : tierLabel[t]}
           </button>
+        ))}
+      </div>
 
-          <button
-            onClick={() => startSubscription("SELECTO")}
-            disabled={busy}
-            className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white"
-          >
-            Selecto
-          </button>
-
-          <button
-            onClick={() => startSubscription("LEGENDARIO")}
-            disabled={busy}
-            className="rounded-full bg-black px-5 py-2 text-sm font-medium text-white"
-          >
-            Legendario
-          </button>
-        </>
+      {isActive && currentTier !== "BASICO" && (
+        <p className="text-xs text-ink-soft">
+          {locale === "es"
+            ? "Cambiar de plan se cobra de inmediato al nuevo precio — no necesitas cancelar primero."
+            : "Switching plans charges the new price right away — no need to cancel first."}
+        </p>
       )}
-{isActive && (
+
+      {isActive && (
         <button
           onClick={cancel}
           disabled={busy}

@@ -264,6 +264,17 @@ squareCustomerId   String?
 isTrial            Boolean  @default(false)
 lastPaymentId      String?
 lastRenewedAt      DateTime?
+
+// Weekly Box Delivery (Selecto & Legendario only)
+weeklyMode           WeeklyBoxMode? // null until user completes onboarding
+autoDeliveryEnabled  Boolean        @default(false)
+creditBalanceCents   Int            @default(0)
+}
+
+enum WeeklyBoxMode {
+  REPEAT_LAST   // Mode 1 — repeats last completed weekly order
+  CURATED       // Mode 2 — Karyana's curated surprise box (+$5/wk)
+  MANUAL        // Mode 3 — must confirm each week or it's skipped
 }
 
 enum MembershipTier {

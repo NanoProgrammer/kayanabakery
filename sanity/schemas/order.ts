@@ -124,9 +124,15 @@ export default defineType({
         OUT_FOR_DELIVERY: "🚚",
         COMPLETED: "🎉",
       };
+      const isCompleted = status === "COMPLETED";
+      // Sanity list titles are plain text — overlay a combining strikethrough
+      // character on each glyph so completed orders visually read as "done"
+      // without hiding them from the list entirely.
+      const strike = (s: string) => s.replace(/./g, (c) => `${c}̶`);
+
       return {
-        title: `${emoji[status] ?? "📦"} ${title}`,
-        subtitle,
+        title: `${emoji[status] ?? "📦"} ${isCompleted ? strike(title) : title}`,
+        subtitle: isCompleted && subtitle ? strike(subtitle) : subtitle,
       };
     },
   },
@@ -135,6 +141,16 @@ export default defineType({
       title: "Newest first",
       name: "createdDesc",
       by: [{ field: "createdAt", direction: "desc" }],
+    },
+    {
+      title: "Active first (completed last)",
+      name: "statusThenDate",
+      by: [
+        // Alphabetical desc happens to sort COMPLETED last among this
+        // schema's 4 statuses (READY, OUT_FOR_DELIVERY, IN_PROGRESS, COMPLETED).
+        { field: "status", direction: "desc" },
+        { field: "createdAt", direction: "desc" },
+      ],
     },
   ],
 });

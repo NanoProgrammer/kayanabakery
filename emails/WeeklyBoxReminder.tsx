@@ -33,7 +33,7 @@ export default function WeeklyBoxReminder(props: Props) {
           send: "Enviar esta semana",
           skip: "Omitir esta semana",
           edit: "Editar mi caja",
-          cutoff: "Debes responder antes del jueves 11:59 PM. Después de esa hora aplicamos tu comportamiento predeterminado.",
+          cutoff: "Debes responder antes del miércoles 11:59 PM. La entrega es el viernes. Después de esa hora aplicamos tu comportamiento predeterminado.",
         }
       : {
           preview: "Your Karyana weekly bread is ready 🍞",
@@ -43,7 +43,7 @@ export default function WeeklyBoxReminder(props: Props) {
           send: "Send this week",
           skip: "Skip this week",
           edit: "Edit my box",
-          cutoff: "Please respond before Thursday 11:59 PM. After that we apply your default behavior.",
+          cutoff: "Please respond before Wednesday 11:59 PM. Delivery is on Fridays. After that we apply your default behavior.",
         };
 
   return (

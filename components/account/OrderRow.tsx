@@ -79,10 +79,15 @@ export function OrderRow({ orders }: { orders: OrderRow[] }) {
 
   return (
     <ul className="space-y-3">
-      {orders.map((o) => (
+      {orders.map((o) => {
+        const isCompleted = o.status === "COMPLETED";
+        return (
         <li
           key={o.id}
-          className="rounded-2xl border border-canela/15 bg-cream p-4"
+          className={cn(
+            "rounded-2xl border border-canela/15 bg-cream p-4",
+            isCompleted && "opacity-70"
+          )}
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -94,7 +99,7 @@ export function OrderRow({ orders }: { orders: OrderRow[] }) {
               <div>
                 <Link
                   href={`/account/orders/${o.id}`}
-                  className="font-medium hover:underline"
+                  className={cn("font-medium hover:underline", isCompleted && "line-through")}
                 >
                   {o.orderNumber}
                 </Link>
@@ -154,7 +159,8 @@ export function OrderRow({ orders }: { orders: OrderRow[] }) {
             </Link>
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

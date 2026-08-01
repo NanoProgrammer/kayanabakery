@@ -21,13 +21,13 @@ export async function GET(req: Request) {
 
   const tasks: Record<string, () => Promise<any>> = {};
 
-  if (dow === 4) {
-    // Thursday ~6PM — this cron should be scheduled to run around then.
+  if (dow === 2) {
+    // Tuesday — gives members until Wednesday 11:59 PM to decide before Friday delivery.
     tasks.weeklyBoxNotify = () =>
       fetch(`${base}/api/cron/weekly-box-notify`, { headers }).then((r) => r.json());
   }
-  if (dow === 5) {
-    // Friday — finalize whatever wasn't answered by the Thursday cutoff.
+  if (dow === 4) {
+    // Thursday — finalize whatever wasn't answered by the Wednesday cutoff, in time for Friday delivery.
     tasks.weeklyBoxProcess = () =>
       fetch(`${base}/api/cron/weekly-box-process`, { headers }).then((r) => r.json());
   }

@@ -5,9 +5,9 @@ import { weekStartOf } from "@/lib/membership/weekly";
 import { createWeeklyOrder } from "@/lib/membership/weekly-order";
 
 /**
- * Runs after the Thursday 11:59PM cutoff (e.g. Friday 00:15 local).
- * Finalizes any WeeklyOrderLog still PENDING (user never responded)
- * by applying that membership's default behavior:
+ * Runs Thursdays, after the Wednesday 11:59PM cutoff — in time for
+ * Friday delivery. Finalizes any WeeklyOrderLog still PENDING (user
+ * never responded) by applying that membership's default behavior:
  *   - MANUAL mode            -> always auto-skip
  *   - REPEAT_LAST / CURATED  -> auto-send if autoDeliveryEnabled, else auto-skip
  * No credits/points are granted on skip — the membership fee already

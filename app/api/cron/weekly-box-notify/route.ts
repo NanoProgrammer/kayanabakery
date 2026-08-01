@@ -14,9 +14,10 @@ const MODE_LABEL: Record<string, { en: string; es: string }> = {
 };
 
 /**
- * Runs Thursdays ~6PM local. Creates this week's WeeklyOrderLog for every
- * active Selecto/Legendario member who has picked a weekly mode, and
- * emails them the Send/Skip/Edit prompt from the spec doc.
+ * Runs Tuesdays. Creates this week's WeeklyOrderLog for every active
+ * Selecto/Legendario member who has picked a weekly mode, and emails
+ * them the Send/Skip/Edit prompt. Members have until Wednesday 11:59 PM
+ * to respond; delivery is Friday.
  */
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");

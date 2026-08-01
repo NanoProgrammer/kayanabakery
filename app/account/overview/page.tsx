@@ -81,29 +81,36 @@ export default async function OverviewPage() {
           </div>
         ) : (
           <ul className="space-y-3">
-            {recentOrders.map((o) => (
-              <li
-                key={o.id}
-                className="flex items-center justify-between gap-4 rounded-2xl border border-canela/15 bg-cream p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <Truck className="h-4 w-4 text-ink-soft" />
-                  <div>
-                    <Link
-                      href={`/account/orders/${o.id}`}
-                      className="text-sm font-medium hover:underline"
-                    >
-                      {o.orderNumber}
-                    </Link>
-                    <p className="text-xs text-ink-soft">
-                      {new Date(o.createdAt).toLocaleDateString("en-CA")} ·{" "}
-                      {o.status}
-                    </p>
+            {recentOrders.map((o) => {
+              const isCompleted = o.status === "COMPLETED";
+              return (
+                <li
+                  key={o.id}
+                  className={`flex items-center justify-between gap-4 rounded-2xl border border-canela/15 bg-cream p-4 ${
+                    isCompleted ? "opacity-70" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Truck className="h-4 w-4 text-ink-soft" />
+                    <div>
+                      <Link
+                        href={`/account/orders/${o.id}`}
+                        className={`text-sm font-medium hover:underline ${
+                          isCompleted ? "line-through" : ""
+                        }`}
+                      >
+                        {o.orderNumber}
+                      </Link>
+                      <p className="text-xs text-ink-soft">
+                        {new Date(o.createdAt).toLocaleDateString("en-CA")} ·{" "}
+                        {o.status}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <p className="font-bold">{formatCents(o.total, "en")}</p>
-              </li>
-            ))}
+                  <p className="font-bold">{formatCents(o.total, "en")}</p>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

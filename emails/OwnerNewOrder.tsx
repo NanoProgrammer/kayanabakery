@@ -74,27 +74,32 @@ export default function OwnerNewOrder(props: Props) {
             <Heading as="h2" style={styles.h2}>
               Customer
             </Heading>
-            <Text style={{ fontSize: 14, margin: 0 }}>
-              <strong>{props.customerName}</strong>
-              <br />
+            <Text style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
+              {props.customerName}
+            </Text>
+            <Text style={{ fontSize: 16, margin: "4px 0 0" }}>
               {props.customerEmail}
-              {props.customerPhone && (
-                <>
-                  <br />
-                  {props.customerPhone}
-                </>
-              )}
+            </Text>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                margin: "4px 0 0",
+                color: props.customerPhone ? "#2B2B2B" : "#B3261E",
+              }}
+            >
+              📞 {props.customerPhone || "NO PHONE ON FILE — contact via email"}
             </Text>
 
             <Heading as="h2" style={styles.h2}>
               {props.fulfillmentLabel}
             </Heading>
             <Section style={styles.pinkBox}>
-              <Text style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
+              <Text style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
                 {props.fulfillmentDetail}
               </Text>
               {props.addressBlock && (
-                <Text style={{ fontSize: 13, color: "#777", margin: "8px 0 0", whiteSpace: "pre-line" }}>
+                <Text style={{ fontSize: 18, fontWeight: 600, color: "#2B2B2B", margin: "8px 0 0", whiteSpace: "pre-line" }}>
                   {props.addressBlock}
                 </Text>
               )}
@@ -123,12 +128,12 @@ export default function OwnerNewOrder(props: Props) {
             {props.items.map((it, i) => (
               <Row key={i}>
                 <Column>
-                  <Text style={{ fontSize: 14, margin: 0 }}>
+                  <Text style={{ fontSize: 16, margin: 0 }}>
                     {it.quantity}× {it.name}
                   </Text>
                 </Column>
                 <Column align="right">
-                  <Text style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>
+                  <Text style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
                     {it.lineTotal}
                   </Text>
                 </Column>

@@ -73,6 +73,7 @@ const schema = z.object({
   guestEmail: z.string().email().optional(),
   guestName: z.string().optional(),
   guestPhone: z.string().optional(),
+  phone: z.string().optional(), // logged-in user's phone, when missing from their profile
   guestAddress: z
     .object({
       street: z.string(),
@@ -163,6 +164,13 @@ export async function POST(req: Request) {
 
   const tier = user?.membership?.tier ?? "BASICO";
   const hasUsedFirstFreeDelivery = (user?.orders?.length ?? 0) > 0;
+
+  // Persist the phone number a logged-in user just entered (no phone on file yet)
+  // so it's saved for future orders and shows up in the owner notification email.
+  if (userId && user && !user.phone && data.phone) {
+    await prisma.user.update({ where: { id: userId }, data: { phone: data.phone } });
+    (user as any).phone = data.phone;
+  }
 
   // ============================================================
   // 3. Product validation

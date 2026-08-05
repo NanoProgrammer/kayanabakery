@@ -71,6 +71,11 @@ export function CheckoutForm({
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
 
+  // Phone for logged-in users who never saved one to their profile —
+  // required so staff can call when they arrive for delivery.
+  const [accountPhone, setAccountPhone] = useState("");
+  const needsAccountPhone = !!user && !user.phone;
+
   // Coupon + points
   const [coupon, setCoupon] = useState<{
     code: string;
@@ -179,7 +184,8 @@ export function CheckoutForm({
     (fulfillment === "PICKUP"
       ? !!pickupDate && !!pickupTime
       : !!deliverySlotId && hasDeliveryAddress) &&
-    (!!user || (guestEmail && guestName && guestPhone));
+    (!!user || (guestEmail && guestName && guestPhone)) &&
+    (!needsAccountPhone || !!accountPhone);
 
   async function handlePayment(token: string) {
     const payload: any = {
@@ -205,6 +211,8 @@ export function CheckoutForm({
       payload.guestEmail = guestEmail;
       payload.guestName = guestName;
       payload.guestPhone = guestPhone;
+    } else if (needsAccountPhone) {
+      payload.phone = accountPhone;
     }
 
     try {
@@ -271,6 +279,24 @@ export function CheckoutForm({
                 <Link href="/login?callbackUrl=/checkout" className="font-medium text-canela-dark underline">
                   {locale === "es" ? "Inicia sesión" : "Sign in"}
                 </Link>
+              </p>
+            </Section>
+          )}
+
+          {/* Phone for logged-in users with none on file — required for delivery contact */}
+          {needsAccountPhone && (
+            <Section num={nextNum()} title={locale === "es" ? "Tu teléfono" : "Your phone"}>
+              <Input
+                label={locale === "es" ? "Teléfono" : "Phone"}
+                type="tel"
+                value={accountPhone}
+                onChange={setAccountPhone}
+                required
+              />
+              <p className="mt-2 text-xs text-ink-soft">
+                {locale === "es"
+                  ? "Lo necesitamos para contactarte al momento de la entrega."
+                  : "We need this to reach you at delivery time."}
               </p>
             </Section>
           )}

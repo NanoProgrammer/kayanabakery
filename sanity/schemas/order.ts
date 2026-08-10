@@ -92,6 +92,8 @@ export default defineType({
       name: "status",
       title: "Order status",
       type: "string",
+      // Dropdown instead of radio — the radio layout is unreliable to tap
+      // on the Sanity Studio mobile web app; a native <select> works everywhere.
       options: {
         list: [
           { title: "⏳ En preparación", value: "IN_PROGRESS" },
@@ -99,7 +101,6 @@ export default defineType({
           { title: "🚚 Enviando", value: "OUT_FOR_DELIVERY" },
           { title: "🎉 Entregado", value: "COMPLETED" },
         ],
-        layout: "radio",
       },
       initialValue: "IN_PROGRESS",
       validation: (R) => R.required(),

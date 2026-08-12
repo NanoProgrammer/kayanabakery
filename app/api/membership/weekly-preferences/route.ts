@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
+import { syncWeeklyAutoDeliveryToggle } from "@/lib/brevo/sync";
 
 const VALID_MODES = ["REPEAT_LAST", "CURATED", "MANUAL"] as const;
 
@@ -36,6 +37,25 @@ export async function PATCH(req: Request) {
         ...(typeof autoDeliveryEnabled === "boolean" ? { autoDeliveryEnabled } : {}),
       },
     });
+
+    // Fire the Brevo ON/OFF automation trigger whenever the toggle actually changes.
+    if (
+      typeof autoDeliveryEnabled === "boolean" &&
+      autoDeliveryEnabled !== membership.autoDeliveryEnabled
+    ) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true, preferredLang: true },
+      });
+      if (user?.email) {
+        syncWeeklyAutoDeliveryToggle({
+          email: user.email,
+          name: user.name,
+          enabled: autoDeliveryEnabled,
+          language: user.preferredLang,
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

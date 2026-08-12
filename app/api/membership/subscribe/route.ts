@@ -53,7 +53,7 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true, phone: true, squareCustomerId: true },
+      select: { email: true, name: true, phone: true, squareCustomerId: true, preferredLang: true },
     });
     if (!user?.email) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
       });
     }
 
-    syncMembershipChange({ email: user.email, tier, status: "ACTIVE" });
+    syncMembershipChange({ email: user.email, tier, status: "ACTIVE", language: user.preferredLang });
 
     return NextResponse.json({
       success: true,

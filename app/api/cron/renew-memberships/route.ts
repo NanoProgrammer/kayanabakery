@@ -22,7 +22,7 @@ export async function GET(req: Request) {
       squareCustomerId: { not: null },
     },
     include: {
-      user: { select: { email: true, name: true } },
+      user: { select: { email: true, name: true, preferredLang: true } },
     },
   });
 
@@ -74,6 +74,7 @@ export async function GET(req: Request) {
           email: m.user.email,
           tier: m.tier,
           status: "ACTIVE",
+          language: m.user.preferredLang,
         });
       }
 
@@ -92,6 +93,7 @@ export async function GET(req: Request) {
           email: m.user.email,
           tier: m.tier,
           status: "PAST_DUE",
+          language: m.user.preferredLang,
         });
       }
 

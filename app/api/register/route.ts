@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { syncUserRegistered } from "@/lib/brevo/sync";
+import { getServerLocale } from "@/lib/i18n/server";
 
 const schema = z.object({
   name: z.string().min(2),
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
   }
 
   const hashed = await bcrypt.hash(password, 10);
+  const locale = await getServerLocale(); // reads the karyana-lang cookie set by the language toggle
 
   const user = await prisma.user.create({
     data: {
@@ -45,6 +47,7 @@ export async function POST(req: Request) {
       password: hashed,
       referredById,
       role: "CUSTOMER",
+      preferredLang: locale,
       // Auto-create Basico membership
       membership: {
         create: {
@@ -55,10 +58,10 @@ export async function POST(req: Request) {
     },
   });
   syncUserRegistered({
-  email: parsed.data.email,
-  name: parsed.data.name,
-  language: "en",
-});
+    email: parsed.data.email,
+    name: parsed.data.name,
+    language: locale,
+  });
 
   return NextResponse.json({ ok: true, id: user.id });
 }

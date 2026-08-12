@@ -13,6 +13,7 @@ import { sendOrderEmails } from "@/lib/email/send-order-emails";
 import { randomUUID } from "crypto";
 import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calendar";
 import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
+import { getServerLocale } from "@/lib/i18n/server";
 
 async function reserveDeliverySlot({
   slotStartTime,
@@ -113,6 +114,7 @@ export async function POST(req: Request) {
 
   const session = await auth();
   const userId = (session?.user as any)?.id as string | undefined;
+  const guestLocale = await getServerLocale();
 
   // ============================================================
   // 1. Re-fetch products from Sanity
@@ -633,6 +635,7 @@ paymentId = result.payment?.id ?? undefined;
       totalOrders: orderCount,
       totalSpentCents: totalSpent._sum.total ?? 0,
       lastOrderDate: new Date().toISOString(),
+      language: (user as any).preferredLang,
     });
   } else if (data.guestEmail) {
     syncGuestOrder({
@@ -640,6 +643,7 @@ paymentId = result.payment?.id ?? undefined;
       name: data.guestName,
       phone: data.guestPhone,
       totalCents: pricing.totalCents,
+      language: guestLocale,
     });
   }
 

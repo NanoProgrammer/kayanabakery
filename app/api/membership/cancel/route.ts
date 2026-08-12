@@ -14,7 +14,7 @@ export async function DELETE() {
 
     const membership = await prisma.membership.findUnique({
       where: { userId },
-      include: { user: { select: { email: true } } },
+      include: { user: { select: { email: true, preferredLang: true } } },
     });
 
     if (!membership || membership.status !== "ACTIVE") {
@@ -47,6 +47,7 @@ export async function DELETE() {
         email: membership.user.email,
         tier: membership.tier,
         status: "CANCELED",
+        language: membership.user.preferredLang,
       });
     }
 

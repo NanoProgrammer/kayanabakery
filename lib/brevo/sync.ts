@@ -25,6 +25,15 @@ function getMembersListId(): number | null {
   return id ? parseInt(id, 10) : null;
 }
 
+// Optional lists that back Brevo Automation workflows. Each is a
+// "contact entered this list" trigger — the most reliable way to fire
+// a Brevo Automation step without needing the newer Events API.
+// Unset any of these and the corresponding sync becomes a no-op.
+function optionalListId(envVar: string): number | null {
+  const id = process.env[envVar];
+  return id ? parseInt(id, 10) : null;
+}
+
 // ─── Newsletter ──────────────────────────────────────────
 
 /**
@@ -66,6 +75,8 @@ export async function syncUserRegistered({
     const [firstName, ...rest] = (name ?? "").split(" ");
     const lastName = rest.join(" ");
 
+    const welcomeListId = optionalListId("BREVO_WELCOME_LIST_ID");
+
     await upsertContact({
       email,
       attributes: {
@@ -77,10 +88,10 @@ export async function syncUserRegistered({
         TOTAL_ORDERS: 0,
         REGISTERED: true,
       },
-      listIds: [getNewsletterListId()],
+      listIds: [getNewsletterListId(), ...(welcomeListId ? [welcomeListId] : [])],
       updateEnabled: true,
     });
-    console.log(`[brevo] user registered: ${email}`);
+    console.log(`[brevo] user registered: ${email} (lang=${language})`);
   } catch (err: any) {
     console.error("[brevo] registration sync failed:", err.message);
   }
@@ -95,15 +106,18 @@ export async function syncMembershipChange({
   email,
   tier,
   status,
+  language,
 }: {
   email: string;
   tier: string;
   status: string;
+  language?: string;
 }) {
   try {
     await updateContactAttributes(email, {
       MEMBERSHIP_TIER: tier,
       MEMBERSHIP_STATUS: status,
+      ...(language ? { LANGUAGE: language } : {}),
     });
 
     // Add to members list if active, remove if cancelled
@@ -113,6 +127,17 @@ export async function syncMembershipChange({
         await addToList(email, membersListId);
       } else if (status === "CANCELED" || status === "EXPIRED") {
         await removeFromList(email, membersListId);
+      }
+    }
+
+    // Paid, active members are eligible for the "programs" promo campaign —
+    // segment by LANGUAGE inside Brevo when building that campaign/workflow.
+    const promoListId = optionalListId("BREVO_PROGRAMS_PROMO_LIST_ID");
+    if (promoListId) {
+      if (status === "ACTIVE" && tier !== "BASICO") {
+        await addToList(email, promoListId);
+      } else {
+        await removeFromList(email, promoListId);
       }
     }
 
@@ -133,18 +158,21 @@ export async function syncOrderCompleted({
   totalOrders,
   totalSpentCents,
   lastOrderDate,
+  language,
 }: {
   email: string;
   name?: string | null;
   totalOrders: number;
   totalSpentCents: number;
   lastOrderDate: string; // ISO date
+  language?: string;
 }) {
   try {
     const attrs: Record<string, string | number> = {
       TOTAL_ORDERS: totalOrders,
       TOTAL_SPENT: Math.round(totalSpentCents / 100),
       LAST_ORDER_DATE: lastOrderDate.split("T")[0], // YYYY-MM-DD
+      ...(language ? { LANGUAGE: language } : {}),
     };
 
     if (name) {
@@ -170,11 +198,13 @@ export async function syncGuestOrder({
   name,
   phone,
   totalCents,
+  language,
 }: {
   email: string;
   name?: string | null;
   phone?: string | null;
   totalCents: number;
+  language?: string;
 }) {
   try {
     const [firstName, ...rest] = (name ?? "").split(" ");
@@ -185,6 +215,7 @@ export async function syncGuestOrder({
         FIRSTNAME: firstName || "",
         LASTNAME: rest.join(" ") || "",
         ...(phone ? { SMS: phone } : {}),
+        ...(language ? { LANGUAGE: language } : {}),
         SOURCE: "GUEST_ORDER",
         TOTAL_ORDERS: 1,
         TOTAL_SPENT: Math.round(totalCents / 100),
@@ -196,5 +227,54 @@ export async function syncGuestOrder({
     console.log(`[brevo] guest order synced: ${email}`);
   } catch (err: any) {
     console.error("[brevo] guest sync failed:", err.message);
+  }
+}
+
+// ─── Weekly Auto-Delivery toggle ──────────────────────────
+
+/**
+ * Fires whenever a Selecto/Legendario member flips their
+ * "Auto Weekly Bread Delivery" toggle. Moves the contact into one of
+ * two lists (ON / OFF) so a Brevo Automation "contact entered this
+ * list" trigger fires the matching email every time — build one
+ * workflow per list, with a LANGUAGE condition split inside it for
+ * the ES/EN copy.
+ */
+export async function syncWeeklyAutoDeliveryToggle({
+  email,
+  name,
+  enabled,
+  language,
+}: {
+  email: string;
+  name?: string | null;
+  enabled: boolean;
+  language?: string;
+}) {
+  try {
+    const [firstName, ...rest] = (name ?? "").split(" ");
+
+    await updateContactAttributes(email, {
+      FIRSTNAME: firstName || "",
+      LASTNAME: rest.join(" ") || "",
+      ...(language ? { LANGUAGE: language } : {}),
+      WEEKLY_AUTO_DELIVERY: enabled ? "ON" : "OFF",
+      WEEKLY_TOGGLE_UPDATED_AT: new Date().toISOString().split("T")[0],
+    });
+
+    const onListId = optionalListId("BREVO_TOGGLE_ON_LIST_ID");
+    const offListId = optionalListId("BREVO_TOGGLE_OFF_LIST_ID");
+
+    if (enabled) {
+      if (onListId) await addToList(email, onListId);
+      if (offListId) await removeFromList(email, offListId);
+    } else {
+      if (offListId) await addToList(email, offListId);
+      if (onListId) await removeFromList(email, onListId);
+    }
+
+    console.log(`[brevo] weekly auto-delivery toggle synced: ${email} → ${enabled ? "ON" : "OFF"}`);
+  } catch (err: any) {
+    console.error("[brevo] weekly toggle sync failed:", err.message);
   }
 }

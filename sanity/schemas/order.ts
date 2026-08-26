@@ -1,16 +1,22 @@
 import { defineField, defineType } from "sanity";
 
+// Orders synced from Prisma (online checkout) carry a prismaId and should stay
+// read-only so Karyana can't drift from the source of truth. Orders created by
+// hand in Studio (phone/walk-in orders) have no prismaId yet, so their fields
+// stay editable until/unless they get linked to a Prisma order.
+const readOnlyUnlessManual = (context: { document?: Record<string, any> }) =>
+  Boolean(context.document?.prismaId);
+
 export default defineType({
   name: "order",
   title: "Orders",
   type: "document",
-  // Read-only fields are synced from Prisma — only status is editable by Karyana
   fields: [
     defineField({
       name: "orderNumber",
       title: "Order #",
       type: "string",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
     }),
     defineField({
       name: "prismaId",
@@ -23,25 +29,25 @@ export default defineType({
       name: "customerName",
       title: "Customer",
       type: "string",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
     }),
     defineField({
       name: "customerEmail",
       title: "Email",
       type: "string",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
     }),
     defineField({
       name: "customerPhone",
       title: "Phone",
       type: "string",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
     }),
     defineField({
       name: "fulfillmentType",
       title: "Fulfillment",
       type: "string",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
       options: {
         list: ["PICKUP", "DELIVERY"],
       },
@@ -50,14 +56,14 @@ export default defineType({
       name: "total",
       title: "Total (CAD)",
       type: "number",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
       description: "In dollars (e.g. 14.50)",
     }),
     defineField({
       name: "items",
       title: "Items",
       type: "array",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
       of: [
         {
           type: "object",
@@ -73,20 +79,20 @@ export default defineType({
       name: "deliveryAddress",
       title: "Delivery address",
       type: "string",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
     }),
     defineField({
       name: "pickupDate",
       title: "Pickup / delivery date",
       type: "string",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
     }),
     defineField({
       name: "notes",
       title: "Customer notes",
       type: "text",
       rows: 2,
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
     }),
     defineField({
       name: "status",
@@ -109,7 +115,8 @@ export default defineType({
       name: "createdAt",
       title: "Order date",
       type: "datetime",
-      readOnly: true,
+      readOnly: readOnlyUnlessManual,
+      initialValue: () => new Date().toISOString(),
     }),
   ],
   preview: {

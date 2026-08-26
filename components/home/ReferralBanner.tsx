@@ -25,7 +25,7 @@ export function ReferralBanner() {
               : "A little bread for heavy days"}
           </h3>
 
-          <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+         <p className="mt-3 text-base font-medium leading-relaxed text-ink-soft md:text-lg">
             {locale === "es"
               ? "Nomina a alguien que esté pasando por un momento difícil. Karyana Bakery puede enviarle una caja de pan como un gesto de apoyo y cariño."
               : "Nominate someone going through a difficult time. Karyana Bakery may send them a box of bread as a gesture of support and kindness."}

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
@@ -586,7 +586,7 @@ paymentId = result.payment?.id ?? undefined;
     return created;
   });
   // ============================================================
-  // 12.5 Sync order to Sanity Studio (fire-and-forget)
+  // 12.5 Sync order to Sanity Studio, CRM, and send emails after response
   // ============================================================
   const deliveryAddress = address
     ? `${address.street}, ${address.city}, ${address.province} ${address.postalCode}`
@@ -600,59 +600,69 @@ paymentId = result.payment?.id ?? undefined;
     ? `${data.pickupDate}${data.pickupTime ? " · " + data.pickupTime : ""}`
     : null;
 
-  sanityClient.create({
-    _type: "order",
-    orderNumber,
-    prismaId: order.id,
-    customerName: user?.name ?? data.guestName ?? "Guest",
-    customerEmail: user?.email ?? data.guestEmail ?? "",
-    customerPhone: (user as any)?.phone ?? data.guestPhone ?? "",
-    fulfillmentType: data.fulfillmentType,
-    total: pricing.totalCents / 100,
-    items: items.map((it) => ({
-      _key: it.productId,
-      name: it.name,
-      quantity: it.quantity,
-      price: it.price / 100,
-    })),
-    deliveryAddress,
-    pickupDate: slotLabel,
-    status: "IN_PROGRESS",
-    createdAt: new Date().toISOString(),
-  }).catch((err: any) => console.error("[checkout] sanity sync failed:", err?.message, err?.statusCode));
+  // These run after the response is sent, but `after()` keeps the serverless
+  // function alive until they finish — plain fire-and-forget promises here
+  // can get cut off mid-flight the instant the response goes out, which is
+  // how an order confirms and emails send but never lands in Sanity Studio.
+  after(async () => {
+    try {
+      await sanityClient.create({
+        _type: "order",
+        orderNumber,
+        prismaId: order.id,
+        customerName: user?.name ?? data.guestName ?? "Guest",
+        customerEmail: user?.email ?? data.guestEmail ?? "",
+        customerPhone: (user as any)?.phone ?? data.guestPhone ?? "",
+        fulfillmentType: data.fulfillmentType,
+        total: pricing.totalCents / 100,
+        items: items.map((it) => ({
+          _key: it.productId,
+          name: it.name,
+          quantity: it.quantity,
+          price: it.price / 100,
+        })),
+        deliveryAddress,
+        pickupDate: slotLabel,
+        status: "IN_PROGRESS",
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      console.error("[checkout] sanity sync failed:", err?.message, err?.statusCode);
+    }
 
-  if (userId && user?.email) {
-    const orderCount = await prisma.order.count({
-      where: { userId, paymentStatus: "PAID" },
-    });
-    const totalSpent = await prisma.order.aggregate({
-      where: { userId, paymentStatus: "PAID" },
-      _sum: { total: true },
-    });
-    syncOrderCompleted({
-      email: user.email,
-      name: user.name,
-      totalOrders: orderCount,
-      totalSpentCents: totalSpent._sum.total ?? 0,
-      lastOrderDate: new Date().toISOString(),
-      language: (user as any).preferredLang,
-    });
-  } else if (data.guestEmail) {
-    syncGuestOrder({
-      email: data.guestEmail,
-      name: data.guestName,
-      phone: data.guestPhone,
-      totalCents: pricing.totalCents,
-      language: guestLocale,
-    });
-  }
+    if (userId && user?.email) {
+      const orderCount = await prisma.order.count({
+        where: { userId, paymentStatus: "PAID" },
+      });
+      const totalSpent = await prisma.order.aggregate({
+        where: { userId, paymentStatus: "PAID" },
+        _sum: { total: true },
+      });
+      syncOrderCompleted({
+        email: user.email,
+        name: user.name,
+        totalOrders: orderCount,
+        totalSpentCents: totalSpent._sum.total ?? 0,
+        lastOrderDate: new Date().toISOString(),
+        language: (user as any).preferredLang,
+      });
+    } else if (data.guestEmail) {
+      syncGuestOrder({
+        email: data.guestEmail,
+        name: data.guestName,
+        phone: data.guestPhone,
+        totalCents: pricing.totalCents,
+        language: guestLocale,
+      });
+    }
 
-  // ============================================================
-  // 13. Fire-and-forget emails
-  // ============================================================
-  sendOrderEmails(order.id).catch((err) =>
-    console.warn("[checkout] email send failed", err)
-  );
+    // ============================================================
+    // 13. Emails
+    // ============================================================
+    await sendOrderEmails(order.id).catch((err) =>
+      console.warn("[checkout] email send failed", err)
+    );
+  });
 
   return NextResponse.json({
     ok: true,

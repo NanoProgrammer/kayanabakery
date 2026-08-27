@@ -22,11 +22,11 @@ export const serverClient = createClient({
   perspective: "published",
 });
 
-// Write client — requires a token with editor/write permissions
+// Write client — SANITY_API_READ_TOKEN must have Editor (or higher) permission
 export const writeClient = createClient({
   projectId,
   dataset,
   apiVersion,
   useCdn: false,
-  token: process.env.SANITY_API_WRITE_TOKEN || process.env.SANITY_API_READ_TOKEN,
+  token: process.env.SANITY_API_READ_TOKEN,
 });

@@ -1,9 +1,9 @@
 // scripts/test-sanity-write.ts
 //
-// Directly tests whether SANITY_API_WRITE_TOKEN (or its fallback,
-// SANITY_API_READ_TOKEN) can actually create documents — the same check
-// the checkout route needs to succeed for an order to show up in Studio.
-// Doesn't touch Prisma, Square, or email — just the Sanity write itself.
+// Directly tests whether SANITY_API_READ_TOKEN can actually create
+// documents — the same check the checkout route needs to succeed for an
+// order to show up in Studio. Doesn't touch Prisma, Square, or email —
+// just the Sanity write itself.
 //
 // Run with:  npx tsx scripts/test-sanity-write.ts
 //
@@ -18,8 +18,7 @@ loadEnv({ path: ".env.local", override: true });
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || "production";
 const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || "2024-10-01";
-const usingWriteToken = Boolean(process.env.SANITY_API_WRITE_TOKEN);
-const token = process.env.SANITY_API_WRITE_TOKEN || process.env.SANITY_API_READ_TOKEN;
+const token = process.env.SANITY_API_READ_TOKEN;
 
 async function run() {
   if (!projectId) {
@@ -27,13 +26,12 @@ async function run() {
     process.exit(1);
   }
   if (!token) {
-    console.error("❌ Neither SANITY_API_WRITE_TOKEN nor SANITY_API_READ_TOKEN is set.");
+    console.error("❌ SANITY_API_READ_TOKEN is not set.");
     process.exit(1);
   }
 
   console.log(`Project:  ${projectId} (dataset: ${dataset})`);
-  console.log(`Token in use: ${usingWriteToken ? "SANITY_API_WRITE_TOKEN" : "SANITY_API_READ_TOKEN (no write token set — this is the bug)"}`);
-  console.log("Attempting to create a test order document...\n");
+  console.log("Attempting to create a test order document with SANITY_API_READ_TOKEN...\n");
 
   const client = createClient({
     projectId,
@@ -59,7 +57,7 @@ async function run() {
       createdAt: new Date().toISOString(),
     });
 
-    console.log("✅ SUCCESS — the write token can create orders.");
+    console.log("✅ SUCCESS — SANITY_API_READ_TOKEN can create orders.");
     console.log(`   Document _id: ${doc._id}`);
     console.log(`   Order #: ${orderNumber}`);
     console.log(`   It should now appear in Studio → Orders.`);
@@ -69,9 +67,9 @@ async function run() {
     console.error(`   ${err?.statusCode ?? ""} ${err?.message ?? err}`);
     if (err?.statusCode === 403) {
       console.error(
-        "\n   This is a permissions error: the token being used is read-only (Viewer).\n" +
-        "   Generate an Editor token in sanity.io/manage → API → Tokens, then set it\n" +
-        "   as SANITY_API_WRITE_TOKEN in your env (Vercel + .env.local) and try again."
+        "\n   This is a permissions error: SANITY_API_READ_TOKEN's permission is still\n" +
+        "   Viewer in sanity.io/manage → API → Tokens. Change that token's permission\n" +
+        "   to Editor (same token, same env var) and try again."
       );
     }
     process.exit(1);

@@ -645,8 +645,8 @@ paymentId = result.payment?.id ?? undefined;
               ``,
               `Error: ${err?.statusCode ?? ""} ${err?.message ?? err}`,
               ``,
-              `This usually means SANITY_API_WRITE_TOKEN is missing, expired,`,
-              `or only has read/viewer permissions in the hosting environment.`,
+              `This usually means SANITY_API_READ_TOKEN is expired or only has`,
+              `Viewer permission — it needs Editor permission to write orders.`,
             ].join("\n"),
           })
           .catch((emailErr) =>

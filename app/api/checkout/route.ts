@@ -10,6 +10,7 @@ import { isSECalgary } from "@/lib/checkout/postal-codes";
 import { generateOrderNumber } from "@/lib/checkout/order-number";
 import { ambassadorPayoutCents } from "@/lib/membership/tiers";
 import { sendOrderEmails } from "@/lib/email/send-order-emails";
+import { resend, FROM_EMAIL, ORDERS_EMAIL } from "@/lib/email/resend";
 import { randomUUID } from "crypto";
 import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calendar";
 import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
@@ -628,6 +629,30 @@ paymentId = result.payment?.id ?? undefined;
       });
     } catch (err: any) {
       console.error("[checkout] sanity sync failed:", err?.message, err?.statusCode);
+      // The order is paid and safe in Prisma either way, but if it silently
+      // fails to reach Sanity Studio nobody would otherwise find out until a
+      // customer or the owner notices it's missing — so alert immediately.
+      if (process.env.RESEND_API_KEY) {
+        resend.emails
+          .send({
+            from: FROM_EMAIL,
+            to: ORDERS_EMAIL,
+            subject: `[ALERT] Order ${orderNumber} did not sync to Sanity Studio`,
+            text: [
+              `Order ${orderNumber} (Prisma id ${order.id}) was paid successfully`,
+              `but failed to create its document in Sanity Studio, so it will`,
+              `NOT appear in the Orders list.`,
+              ``,
+              `Error: ${err?.statusCode ?? ""} ${err?.message ?? err}`,
+              ``,
+              `This usually means SANITY_API_WRITE_TOKEN is missing, expired,`,
+              `or only has read/viewer permissions in the hosting environment.`,
+            ].join("\n"),
+          })
+          .catch((emailErr) =>
+            console.error("[checkout] sanity-failure alert email also failed:", emailErr)
+          );
+      }
     }
 
     if (userId && user?.email) {

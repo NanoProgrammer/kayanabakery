@@ -17,6 +17,17 @@ export default defineType({
       title: "Order #",
       type: "string",
       readOnly: readOnlyUnlessManual,
+      // Orders synced from the online checkout get a real KAR-YYYYMM-XXXXX
+      // number from Prisma before this ever renders. A manually-created
+      // order has no such number yet, so count the existing manual orders
+      // and hand it the next one — no guessing what to type.
+      initialValue: async (_, context) => {
+        const client = context.getClient({ apiVersion: "2024-10-01" });
+        const count: number = await client.fetch(
+          `count(*[_type == "order" && !defined(prismaId)])`
+        );
+        return `Custom Order #${count + 1}`;
+      },
     }),
     defineField({
       name: "prismaId",

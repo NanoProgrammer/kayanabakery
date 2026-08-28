@@ -17,11 +17,12 @@ export const printPackingSlipAction: DocumentActionComponent = (
   return {
     label: "Print packing slip",
     icon: Printer,
-    disabled: !prismaId,
-    title: prismaId
-      ? undefined
-      : "This order has no linked Prisma order to print a packing slip from",
     onHandle: () => {
+      if (!prismaId) {
+        alert("This order has no linked order data yet — can't print a packing slip for it.");
+        props.onComplete();
+        return;
+      }
       window.open(`${APP_URL}/api/orders/${prismaId}/packing-slip`, "_blank");
       props.onComplete();
     },

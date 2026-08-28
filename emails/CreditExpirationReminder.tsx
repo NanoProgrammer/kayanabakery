@@ -53,7 +53,7 @@ export default function CreditExpirationReminder(props: Props) {
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Section style={styles.header}>
-            <Img src={`${props.appUrl}/logo.png`} alt="Karyana" width="120" style={{ margin: "0 auto" }} />
+            <Img src={`${props.appUrl}/logo-email.png`} alt="Karyana" width="120" height="120" style={{ margin: "0 auto" }} />
           </Section>
           <Section style={styles.card}>
             <Heading style={styles.h1}>{t.title}</Heading>

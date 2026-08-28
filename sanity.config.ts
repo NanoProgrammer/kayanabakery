@@ -3,6 +3,7 @@ import { deskTool as structureTool } from "sanity/desk";
 import { visionTool } from "@sanity/vision";
 import { schemaTypes } from "./sanity/schemas";
 import { karyanaStructure } from "./sanity/structure";
+import { printPackingSlipAction } from "./sanity/structure/actions/printPackingSlip";
 
 export default defineConfig({
   name: "default",
@@ -21,5 +22,12 @@ export default defineConfig({
 
   schema: {
     types: schemaTypes,
+  },
+
+  document: {
+    actions: (prev, context) =>
+      context.schemaType === "order"
+        ? [...prev, printPackingSlipAction]
+        : prev,
   },
 });

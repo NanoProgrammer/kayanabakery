@@ -45,9 +45,10 @@ export default function OwnerNewOrder(props: Props) {
         <Container style={styles.container}>
           <Section style={styles.header}>
             <Img
-              src={`${props.appUrl}/logo.png`}
+              src={`${props.appUrl}/logo-email.png`}
               alt="Karyana"
               width="100"
+              height="100"
               style={{ margin: "0 auto" }}
             />
           </Section>

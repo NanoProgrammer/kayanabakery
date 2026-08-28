@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
   noteBox: {
     marginBottom: 10,
     padding: 8,
+    minHeight: 40,
     backgroundColor: "#FFF8E5",
     border: "1px solid #D4AF37",
     borderRadius: 4,
@@ -184,13 +185,12 @@ export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
           ))}
         </View>
 
-        {/* Customer note — the reason this exists separately from the invoice */}
-        {data.note && (
-          <View style={styles.noteBox}>
-            <Text style={styles.noteLabel}>Customer note</Text>
-            <Text style={styles.noteText}>{data.note}</Text>
-          </View>
-        )}
+        {/* Customer note — always shown, even blank, so there's room to
+            write one by hand on the printed slip if there isn't one on file */}
+        <View style={styles.noteBox}>
+          <Text style={styles.noteLabel}>Customer note</Text>
+          {data.note && <Text style={styles.noteText}>{data.note}</Text>}
+        </View>
 
         {/* Footer tagline */}
         <View style={styles.footer}>

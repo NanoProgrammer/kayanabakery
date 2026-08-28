@@ -1,4 +1,6 @@
 import { defineField, defineType } from "sanity";
+import { PhoneInput } from "../structure/components/PhoneInput";
+import { PickupDateTimeInput } from "../structure/components/PickupDateTimeInput";
 
 // Orders synced from Prisma (online checkout) carry a prismaId and should stay
 // read-only so Karyana can't drift from the source of truth. Orders created by
@@ -53,6 +55,7 @@ export default defineType({
       title: "Phone",
       type: "string",
       readOnly: readOnlyUnlessManual,
+      components: { input: PhoneInput },
     }),
     defineField({
       name: "fulfillmentType",
@@ -94,9 +97,10 @@ export default defineType({
     }),
     defineField({
       name: "pickupDate",
-      title: "Pickup / delivery date",
+      title: "Pickup / delivery date & time",
       type: "string",
       readOnly: readOnlyUnlessManual,
+      components: { input: PickupDateTimeInput },
     }),
     defineField({
       name: "notes",

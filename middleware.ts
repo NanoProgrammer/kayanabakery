@@ -21,7 +21,7 @@ export default auth((req) => {
     pathname.startsWith("/account") ||
     pathname.startsWith("/api/account") ||
     pathname.startsWith("/api/membership/subscribe") ||
-    pathname.startsWith("/api/orders")
+    (pathname.startsWith("/api/orders") && !pathname.endsWith("/packing-slip"))
   ) {
     if (!req.auth) {
       const url = new URL("/login", req.url);

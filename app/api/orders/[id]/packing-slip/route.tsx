@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { renderToStream } from "@react-pdf/renderer";
 import { PackingSlipPDF, type PackingSlipData } from "@/lib/pdf/packing-slip-pdf";
@@ -17,15 +16,9 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  const role = (session?.user as any)?.role;
-
-  // Packing slips are a kitchen/staff document — no customer-facing use case,
-  // unlike the invoice which a customer can pull for their own order.
-  if (role !== "ADMIN" && role !== "STAFF") {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-  }
-
+  // No separate site-account login required — this link is only ever
+  // generated and shown from inside Sanity Studio (which has its own
+  // login), and the order id is an unguessable string, not a login gate.
   const { id } = await params;
   const order = await prisma.order.findUnique({
     where: { id },

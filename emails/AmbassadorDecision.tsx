@@ -72,9 +72,10 @@ export default function AmbassadorDecision(props: Props) {
         <Container style={styles.container}>
           <Section style={styles.header}>
             <Img
-              src={`${props.appUrl}/logo.png`}
+              src={`${props.appUrl}/logo-email.png`}
               alt="Karyana"
               width="120"
+              height="120"
               style={{ margin: "0 auto" }}
             />
           </Section>

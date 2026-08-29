@@ -21,15 +21,16 @@ const styles = StyleSheet.create({
   },
   logoWrap: {
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   logo: {
-    width: 40,
-    height: 40,
+    width: 58,
+    height: 58,
   },
   metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
     paddingBottom: 8,
     borderBottom: "1px solid #111111",
@@ -38,8 +39,19 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: 700,
   },
+  fulfillmentBadge: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: "#FFFFFF",
+    backgroundColor: "#111111",
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 3,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   section: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionHeading: {
     fontSize: 8,
@@ -50,7 +62,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   customerName: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: 700,
     marginBottom: 2,
   },
@@ -61,7 +73,7 @@ const styles = StyleSheet.create({
   noteBox: {
     marginBottom: 10,
     padding: 8,
-    minHeight: 40,
+    minHeight: 36,
     backgroundColor: "#FFF8E5",
     border: "1px solid #D4AF37",
     borderRadius: 4,
@@ -120,22 +132,20 @@ const styles = StyleSheet.create({
 export type PackingSlipData = {
   orderNumber: string;
   date: string;
+  fulfillmentType: "PICKUP" | "DELIVERY";
   customerName: string;
-  customerEmail?: string | null;
   customerPhone?: string | null;
-  address?: {
-    street: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    buzzer?: string | null;
-  } | null;
+  // For DELIVERY: the customer's delivery address.
+  // For PICKUP: the bakery's own pickup address (siteSettings.pickupAddress).
+  shippingAddress?: string | null;
   items: { name: string; quantity: number }[];
   note?: string | null;
   logoUrl: string;
 };
 
 export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
+  const isPickup = data.fulfillmentType === "PICKUP";
+
   return (
     <Document>
       <Page size={[PAGE_WIDTH, PAGE_HEIGHT]} style={styles.page}>
@@ -146,27 +156,36 @@ export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
 
         {/* Order meta */}
         <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Order {data.orderNumber}</Text>
-          <Text style={styles.metaLabel}>{data.date}</Text>
+          <View>
+            <Text style={styles.metaLabel}>Order {data.orderNumber}</Text>
+            <Text style={[styles.metaLabel, { marginTop: 2 }]}>{data.date}</Text>
+          </View>
+          <Text style={styles.fulfillmentBadge}>
+            {isPickup ? "Pickup" : "Delivery"}
+          </Text>
         </View>
 
-        {/* Ship to — one address block, not duplicated Billing/Shipping columns */}
+        {/* Billing address — contact info for the order */}
         <View style={styles.section}>
-          <Text style={styles.sectionHeading}>Ship to</Text>
+          <Text style={styles.sectionHeading}>Billing Address</Text>
           <Text style={styles.customerName}>{data.customerName}</Text>
-          {data.address && (
-            <>
-              <Text style={styles.addressLine}>
-                {data.address.street}
-                {data.address.buzzer ? ` (Buzzer: ${data.address.buzzer})` : ""}
-              </Text>
-              <Text style={styles.addressLine}>
-                {data.address.city} {data.address.province}{" "}
-                {data.address.postalCode}
-              </Text>
-            </>
-          )}
           {data.customerPhone && (
+            <Text style={styles.addressLine}>{data.customerPhone}</Text>
+          )}
+        </View>
+
+        {/* Shipping address (delivery) or pickup location (our bakery) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeading}>
+            {isPickup ? "Pickup Location" : "Shipping Address"}
+          </Text>
+          <Text style={styles.customerName}>
+            {isPickup ? "Karyana Ruiz Bakery" : data.customerName}
+          </Text>
+          {data.shippingAddress && (
+            <Text style={styles.addressLine}>{data.shippingAddress}</Text>
+          )}
+          {!isPickup && data.customerPhone && (
             <Text style={styles.addressLine}>{data.customerPhone}</Text>
           )}
         </View>

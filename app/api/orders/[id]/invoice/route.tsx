@@ -96,7 +96,7 @@ export async function GET(
         : "FREE",
     gst: formatCents(order.gst, "en"),
     total: formatCents(order.total, "en"),
-    logoUrl: `${APP_URL}/logo-email.png`,
+    logoUrl: `${APP_URL}/logo-print.jpg`,
   };
 
   const stream = await renderToStream(<InvoicePDF data={data} />);

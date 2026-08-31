@@ -64,7 +64,7 @@ export async function GET(
     shippingAddress,
     items,
     note: order.notes ?? null,
-    logoUrl: `${APP_URL}/logo-email.png`,
+    logoUrl: `${APP_URL}/logo-print.jpg`,
   };
 
   const stream = await renderToStream(<PackingSlipPDF data={data} />);

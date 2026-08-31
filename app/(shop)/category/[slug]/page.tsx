@@ -64,6 +64,7 @@ export default async function CategoryPage({
               alt={name}
               fill
               priority
+              sizes="100vw"
               className="object-cover opacity-30"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-cream/40 via-cream/30 to-cream" />

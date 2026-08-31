@@ -1,5 +1,3 @@
-"use client";
-
 export function AnnouncementBar({ messages }: { messages: string[] }) {
   if (!messages?.length) return null;
   const repeated = [...messages, ...messages, ...messages];

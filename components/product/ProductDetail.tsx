@@ -127,6 +127,7 @@ export function ProductDetail({ product }: { product: Product }) {
                     src={urlFor(img).width(160).height(160).url()}
                     alt=""
                     fill
+                    sizes="80px"
                     className="object-cover"
                   />
                 </button>

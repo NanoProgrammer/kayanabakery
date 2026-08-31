@@ -98,7 +98,7 @@ export function Hero({
             {slide.type === "info" && (
               <>
                 {heroBg ? (
-                  <Image src={heroBg} alt="Karyana" fill priority className="object-cover" />
+                  <Image src={heroBg} alt="Karyana" fill priority sizes="100vw" className="object-cover" />
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-br from-canela-dark via-canela to-ink" />
                 )}

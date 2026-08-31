@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Play } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 
@@ -46,10 +47,12 @@ export function ConchaVideoSection() {
               className="group relative block aspect-video w-full"
               aria-label="Play video"
             >
-              <img
+              <Image
                 src={`https://img.youtube.com/vi/${YOUTUBE_ID}/maxresdefault.jpg`}
                 alt="Karyana Bakery conchas video"
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                fill
+                sizes="(max-width: 896px) 100vw, 896px"
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-ink/30 transition-colors group-hover:bg-ink/20" />
               <div className="absolute inset-0 flex items-center justify-center">

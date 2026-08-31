@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronDown } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
@@ -86,9 +87,11 @@ export function CategoryDropdown({
             className="flex items-center gap-3 py-3"
           >
             {cat.image && (
-              <img
+              <Image
                 src={cat.image}
                 alt={name}
+                width={32}
+                height={32}
                 className="h-8 w-8 rounded-lg object-cover"
               />
             )}

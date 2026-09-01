@@ -6,6 +6,12 @@ import type { NextAuthConfig } from "next-auth";
 // Node-only auth stack. Session shape must stay identical to the full
 // config in lib/auth/auth.ts so both read/write the same JWT cookie.
 export const authConfig: NextAuthConfig = {
+  // The site is served on two live domains (.ca and .com) — trust the
+  // incoming request's Host header to build callback/redirect URLs per
+  // request instead of forcing everything through one fixed origin. A
+  // hardcoded AUTH_URL env var would override this for whichever single
+  // domain it names, breaking Google sign-in on the other one.
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

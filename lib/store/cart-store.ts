@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { CartItem } from "@/types";
+import { trackEvent } from "@/lib/analytics/gtag";
 
 type CartState = {
   items: CartItem[];
@@ -59,6 +60,19 @@ export const useCartStore = create<CartState>()(
             };
           }
           return { items: [...state.items, { ...item, quantity }] };
+        });
+
+        trackEvent("add_to_cart", {
+          currency: "CAD",
+          value: item.price * quantity,
+          items: [
+            {
+              item_id: item.productId,
+              item_name: item.name,
+              price: item.price,
+              quantity,
+            },
+          ],
         });
       },
 

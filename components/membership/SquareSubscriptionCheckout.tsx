@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Crown, Check, Shield } from "lucide-react";
 import { TIERS } from "@/lib/membership/tiers";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { trackEvent } from "@/lib/analytics/gtag";
 
 type Props = {
   tier: "ARTESANO" | "SELECTO" | "LEGENDARIO";
@@ -151,6 +152,12 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
               if (!res.ok) {
                 throw new Error(data.error || "Subscription failed");
               }
+
+              trackEvent("sign_up", {
+                method: tier,
+                currency: "CAD",
+                value: isArtesano ? 0 : tierData.priceCents / 100,
+              });
 
               window.location.href = callbackUrl;
             } catch (err: any) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Plus, Minus, ShoppingBag, Crown, Lock } from "lucide-react";
@@ -13,6 +13,7 @@ import { formatPrice, cn } from "@/lib/utils";
 import { tierMeets, type MembershipTier } from "@/lib/membership/tiers";
 import { MembershipUpsellModal } from "@/components/membership/MembershipUpsellModal";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics/gtag";
 import type { Product } from "@/types";
 
 export function ProductDetail({ product }: { product: Product }) {
@@ -41,6 +42,21 @@ export function ProductDetail({ product }: { product: Product }) {
   const isUnavailable = !product.inStock && !product.isOffSeason;
 
   const images = [product.image, ...(product.gallery || [])].filter(Boolean);
+
+  useEffect(() => {
+    trackEvent("view_item", {
+      currency: "CAD",
+      value: product.price,
+      items: [
+        {
+          item_id: product._id,
+          item_name: product.name,
+          price: product.price,
+        },
+      ],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product._id]);
 
   function handleAdd() {
     if (isUnavailable) {

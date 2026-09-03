@@ -19,6 +19,7 @@ import {
 import type { SiteSettings, PopupBanner } from "@/types";
 import { auth } from "@/lib/auth/auth";
 import { SessionProvider } from "next-auth/react";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -105,6 +106,7 @@ export default async function RootLayout({
             <Toaster position="bottom-right" richColors />
           </LocaleProvider>
         </SessionProvider>
+        <GoogleAnalytics />
       </body>
     </html>
   );

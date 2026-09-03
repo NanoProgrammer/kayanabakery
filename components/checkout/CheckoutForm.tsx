@@ -11,6 +11,7 @@ import { computePricing, formatCents } from "@/lib/checkout/pricing";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
 import { tierMeets, type MembershipTier } from "@/lib/membership/tiers";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics/gtag";
 
 import { DeliverySlotPicker } from "./DeliverySlotPicker";
 import { PickupSlotPicker } from "./PickupSlotPicker";
@@ -122,6 +123,22 @@ export function CheckoutForm({
     if (cartPoints && pointsToRedeem === 0) {
       setPointsToRedeem(cartPoints);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fire once per checkout page load, not on every cart mutation
+  useEffect(() => {
+    if (items.length === 0) return;
+    trackEvent("begin_checkout", {
+      currency: "CAD",
+      value: items.reduce((s, it) => s + it.price * it.quantity, 0),
+      items: items.map((it) => ({
+        item_id: it.productId,
+        item_name: it.name,
+        price: it.price,
+        quantity: it.quantity,
+      })),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

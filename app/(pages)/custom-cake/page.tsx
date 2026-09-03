@@ -15,6 +15,7 @@ import {
   Info,
 } from "lucide-react";
 import { CakeSizeCalculator } from "@/components/cake/CakeSizeCalculator";
+import { trackEvent } from "@/lib/analytics/gtag";
 
 const FLAVORS = [
   "Vanilla",
@@ -147,6 +148,7 @@ export default function CustomCakePage() {
       });
       if (!res.ok) throw new Error();
       setSubmitted(true);
+      trackEvent("generate_lead", { lead_type: "custom_cake" });
       toast.success(
         locale === "es" ? "¡Solicitud enviada!" : "Request sent!"
       );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { trackEvent } from "@/lib/analytics/gtag";
 
 export function Newsletter() {
   const { t, locale } = useLocale();
@@ -21,6 +22,7 @@ export function Newsletter() {
       });
       if (!res.ok) throw new Error();
       setStatus("success");
+      trackEvent("generate_lead", { lead_type: "newsletter" });
       setEmail("");
     } catch {
       setStatus("error");

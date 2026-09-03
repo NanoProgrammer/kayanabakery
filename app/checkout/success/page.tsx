@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatCents } from "@/lib/checkout/pricing";
+import { PurchaseEvent } from "@/components/checkout/PurchaseEvent";
 
 export const metadata = { title: "Order confirmed" };
 export const dynamic = "force-dynamic";
@@ -53,6 +54,11 @@ export default async function CheckoutSuccessPage({
 
   return (
     <div className="container-bakery py-16">
+      <PurchaseEvent
+        orderNumber={order.orderNumber}
+        totalCents={order.total}
+        items={items}
+      />
       <div className="mx-auto max-w-2xl">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-canela-light">
           <CheckCircle2 className="h-10 w-10 text-canela-dark" />

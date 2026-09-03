@@ -57,7 +57,13 @@ export const metadata: Metadata = {
     description: "More than bread, a home memory.",
     type: "website",
     locale: "en_CA",
-    images: ["/logo.png"],
+    images: [{ url: "/og-default.jpg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Karyana Bakery",
+    description: "More than bread, a home memory.",
+    images: ["/og-default.jpg"],
   },
 };
 

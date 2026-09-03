@@ -25,6 +25,42 @@ function pickI18n<T extends Record<string, any>>(
   return doc[key] as string;
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
+
+  const category = await sanityFetch<CategoryWithProducts | null>({
+    query: categoryBySlugQuery,
+    params: { slug },
+    tags: ["category", "product"],
+  });
+
+  if (!category) return { title: "Category not found" };
+
+  const name = pickI18n(category, "name", locale);
+  const description = pickI18n(category, "description", locale);
+  const imageUrl = category.image
+    ? urlFor(category.image).width(1200).height(630).url()
+    : undefined;
+
+  return {
+    title: name,
+    description,
+    openGraph: imageUrl
+      ? { title: name, description, images: [{ url: imageUrl, width: 1200, height: 630 }] }
+      : undefined,
+    twitter: imageUrl
+      ? { card: "summary_large_image", title: name, description, images: [imageUrl] }
+      : undefined,
+  };
+}
+
 export default async function CategoryPage({
   params,
 }: {

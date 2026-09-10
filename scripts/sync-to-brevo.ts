@@ -128,7 +128,11 @@ async function run() {
     const lastOrder = userRecord ? lastOrderMap.get(userRecord.id) : null;
 
     const isActivePaidMember = tier !== "BASICO" && status === "ACTIVE";
-    const language = u.preferredLang || guessLanguageFromName(u.name);
+    // preferredLang defaults to "en" in the DB for every account, so it's
+    // only a real signal when it's "es" (someone had to change it away
+    // from the default). Otherwise, guess from the name.
+    const language =
+      u.preferredLang === "es" ? "es" : guessLanguageFromName(u.name);
 
     const listIds = [BREVO_LIST_ID];
     if (BREVO_MEMBERS_LIST_ID && isActivePaidMember) {
@@ -170,7 +174,7 @@ async function run() {
 
     if (res.ok) {
       console.log(
-        `  ✓ ${u.email} (${tier}, ${u._count.orders} orders, lang=${language}, lists=[${listIds.join(",")}])`
+        `  ✓ ${u.email} [${u.name ?? "no name"}] (${tier}, ${u._count.orders} orders, lang=${language}, lists=[${listIds.join(",")}])`
       );
       usersSynced++;
     } else {

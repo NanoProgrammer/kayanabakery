@@ -24,6 +24,7 @@ export function Footer() {
 
   const aboutLinks = [
     { href: "/about", label: locale === "es" ? "Nosotros" : "About us" },
+    { href: "/blog", label: "Blog" },
     { href: "/events", label: locale === "es" ? "Eventos" : "Events" },
     { href: "/memberships", label: locale === "es" ? "Membresías" : "Memberships" },
     {

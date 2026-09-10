@@ -1,0 +1,109 @@
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+import { BLOG_POSTS, BLOG_KIND_LABEL, getBlogPost } from "@/lib/blog/posts";
+
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return BLOG_POSTS.map((post) => ({ slug: post.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const post = getBlogPost(slug);
+  if (!post) return { title: "Post not found" };
+
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
+
+  return {
+    title: post.title[locale],
+    description: post.metaDescription[locale],
+    openGraph: {
+      title: post.title[locale],
+      description: post.metaDescription[locale],
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title[locale],
+      description: post.metaDescription[locale],
+    },
+  };
+}
+
+export default async function BlogPostPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const post = getBlogPost(slug);
+  if (!post) notFound();
+
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
+
+  return (
+    <article className="container-bakery py-16 md:py-20">
+      <div className="mx-auto max-w-2xl">
+        <Link
+          href="/blog"
+          className="text-sm font-medium text-canela-dark hover:underline"
+        >
+          {locale === "es" ? "← Volver al blog" : "← Back to blog"}
+        </Link>
+
+        <span className="mt-6 inline-flex w-fit items-center rounded-full bg-canela-light px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-canela-dark">
+          {BLOG_KIND_LABEL[post.kind][locale]}
+        </span>
+
+        <h1 className="mt-3 font-display text-[length:var(--text-display-md)] leading-[var(--text-display-md--line-height)] tracking-[var(--text-display-md--letter-spacing)] text-ink">
+          {post.title[locale]}
+        </h1>
+        <p className="mt-3 font-script text-2xl text-canela-dark">
+          {post.scriptTag[locale]}
+        </p>
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          {post.keywords[locale].map((kw) => (
+            <span
+              key={kw}
+              className="rounded-full bg-masa px-3 py-1 text-xs text-ink-soft"
+            >
+              {kw}
+            </span>
+          ))}
+        </div>
+
+        <div className="prose prose-sm mt-10 max-w-none text-ink-soft">
+          {post.body.map((block, i) =>
+            block.type === "h3" ? (
+              <h3
+                key={i}
+                className="mt-8 font-display text-xl text-ink first:mt-0"
+              >
+                {block[locale]}
+              </h3>
+            ) : (
+              <p key={i} className="mt-4 leading-relaxed">
+                {block[locale]}
+              </p>
+            )
+          )}
+        </div>
+
+        <div className="mt-10 border-t border-canela/15 pt-8">
+          <Link href={post.ctaHref} className="btn-primary">
+            {post.ctaLabel[locale]}
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}

@@ -34,27 +34,27 @@ export async function generateMetadata({
   });
   if (!p) return { title: "Product not found" };
 
-  const imageUrl = p.image
-    ? urlFor(p.image).width(1200).height(1200).url()
-    : undefined;
+  // Fall back to the gallery, then the site's default share image, so a
+  // product with a missing/broken main photo still gets a real og:image
+  // instead of silently dropping the whole openGraph/twitter block.
+  const rawImage = p.image ?? p.gallery?.[0];
+  const imageUrl = rawImage
+    ? urlFor(rawImage).width(1200).height(1200).url()
+    : "/og-default.jpg";
 
   return {
     title: p.name,
     description: p.description,
-    openGraph: imageUrl
-      ? {
-          title: p.name,
-          description: p.description,
-          images: [{ url: imageUrl, width: 1200, height: 1200 }],
-        }
-      : undefined,
-    twitter: imageUrl
-      ? {
-          card: "summary_large_image",
-          title: p.name,
-          description: p.description,
-          images: [imageUrl],
-        }
-      : undefined,
+    openGraph: {
+      title: p.name,
+      description: p.description,
+      images: [{ url: imageUrl, width: 1200, height: 1200 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: p.name,
+      description: p.description,
+      images: [imageUrl],
+    },
   };
 }

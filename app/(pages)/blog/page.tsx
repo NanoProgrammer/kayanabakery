@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { cookies } from "next/headers";
 import { BLOG_POSTS, BLOG_KIND_LABEL } from "@/lib/blog/posts";
-import { getBlogCategoryImages, resolveBlogImage } from "@/lib/blog/images";
+import { getBlogImagePools, resolveBlogImage } from "@/lib/blog/images";
 
 export const metadata = {
   title: "Blog",
@@ -13,7 +13,7 @@ export const metadata = {
 export default async function BlogPage() {
   const cookieStore = await cookies();
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
-  const categoryImages = await getBlogCategoryImages();
+  const imagePools = await getBlogImagePools();
 
   return (
     <>
@@ -33,7 +33,7 @@ export default async function BlogPage() {
 
       <section className="container-bakery pb-20 md:pb-28">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {BLOG_POSTS.map((post) => (
+          {BLOG_POSTS.map((post, index) => (
             <Link
               key={post.slug}
               href={`/blog/${post.slug}`}
@@ -41,7 +41,7 @@ export default async function BlogPage() {
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-canela-light">
                 <Image
-                  src={resolveBlogImage(post.categorySlug, categoryImages)}
+                  src={resolveBlogImage(post.categorySlug, imagePools, index)}
                   alt={post.title[locale]}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

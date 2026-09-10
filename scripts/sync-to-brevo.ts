@@ -34,6 +34,16 @@ const BREVO_TOGGLE_ON_LIST_ID = process.env.BREVO_TOGGLE_ON_LIST_ID
 const BREVO_TOGGLE_OFF_LIST_ID = process.env.BREVO_TOGGLE_OFF_LIST_ID
   ? parseInt(process.env.BREVO_TOGGLE_OFF_LIST_ID, 10)
   : null;
+const BREVO_ES_LIST_ID = process.env.BREVO_ES_LIST_ID
+  ? parseInt(process.env.BREVO_ES_LIST_ID, 10)
+  : null;
+const BREVO_EN_LIST_ID = process.env.BREVO_EN_LIST_ID
+  ? parseInt(process.env.BREVO_EN_LIST_ID, 10)
+  : null;
+
+function languageListId(language: string): number | null {
+  return language === "es" ? BREVO_ES_LIST_ID : BREVO_EN_LIST_ID;
+}
 
 async function run() {
   if (!process.env.BREVO_API_KEY) {
@@ -109,6 +119,7 @@ async function run() {
     const lastOrder = userRecord ? lastOrderMap.get(userRecord.id) : null;
 
     const isActivePaidMember = tier !== "BASICO" && status === "ACTIVE";
+    const language = u.preferredLang || guessLanguageFromName(u.name);
 
     const listIds = [BREVO_LIST_ID];
     if (BREVO_MEMBERS_LIST_ID && isActivePaidMember) {
@@ -123,13 +134,15 @@ async function run() {
         : BREVO_TOGGLE_OFF_LIST_ID;
       if (toggleListId) listIds.push(toggleListId);
     }
+    const langListId = languageListId(language);
+    if (langListId) listIds.push(langListId);
 
     const res = await upsertContact({
       email: u.email,
       attributes: {
         FIRSTNAME: firstName || "",
         LASTNAME: lastName || "",
-        LANGUAGE: u.preferredLang || guessLanguageFromName(u.name),
+        LANGUAGE: language,
         SOURCE: "MIGRATION",
         REGISTERED: true,
         MEMBERSHIP_TIER: tier,
@@ -181,6 +194,7 @@ async function run() {
   let subsFailed = 0;
 
   for (const s of newSubscribers) {
+    const subLangListId = languageListId(s.language || "en");
     const res = await upsertContact({
       email: s.email,
       attributes: {
@@ -188,7 +202,7 @@ async function run() {
         SOURCE: s.source || "NEWSLETTER",
         NEWSLETTER: true,
       },
-      listIds: [BREVO_LIST_ID],
+      listIds: [BREVO_LIST_ID, ...(subLangListId ? [subLangListId] : [])],
       updateEnabled: true,
     });
 

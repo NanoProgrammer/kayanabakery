@@ -40,7 +40,7 @@ export function Footer() {
       label: locale === "es" ? "Cómo ordenar" : "How to order",
     },
     {
-      href: "/track",
+      href: "/track-order",
       label: locale === "es" ? "Rastrear orden" : "Track order",
     },
     {

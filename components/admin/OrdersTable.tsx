@@ -126,12 +126,7 @@ export function OrdersTable({
                   className="border-b border-canela/10 last:border-0 hover:bg-canela-light/30"
                 >
                   <td className="p-3 font-mono text-xs">
-                    <Link
-                      href={`/admin/orders/${o.id}`}
-                      className="font-bold hover:underline"
-                    >
-                      {o.orderNumber}
-                    </Link>
+                    <span className="font-bold">{o.orderNumber}</span>
                     <p className="text-[10px] text-ink-soft">
                       {new Date(o.createdAt).toLocaleString("en-CA", {
                         month: "short",

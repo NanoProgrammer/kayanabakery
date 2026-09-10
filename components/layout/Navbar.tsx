@@ -67,7 +67,7 @@ export function Navbar() {
                 <Link href="/account/orders" className="block px-4 py-2.5 text-sm hover:bg-canela-light" onClick={() => setAccountOpen(false)}>{t("account.orders")}</Link>
                 <Link href="/account/membership" className="block px-4 py-2.5 text-sm hover:bg-canela-light" onClick={() => setAccountOpen(false)}>{t("account.membership")}</Link>
                 {(session.user as any)?.role === "ADMIN" && (
-                  <Link href="/admin" className="block border-t border-canela/15 px-4 py-2.5 text-sm font-medium text-canela-dark hover:bg-canela-light" onClick={() => setAccountOpen(false)}>Admin</Link>
+                  <Link href="/admin/orders" className="block border-t border-canela/15 px-4 py-2.5 text-sm font-medium text-canela-dark hover:bg-canela-light" onClick={() => setAccountOpen(false)}>Admin</Link>
                 )}
                 <button onClick={() => signOut({ callbackUrl: "/" })} className="block w-full border-t border-canela/15 px-4 py-2.5 text-left text-sm hover:bg-canela-light">{t("common.signOut")}</button>
               </div>

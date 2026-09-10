@@ -3,7 +3,7 @@ import Image from "next/image";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { BLOG_POSTS, BLOG_KIND_LABEL, getBlogPost } from "@/lib/blog/posts";
-import { getBlogCategoryImages, resolveBlogImage } from "@/lib/blog/images";
+import { getBlogImagePools, resolveBlogImage } from "@/lib/blog/images";
 import { getFeaturedProductsForPost } from "@/lib/blog/products";
 import { ProductCard } from "@/components/product/ProductCard";
 
@@ -52,11 +52,12 @@ export default async function BlogPostPage({
 
   const cookieStore = await cookies();
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
-  const [categoryImages, featuredProducts] = await Promise.all([
-    getBlogCategoryImages(),
+  const [imagePools, featuredProducts] = await Promise.all([
+    getBlogImagePools(),
     getFeaturedProductsForPost(post.categorySlug),
   ]);
-  const heroImage = resolveBlogImage(post.categorySlug, categoryImages);
+  const postIndex = BLOG_POSTS.findIndex((p) => p.slug === post.slug);
+  const heroImage = resolveBlogImage(post.categorySlug, imagePools, postIndex);
 
   return (
     <article className="container-bakery py-16 md:py-20">

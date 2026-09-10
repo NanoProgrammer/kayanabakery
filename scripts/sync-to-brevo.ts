@@ -25,6 +25,15 @@ const BREVO_LIST_ID = parseInt(process.env.BREVO_LIST_ID || "0", 10);
 const BREVO_MEMBERS_LIST_ID = process.env.BREVO_MEMBERS_LIST_ID
   ? parseInt(process.env.BREVO_MEMBERS_LIST_ID, 10)
   : null;
+const BREVO_PROGRAMS_PROMO_LIST_ID = process.env.BREVO_PROGRAMS_PROMO_LIST_ID
+  ? parseInt(process.env.BREVO_PROGRAMS_PROMO_LIST_ID, 10)
+  : null;
+const BREVO_TOGGLE_ON_LIST_ID = process.env.BREVO_TOGGLE_ON_LIST_ID
+  ? parseInt(process.env.BREVO_TOGGLE_ON_LIST_ID, 10)
+  : null;
+const BREVO_TOGGLE_OFF_LIST_ID = process.env.BREVO_TOGGLE_OFF_LIST_ID
+  ? parseInt(process.env.BREVO_TOGGLE_OFF_LIST_ID, 10)
+  : null;
 
 async function run() {
   if (!process.env.BREVO_API_KEY) {
@@ -48,7 +57,9 @@ async function run() {
       phone: true,
       preferredLang: true,
       pointsBalance: true,
-      membership: { select: { tier: true, status: true } },
+      membership: {
+        select: { tier: true, status: true, autoDeliveryEnabled: true },
+      },
       _count: {
         select: {
           orders: { where: { paymentStatus: "PAID" } },
@@ -97,13 +108,20 @@ async function run() {
     const totalSpent = userRecord ? spentMap.get(userRecord.id) ?? 0 : 0;
     const lastOrder = userRecord ? lastOrderMap.get(userRecord.id) : null;
 
+    const isActivePaidMember = tier !== "BASICO" && status === "ACTIVE";
+
     const listIds = [BREVO_LIST_ID];
-    if (
-      BREVO_MEMBERS_LIST_ID &&
-      tier !== "BASICO" &&
-      status === "ACTIVE"
-    ) {
+    if (BREVO_MEMBERS_LIST_ID && isActivePaidMember) {
       listIds.push(BREVO_MEMBERS_LIST_ID);
+    }
+    if (BREVO_PROGRAMS_PROMO_LIST_ID && isActivePaidMember) {
+      listIds.push(BREVO_PROGRAMS_PROMO_LIST_ID);
+    }
+    if (isActivePaidMember && (tier === "SELECTO" || tier === "LEGENDARIO")) {
+      const toggleListId = u.membership?.autoDeliveryEnabled
+        ? BREVO_TOGGLE_ON_LIST_ID
+        : BREVO_TOGGLE_OFF_LIST_ID;
+      if (toggleListId) listIds.push(toggleListId);
     }
 
     const res = await upsertContact({

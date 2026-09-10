@@ -1,7 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { BLOG_POSTS, BLOG_KIND_LABEL, getBlogPost } from "@/lib/blog/posts";
+import { getBlogCategoryImages, resolveBlogImage } from "@/lib/blog/images";
 
 export const revalidate = 3600;
 
@@ -48,6 +50,8 @@ export default async function BlogPostPage({
 
   const cookieStore = await cookies();
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
+  const categoryImages = await getBlogCategoryImages();
+  const heroImage = resolveBlogImage(post.categorySlug, categoryImages);
 
   return (
     <article className="container-bakery py-16 md:py-20">
@@ -69,6 +73,26 @@ export default async function BlogPostPage({
         <p className="mt-3 font-script text-2xl text-canela-dark">
           {post.scriptTag[locale]}
         </p>
+
+        <div className="relative mt-6 aspect-[16/9] overflow-hidden rounded-3xl bg-canela-light">
+          <Image
+            src={heroImage}
+            alt={post.title[locale]}
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 672px"
+            className="object-cover"
+          />
+        </div>
+
+        {post.categorySlug && (
+          <Link
+            href={`/category/${post.categorySlug}`}
+            className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-canela-dark hover:underline"
+          >
+            {locale === "es" ? "Ver estos productos →" : "Shop these products →"}
+          </Link>
+        )}
 
         <div className="mt-6 flex flex-wrap gap-2">
           {post.keywords[locale].map((kw) => (

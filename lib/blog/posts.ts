@@ -2,7 +2,7 @@
 // the site's existing cookie-based locale (see lib/i18n/server.ts) can pick
 // the right copy at render time without a client round-trip.
 
-export type BlogKind = "producto" | "cultural" | "servicio";
+export type BlogKind = "producto" | "cultural" | "servicio" | "curioso";
 
 export type BlogBlock =
   | { type: "p"; en: string; es: string }
@@ -11,6 +11,8 @@ export type BlogBlock =
 export type BlogPost = {
   slug: string;
   kind: BlogKind;
+  /** Real Sanity category slug to pull a product photo from, or null for a generic header. */
+  categorySlug: string | null;
   title: { en: string; es: string };
   scriptTag: { en: string; es: string };
   metaDescription: { en: string; es: string };
@@ -24,6 +26,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "conchas-mexicanas-calgary",
     kind: "producto",
+    categorySlug: "conchas",
     title: {
       en: "Mexican Conchas in Calgary: The Guide We Owed You",
       es: "Conchas mexicanas en Calgary: la guía que te íbamos a deber",
@@ -58,6 +61,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "pasteles-personalizados-calgary",
     kind: "producto",
+    categorySlug: "cakes",
     title: {
       en: "Custom Cakes in Calgary: From Quinceañeras to Baby Showers",
       es: "Pasteles personalizados en Calgary: de quinceañeras a baby showers",
@@ -92,6 +96,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "churros-mexicanos-calgary",
     kind: "producto",
+    categorySlug: "churros",
     title: {
       en: "Mexican Churros in Calgary: Crisp Outside, Soft Inside",
       es: "Churros mexicanos en Calgary: crujientes por fuera, suaves por dentro",
@@ -124,6 +129,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "pan-dulce-tradicional-calgary",
     kind: "producto",
+    categorySlug: "traditional-mexican-bread",
     title: {
       en: "Traditional Mexican Pan Dulce: A Guide for Calgary Locals",
       es: "Pan dulce tradicional mexicano: guía para quienes viven en Calgary",
@@ -158,6 +164,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "membresia-panaderia-calgary",
     kind: "servicio",
+    categorySlug: null,
     title: {
       en: "Bakery Membership in Calgary: How the Karyana Club Works",
       es: "Membresía de panadería en Calgary: cómo funciona el club Karyana",
@@ -192,6 +199,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "cajas-pan-dulce-eventos-calgary",
     kind: "producto",
+    categorySlug: "boxes",
     title: {
       en: "Pan Dulce Gift & Party Boxes for Calgary Events and Offices",
       es: "Cajas de pan dulce para eventos y oficina en Calgary",
@@ -226,6 +234,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "karyana-eventos-mercados-calgary",
     kind: "servicio",
+    categorySlug: null,
     title: {
       en: "Karyana Bakery at Calgary Events and Markets",
       es: "Karyana Bakery en eventos y mercados de Calgary",
@@ -260,6 +269,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "pan-de-muerto-calgary",
     kind: "cultural",
+    categorySlug: null,
     title: {
       en: "Pan de Muerto in Calgary: Where to Find It for Your Ofrenda",
       es: "Pan de Muerto en Calgary: dónde encontrarlo para tu ofrenda",
@@ -294,6 +304,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "rosca-de-reyes-calgary",
     kind: "cultural",
+    categorySlug: null,
     title: {
       en: "Rosca de Reyes in Calgary: Where to Order for January 6th",
       es: "Rosca de Reyes en Calgary: dónde pedirla para el 6 de enero",
@@ -328,6 +339,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "entrega-pan-mexicano-se-calgary",
     kind: "servicio",
+    categorySlug: null,
     title: {
       en: "Mexican Bakery Delivery in SE Calgary: What to Know",
       es: "Entrega de pan mexicano en el sureste de Calgary: lo que debes saber",
@@ -359,6 +371,195 @@ export const BLOG_POSTS: BlogPost[] = [
       es: "Empieza tu pedido en karyanabakery.ca/shop",
     },
   },
+  {
+    slug: "guia-pan-dulce-nombres-calgary",
+    kind: "curioso",
+    categorySlug: "traditional-mexican-bread",
+    title: {
+      en: "Mexican Pan Dulce 101: A Field Guide to the Shapes and Names",
+      es: "Pan dulce 101: guía de campo para reconocer cada pieza (y su nombre)",
+    },
+    scriptTag: {
+      en: "point and say the name — you'll sound like a regular by piece three",
+      es: "señala y di el nombre — para la tercera pieza ya suenas de la casa",
+    },
+    metaDescription: {
+      en: "New to Mexican pan dulce? A friendly, no-shame field guide to the shapes and names you'll see at Karyana Bakery in Calgary — conchas, orejas, cuernos, and more.",
+      es: "¿Nuevo en el pan dulce mexicano? Una guía de campo sin pena para reconocer las formas y nombres que vas a ver en Karyana Bakery en Calgary — conchas, orejas, cuernos y más.",
+    },
+    keywords: {
+      en: ["mexican pan dulce guide", "types of pan dulce explained", "concha oreja cuerno names", "mexican sweet bread 101", "mexican bakery calgary guide"],
+      es: ["guía de pan dulce", "nombres del pan dulce mexicano", "concha oreja cuerno significado", "tipos de pan dulce explicados", "panadería mexicana calgary guía"],
+    },
+    body: [
+      { type: "p", en: "Walk into a Mexican bakery for the first time and the tray-and-tongs system can feel like a pop quiz: dozens of shapes, zero labels, and a line building behind you. Here's the cheat sheet nobody hands you at the door — so next time you can point with confidence.", es: "Entrar por primera vez a una panadería mexicana con charola y pinzas se siente como examen sorpresa: decenas de formas, ningún letrero, y una fila creciendo detrás de ti. Aquí está la chuleta que nadie te da en la puerta — para que la próxima vez señales con confianza." },
+      { type: "h3", en: "The concha (\"shell\")", es: "La concha" },
+      { type: "p", en: "The icon. Soft bread topped with a sugar-paste shell pattern, usually vanilla or chocolate. If you only learn one name, make it this one.", es: "La reina del mostrador. Pan suave con una pasta de azúcar encima marcada en forma de concha, normalmente de vainilla o chocolate. Si solo aprendes un nombre, que sea este." },
+      { type: "h3", en: "The oreja (\"ear\")", es: "La oreja" },
+      { type: "p", en: "Flaky, caramelized, and shaped like a heart or a butterfly — puff pastry with a crunchy, sugar-glazed shell. Related to what you might know as a palmier.", es: "Hojaldrada, caramelizada, con forma de corazón o mariposa — hojaldre con una costra crujiente y acaramelada. Es prima del \"palmier\" francés." },
+      { type: "h3", en: "The cuerno (\"horn\")", es: "El cuerno" },
+      { type: "p", en: "Shaped like a crescent, denser than a French croissant, lightly sweet. A safe pick if you want something familiar-but-not-quite.", es: "Con forma de medialuna, más denso que un croissant francés, ligeramente dulce. Es tu opción segura si quieres algo que se siente conocido pero distinto." },
+      { type: "h3", en: "The garibaldi", es: "El garibaldi" },
+      { type: "p", en: "A light sponge cake soaked in glaze and covered in rainbow sprinkles. Looks like a party. Tastes like one too.", es: "Un pan esponjoso bañado en glaseado y cubierto de chispas de colores. Se ve como fiesta. Sabe como fiesta." },
+      { type: "h3", en: "The polvorón", es: "El polvorón" },
+      { type: "p", en: "Shortbread-like, crumbly, and dusted in sugar — this one disintegrates a little in your hand, and that's completely normal.", es: "Tipo mantecada, quebradizo, espolvoreado de azúcar — se desmorona un poco en la mano, y eso es totalmente normal." },
+      { type: "p", en: "Now that you can name what you're pointing at, see which of these Karyana actually has in stock this week in our shop.", es: "Ahora que ya puedes nombrar lo que señalas, checa cuáles tiene Karyana disponibles esta semana en la tienda." },
+    ],
+    ctaHref: "/shop",
+    ctaLabel: {
+      en: "Match names to real photos at karyanabakery.ca/shop",
+      es: "Compara nombres con fotos reales en karyanabakery.ca/shop",
+    },
+  },
+  {
+    slug: "mitos-panaderia-mexicana",
+    kind: "curioso",
+    categorySlug: "conchas",
+    title: {
+      en: "5 Myths About Mexican Bakeries We're Happy to Debunk",
+      es: "5 mitos sobre la panadería mexicana que hay que dejar de creer",
+    },
+    scriptTag: {
+      en: "no, it's not \"just doughnuts with extra steps\"",
+      es: "no, no es \"solo dona con pasos extra\"",
+    },
+    metaDescription: {
+      en: "From \"it's all the same dough\" to \"it's only bread\" — we're clearing up the most common myths about Mexican bakeries, Karyana-style.",
+      es: "Desde \"es la misma masa nomás con otra forma\" hasta \"solo hacen pan\" — aclaramos los mitos más comunes sobre la panadería mexicana, a la Karyana.",
+    },
+    keywords: {
+      en: ["mexican bakery myths", "authentic mexican bakery calgary", "mexican pastry facts", "is pan dulce sweet", "mexican bakery vs regular bakery"],
+      es: ["mitos panadería mexicana", "panadería mexicana auténtica calgary", "datos sobre pan dulce", "pan dulce es muy dulce", "diferencia panadería mexicana"],
+    },
+    body: [
+      { type: "p", en: "Every cuisine collects a few myths from people who've never really sat down with it. Mexican bakeries have picked up their share. Let's clear the mostrador.", es: "Toda cocina acumula mitos de gente que nunca se sentó de verdad a probarla. La panadería mexicana también tiene los suyos. Vamos a limpiar el mostrador." },
+      { type: "h3", en: "Myth 1: \"It's basically doughnuts\"", es: "Mito 1: \"Es básicamente dona\"" },
+      { type: "p", en: "Pan dulce is actually less sugary than most North American pastry, on average. The sweetness sits mostly on top (a glaze, a sugar shell), while the bread itself stays mild — which is exactly why it pairs so well with a strong coffee.", es: "El pan dulce, en promedio, es menos dulce que la mayoría de la repostería norteamericana. Lo dulce vive arriba (un glaseado, una costra de azúcar), mientras el pan de abajo se mantiene sobrio — por eso combina tan bien con un café fuerte." },
+      { type: "h3", en: "Myth 2: \"It's all the same dough, just shaped differently\"", es: "Mito 2: \"Es la misma masa, solo con otra forma\"" },
+      { type: "p", en: "A concha, a puff-pastry oreja, and a choux-pastry churro have almost nothing in common at the dough level. Different fats, different fermentation, different techniques entirely.", es: "Una concha, una oreja de hojaldre, y un churro de masa choux casi no comparten nada a nivel de masa. Diferentes grasas, diferente fermentación, técnicas completamente distintas." },
+      { type: "h3", en: "Myth 3: \"Mexican bakeries only do bread\"", es: "Mito 3: \"Las panaderías mexicanas solo hacen pan\"" },
+      { type: "p", en: "Custom cakes for quinceañeras and birthdays are a full craft of their own — ask anyone who's ordered one for a 15-year-old's big day.", es: "Los pasteles personalizados para quinceañeras y cumpleaños son un oficio aparte — pregúntale a cualquiera que haya pedido uno para los quince de su hija." },
+      { type: "h3", en: "Myth 4: \"You can't get the real thing outside Mexico\"", es: "Mito 4: \"No se consigue lo auténtico fuera de México\"" },
+      { type: "p", en: "It takes the right recipe and zero shortcuts, not a specific zip code. Slow fermentation and real butter travel just fine.", es: "Lo que se necesita es la receta correcta y cero atajos, no un código postal específico. La fermentación lenta y la mantequilla real viajan bastante bien." },
+      { type: "h3", en: "Myth 5: \"It's a breakfast-only food\"", es: "Mito 5: \"Es comida de solo desayuno\"" },
+      { type: "p", en: "Pan dulce shows up at breakfast, at the 6pm merienda, and at 11pm when someone's craving hits. There's no clock on it.", es: "El pan dulce aparece en el desayuno, en la merienda de las 6pm, y a las 11pm cuando pega el antojo. No tiene horario." },
+    ],
+    ctaHref: "/shop",
+    ctaLabel: {
+      en: "Taste the difference at karyanabakery.ca/shop",
+      es: "Prueba la diferencia en karyanabakery.ca/shop",
+    },
+  },
+  {
+    slug: "tradiciones-pan-dulce-cafe",
+    kind: "curioso",
+    categorySlug: "conchas",
+    title: {
+      en: "Why Mexicans Dunk Their Pan Dulce (And Other Sweet Bread Habits)",
+      es: "Por qué remojamos el pan dulce en el café (y otras costumbres que nadie explica)",
+    },
+    scriptTag: {
+      en: "some traditions were never written down — they were just always true",
+      es: "hay costumbres que nunca se explican — solo se heredan",
+    },
+    metaDescription: {
+      en: "The dunking, the pinch on top of the concha, the 6pm merienda — a look at the small rituals around Mexican pan dulce, and why they matter.",
+      es: "El remojado, el pellizco a la concha antes de comerla, la merienda de las 6pm — un vistazo a los pequeños rituales alrededor del pan dulce mexicano, y por qué importan.",
+    },
+    keywords: {
+      en: ["pan dulce traditions", "why dunk bread in coffee mexican", "mexican merienda tradition", "pan y cafe culture", "mexican bakery rituals"],
+      es: ["tradiciones del pan dulce", "por qué se remoja el pan en café", "la merienda mexicana", "costumbre pan y café", "rituales panadería mexicana"],
+    },
+    body: [
+      { type: "p", en: "Nobody teaches you to dunk your concha in coffee — you just absorb it, usually from watching an abuela do it without even looking down. Pan dulce comes with habits nobody wrote a manual for, and most of them are worth knowing.", es: "Nadie te enseña a remojar la concha en el café — simplemente lo aprendes, casi siempre viendo a una abuela hacerlo sin ni siquiera mirar hacia abajo. El pan dulce trae consigo costumbres que nadie puso en un manual, y la mayoría vale la pena conocerlas." },
+      { type: "h3", en: "The dunk", es: "El remojo" },
+      { type: "p", en: "Coffee or hot chocolate softens the crumb just enough without dissolving it — the goal is a bite that's warm all the way through, not soup. It takes a little practice to find the exact second.", es: "El café o el chocolate suavizan la miga justo lo necesario sin deshacerla — la meta es un bocado calientito por dentro, no una sopa. Encontrar el segundo exacto toma algo de práctica." },
+      { type: "h3", en: "The pinch on top of the concha", es: "El pellizco a la concha" },
+      { type: "p", en: "Plenty of people break off the sugary shell pattern first and eat it separately before touching the bread underneath. There's no official rule — it's just a very common personal ritual.", es: "Mucha gente arranca primero el diseño de azúcar de encima y se lo come aparte antes de tocar el pan de abajo. No hay regla oficial — es solo un ritual personal muy común." },
+      { type: "h3", en: "The 6pm merienda", es: "La merienda de las 6pm" },
+      { type: "p", en: "Not quite dinner, not quite a snack — the merienda is its own meal: bread, a hot drink, and usually the whole family at the table. It's less about the food and more about everyone stopping at the same time.", es: "No es cena, no es solo antojo — la merienda es su propia comida: pan, algo caliente de tomar, y normalmente toda la familia en la mesa. Es menos sobre la comida y más sobre que todos se detienen a la misma hora." },
+      { type: "h3", en: "Sharing the bag", es: "Compartir la bolsa" },
+      { type: "p", en: "A mixed bag of pan dulce is built for sharing — one bag, several people, and an unwritten rule that you don't take the last piece without asking.", es: "Una bolsa surtida de pan dulce está hecha para compartir — una bolsa, varias personas, y una regla no escrita de que no te llevas la última pieza sin preguntar." },
+    ],
+    ctaHref: "/shop",
+    ctaLabel: {
+      en: "Build a bag worth sharing at karyanabakery.ca/shop",
+      es: "Arma una bolsa digna de compartir en karyanabakery.ca/shop",
+    },
+  },
+  {
+    slug: "cafe-de-olla-vs-chocolate-caliente",
+    kind: "curioso",
+    categorySlug: "churros",
+    title: {
+      en: "Café de Olla vs. Hot Chocolate: What Actually Pairs With Your Pan Dulce",
+      es: "Café de olla vs. chocolate caliente: qué va mejor con cada pan",
+    },
+    scriptTag: {
+      en: "the real debate isn't coffee vs. chocolate — it's which bread you're holding",
+      es: "el verdadero debate no es café o chocolate — es qué pan traes en la mano",
+    },
+    metaDescription: {
+      en: "Café de olla or Mexican hot chocolate? A practical pairing guide for what to drink with conchas, churros, and the rest of Karyana Bakery's menu.",
+      es: "¿Café de olla o chocolate caliente? Una guía práctica de qué tomar con conchas, churros, y el resto del menú de Karyana Bakery.",
+    },
+    keywords: {
+      en: ["cafe de olla vs hot chocolate", "what to drink with pan dulce", "mexican hot chocolate calgary", "best pairing for churros", "cafe de olla recipe origin"],
+      es: ["café de olla vs chocolate caliente", "qué tomar con pan dulce", "chocolate caliente mexicano calgary", "mejor bebida para churros", "qué es el café de olla"],
+    },
+    body: [
+      { type: "p", en: "Two drinks show up at almost every Mexican table with bread: café de olla, brewed with cinnamon and piloncillo in a clay pot, and hot chocolate, whipped frothy with a wooden molinillo. Both are correct. The real question is which bread you're about to eat.", es: "Dos bebidas aparecen en casi toda mesa mexicana con pan: el café de olla, hervido con canela y piloncillo en una olla de barro, y el chocolate caliente, batido con un molinillo hasta espumar. Las dos son correctas. La verdadera pregunta es qué pan estás por comerte." },
+      { type: "h3", en: "Café de olla wins with: conchas, cuernos, polvorones", es: "El café de olla gana con: conchas, cuernos, polvorones" },
+      { type: "p", en: "Anything mild and slightly sweet lets the cinnamon-and-piloncillo edge of café de olla come through instead of getting drowned out.", es: "Todo lo suave y ligeramente dulce deja que resalte el toque de canela y piloncillo del café de olla, en lugar de opacarlo." },
+      { type: "h3", en: "Hot chocolate wins with: churros, garibaldis, anything glazed", es: "El chocolate caliente gana con: churros, garibaldis, todo lo glaseado" },
+      { type: "p", en: "Churros and hot chocolate is the pairing that needs no introduction — the crunch and the cinnamon sugar practically ask for it. Anything already glazed or frosted plays well here too; the richness matches instead of competing.", es: "Churros con chocolate caliente es la pareja que no necesita presentación — el crujido y la canela con azúcar prácticamente lo piden. Todo lo que ya trae glaseado o betún también combina bien aquí; la riqueza empareja en lugar de competir." },
+      { type: "h3", en: "The tiebreaker: temperature outside", es: "El desempate: la temperatura de afuera" },
+      { type: "p", en: "This is Calgary, so let's be honest — on a −20°C day, the drink that wins is whichever one is hottest when it reaches your hands.", es: "Estamos en Calgary, seamos honestos — en un día de −20°C, gana la bebida que llegue más caliente a tus manos." },
+      { type: "p", en: "See what's in stock this week and build your own pairing.", es: "Revisa qué hay disponible esta semana y arma tu propia combinación." },
+    ],
+    ctaHref: "/category/churros",
+    ctaLabel: {
+      en: "Start with churros at karyanabakery.ca/category/churros",
+      es: "Empieza por los churros en karyanabakery.ca/category/churros",
+    },
+  },
+  {
+    slug: "sobrevivir-invierno-calgary-pan-dulce",
+    kind: "curioso",
+    categorySlug: null,
+    title: {
+      en: "Surviving a Calgary Winter With a Pan Dulce Craving",
+      es: "Cómo sobrevivir el invierno de Calgary con antojo de pan dulce",
+    },
+    scriptTag: {
+      en: "−25°C outside, concha and coffee inside — that's the whole strategy",
+      es: "−25°C afuera, concha y café adentro — esa es toda la estrategia",
+    },
+    metaDescription: {
+      en: "A survival guide for anyone missing home flavors during a Calgary winter — how a weekly bag of pan dulce makes the cold a little more bearable.",
+      es: "Una guía de supervivencia para quien extraña los sabores de casa en pleno invierno de Calgary — cómo una bolsa semanal de pan dulce hace más llevadero el frío.",
+    },
+    keywords: {
+      en: ["mexican comfort food calgary winter", "pan dulce craving calgary", "mexican bakery calgary winter", "latino community calgary", "warm bread delivery calgary"],
+      es: ["comida mexicana consuelo calgary invierno", "antojo de pan dulce calgary", "panadería mexicana calgary invierno", "comunidad latina calgary", "entrega de pan caliente calgary"],
+    },
+    body: [
+      { type: "p", en: "Nobody warns you about the specific kind of homesickness that shows up at −25°C. It's not big — it's small and oddly specific, like suddenly needing the smell of warm bread and cinnamon more than anything else in the world.", es: "Nadie te avisa sobre ese tipo de nostalgia tan específica que aparece a −25°C. No es grande — es pequeña y rarísimamente concreta, como necesitar de repente el olor a pan calientito y canela más que cualquier otra cosa en el mundo." },
+      { type: "h3", en: "Step 1: Accept that the craving is real", es: "Paso 1: acepta que el antojo es real" },
+      { type: "p", en: "It's not nostalgia being dramatic. Comfort food is doing exactly its job — reminding your body of somewhere warmer, literally and otherwise.", es: "No es la nostalgia siendo dramática. La comida de consuelo está haciendo exactamente su trabajo — recordarle a tu cuerpo un lugar más cálido, literal y de otras formas." },
+      { type: "h3", en: "Step 2: Don't wait for a special occasion", es: "Paso 2: no esperes una ocasión especial" },
+      { type: "p", en: "A random Tuesday with -30°C windchill is occasion enough for a concha and hot coffee. You don't need a holiday to justify it.", es: "Un martes cualquiera con sensación térmica de -30°C ya es ocasión suficiente para una concha y un café caliente. No necesitas una fecha especial para justificarlo." },
+      { type: "h3", en: "Step 3: Stock up before the cold snap", es: "Paso 3: abastécete antes de la ola de frío" },
+      { type: "p", en: "The days you least want to leave the house are exactly the days you'll want bread in the freezer. Ordering ahead — or turning on weekly delivery through the membership — solves this before it becomes a problem.", es: "Los días en que menos quieres salir de casa son justo los días en que vas a querer pan en el congelador. Pedir con anticipación —o activar la entrega semanal con la membresía— resuelve esto antes de que se vuelva problema." },
+      { type: "h3", en: "Step 4: Find your community", es: "Paso 4: encuentra tu comunidad" },
+      { type: "p", en: "Calgary's Mexican and Latino community is bigger than it feels on the coldest days. Karyana shows up at local markets and events throughout the year — sometimes the best remedy for homesickness is standing next to someone who gets it.", es: "La comunidad mexicana y latina de Calgary es más grande de lo que se siente en los días más fríos. Karyana aparece en mercados y eventos locales durante el año — a veces el mejor remedio para la nostalgia es estar junto a alguien que te entiende." },
+    ],
+    ctaHref: "/memberships",
+    ctaLabel: {
+      en: "Never run out mid-winter — see memberships at karyanabakery.ca/memberships",
+      es: "Que nunca se te acabe a media temporada — ve las membresías en karyanabakery.ca/memberships",
+    },
+  },
 ];
 
 export function getBlogPost(slug: string): BlogPost | undefined {
@@ -369,4 +570,5 @@ export const BLOG_KIND_LABEL: Record<BlogKind, { en: string; es: string }> = {
   producto: { en: "Product", es: "Producto" },
   cultural: { en: "Seasonal", es: "Temporada" },
   servicio: { en: "Service", es: "Servicio" },
+  curioso: { en: "Fun facts", es: "Curiosidades" },
 };

@@ -55,6 +55,15 @@ async function run() {
     process.exit(1);
   }
 
+  console.log("⚙️  Config loaded:");
+  console.log(`   BREVO_LIST_ID=${BREVO_LIST_ID}`);
+  console.log(`   BREVO_ES_LIST_ID=${BREVO_ES_LIST_ID ?? "(not set)"}`);
+  console.log(`   BREVO_EN_LIST_ID=${BREVO_EN_LIST_ID ?? "(not set)"}`);
+  console.log(`   BREVO_MEMBERS_LIST_ID=${BREVO_MEMBERS_LIST_ID ?? "(not set)"}`);
+  console.log(`   BREVO_PROGRAMS_PROMO_LIST_ID=${BREVO_PROGRAMS_PROMO_LIST_ID ?? "(not set)"}`);
+  console.log(`   BREVO_TOGGLE_ON_LIST_ID=${BREVO_TOGGLE_ON_LIST_ID ?? "(not set)"}`);
+  console.log(`   BREVO_TOGGLE_OFF_LIST_ID=${BREVO_TOGGLE_OFF_LIST_ID ?? "(not set)"}\n`);
+
   // ══════════════════════════════════════════════
   // 1. Sync registered users
   // ══════════════════════════════════════════════
@@ -160,7 +169,9 @@ async function run() {
     });
 
     if (res.ok) {
-      console.log(`  ✓ ${u.email} (${tier}, ${u._count.orders} orders)`);
+      console.log(
+        `  ✓ ${u.email} (${tier}, ${u._count.orders} orders, lang=${language}, lists=[${listIds.join(",")}])`
+      );
       usersSynced++;
     } else {
       console.log(`  ✗ ${u.email}: ${res.error}`);

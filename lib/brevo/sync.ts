@@ -11,6 +11,7 @@ import {
   addToList,
   removeFromList,
 } from "./client";
+import { guessLanguageFromName } from "../i18n/guess-language";
 
 // ─── List IDs from env ───────────────────────────────────
 
@@ -34,6 +35,15 @@ function optionalListId(envVar: string): number | null {
   return id ? parseInt(id, 10) : null;
 }
 
+// Splits contacts into the ES / EN newsletter list, on top of the
+// general BREVO_LIST_ID, so language-specific campaigns can target
+// either one. Unset either env var and that side becomes a no-op.
+function languageListId(language: string): number | null {
+  return optionalListId(
+    language === "es" ? "BREVO_ES_LIST_ID" : "BREVO_EN_LIST_ID"
+  );
+}
+
 // ─── Newsletter ──────────────────────────────────────────
 
 /**
@@ -41,6 +51,7 @@ function optionalListId(envVar: string): number | null {
  */
 export async function syncNewsletterSubscribe(email: string, language = "en") {
   try {
+    const langListId = languageListId(language);
     await upsertContact({
       email,
       attributes: {
@@ -48,7 +59,7 @@ export async function syncNewsletterSubscribe(email: string, language = "en") {
         SOURCE: "NEWSLETTER",
         NEWSLETTER: true,
       },
-      listIds: [getNewsletterListId()],
+      listIds: [getNewsletterListId(), ...(langListId ? [langListId] : [])],
       updateEnabled: true,
     });
     console.log(`[brevo] newsletter subscribed: ${email}`);
@@ -76,6 +87,7 @@ export async function syncUserRegistered({
     const lastName = rest.join(" ");
 
     const welcomeListId = optionalListId("BREVO_WELCOME_LIST_ID");
+    const langListId = languageListId(language);
 
     await upsertContact({
       email,
@@ -88,7 +100,11 @@ export async function syncUserRegistered({
         TOTAL_ORDERS: 0,
         REGISTERED: true,
       },
-      listIds: [getNewsletterListId(), ...(welcomeListId ? [welcomeListId] : [])],
+      listIds: [
+        getNewsletterListId(),
+        ...(welcomeListId ? [welcomeListId] : []),
+        ...(langListId ? [langListId] : []),
+      ],
       updateEnabled: true,
     });
     console.log(`[brevo] user registered: ${email} (lang=${language})`);
@@ -208,6 +224,8 @@ export async function syncGuestOrder({
 }) {
   try {
     const [firstName, ...rest] = (name ?? "").split(" ");
+    const resolvedLanguage = language || guessLanguageFromName(name);
+    const langListId = languageListId(resolvedLanguage);
 
     await upsertContact({
       email,
@@ -215,13 +233,13 @@ export async function syncGuestOrder({
         FIRSTNAME: firstName || "",
         LASTNAME: rest.join(" ") || "",
         ...(phone ? { SMS: phone } : {}),
-        ...(language ? { LANGUAGE: language } : {}),
+        LANGUAGE: resolvedLanguage,
         SOURCE: "GUEST_ORDER",
         TOTAL_ORDERS: 1,
         TOTAL_SPENT: Math.round(totalCents / 100),
         LAST_ORDER_DATE: new Date().toISOString().split("T")[0],
       },
-      listIds: [getNewsletterListId()],
+      listIds: [getNewsletterListId(), ...(langListId ? [langListId] : [])],
       updateEnabled: true,
     });
     console.log(`[brevo] guest order synced: ${email}`);

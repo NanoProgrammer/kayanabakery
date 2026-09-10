@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { BLOG_POSTS, BLOG_KIND_LABEL, getBlogPost } from "@/lib/blog/posts";
 import { getBlogCategoryImages, resolveBlogImage } from "@/lib/blog/images";
+import { getFeaturedProductsForPost } from "@/lib/blog/products";
+import { ProductCard } from "@/components/product/ProductCard";
 
 export const revalidate = 3600;
 
@@ -50,7 +52,10 @@ export default async function BlogPostPage({
 
   const cookieStore = await cookies();
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
-  const categoryImages = await getBlogCategoryImages();
+  const [categoryImages, featuredProducts] = await Promise.all([
+    getBlogCategoryImages(),
+    getFeaturedProductsForPost(post.categorySlug),
+  ]);
   const heroImage = resolveBlogImage(post.categorySlug, categoryImages);
 
   return (
@@ -128,6 +133,22 @@ export default async function BlogPostPage({
           </Link>
         </div>
       </div>
+
+      {featuredProducts.length > 0 && (
+        <div className="mx-auto mt-16 max-w-4xl border-t border-canela/15 pt-12">
+          <h2 className="font-display text-2xl text-ink md:text-3xl">
+            {locale === "es" ? "Productos destacados" : "Featured products"}
+          </h2>
+          <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-4">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
+          </div>
+          <Link href="/shop" className="btn-ghost mt-8 inline-flex">
+            {locale === "es" ? "Ver todo el menú →" : "See the full menu →"}
+          </Link>
+        </div>
+      )}
     </article>
   );
 }

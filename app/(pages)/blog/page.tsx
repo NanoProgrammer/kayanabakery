@@ -68,6 +68,17 @@ export default async function BlogPage() {
             </Link>
           ))}
         </div>
+
+        <div className="mt-14 flex flex-col items-center gap-4 rounded-3xl bg-masa/60 px-6 py-10 text-center">
+          <p className="font-display text-xl text-ink md:text-2xl">
+            {locale === "es"
+              ? "¿Ya se te antojó? El menú completo está a un clic."
+              : "Craving something already? The full menu is one click away."}
+          </p>
+          <Link href="/shop" className="btn-primary">
+            {locale === "es" ? "Ver todo el menú →" : "See the full menu →"}
+          </Link>
+        </div>
       </section>
     </>
   );

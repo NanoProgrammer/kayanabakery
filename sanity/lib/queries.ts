@@ -46,6 +46,16 @@ export const featuredProductsQuery = groq`
   }
 `;
 
+export const productsByCategorySlugQuery = groq`
+  *[_type == "product" && $slug in categories[]->slug.current] | order(displayOrder asc) [0...4] {
+    _id, name, nameEs, "slug": slug.current,
+    description, descriptionEs,
+    price, compareAtPrice, image, tag,
+    inStock, unit, leadTime, membersOnly, isOffSeason,
+    "categories": categories[]->{ "slug": slug.current, name, nameEs }
+  }
+`;
+
 export const allProductsQuery = groq`
   *[_type == "product"] | order(displayOrder asc) {
     _id, name, nameEs, "slug": slug.current,

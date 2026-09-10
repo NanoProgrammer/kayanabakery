@@ -45,19 +45,28 @@ export async function generateMetadata({
 
   const name = pickI18n(category, "name", locale);
   const description = pickI18n(category, "description", locale);
-  const imageUrl = category.image
-    ? urlFor(category.image).width(1200).height(630).url()
-    : undefined;
+  // Fall back to the first product's photo, then the site's default share
+  // image, so a category with no cover photo set still gets a real
+  // og:image instead of silently dropping the whole openGraph block.
+  const rawImage = category.image ?? category.products?.[0]?.image;
+  const imageUrl = rawImage
+    ? urlFor(rawImage).width(1200).height(630).url()
+    : "/og-default.jpg";
 
   return {
     title: name,
     description,
-    openGraph: imageUrl
-      ? { title: name, description, images: [{ url: imageUrl, width: 1200, height: 630 }] }
-      : undefined,
-    twitter: imageUrl
-      ? { card: "summary_large_image", title: name, description, images: [imageUrl] }
-      : undefined,
+    openGraph: {
+      title: name,
+      description,
+      images: [{ url: imageUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: name,
+      description,
+      images: [imageUrl],
+    },
   };
 }
 

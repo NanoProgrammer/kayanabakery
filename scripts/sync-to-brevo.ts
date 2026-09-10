@@ -17,6 +17,7 @@ loadEnv({ path: ".env.local", override: true });
 
 import { PrismaClient } from "@prisma/client";
 import { upsertContact, addToList } from "../lib/brevo/client";
+import { guessLanguageFromName } from "../lib/i18n/guess-language";
 
 const prisma = new PrismaClient();
 
@@ -110,7 +111,7 @@ async function run() {
       attributes: {
         FIRSTNAME: firstName || "",
         LASTNAME: lastName || "",
-        LANGUAGE: u.preferredLang || "en",
+        LANGUAGE: u.preferredLang || guessLanguageFromName(u.name),
         SOURCE: "MIGRATION",
         REGISTERED: true,
         MEMBERSHIP_TIER: tier,

@@ -55,7 +55,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Karyana Bakery",
     description: "More than bread, a home memory.",
-    url: "/",
+    // No og:url here on purpose: this is static metadata shared by both
+    // karyanabakery.ca and .com, and pinning it to one domain makes links
+    // shared from the other declare a different canonical host, which
+    // WhatsApp reads as "the content lives elsewhere" and drops the
+    // preview. Pages that need og:url build it from the request host.
     type: "website",
     locale: "en_CA",
     images: [{ url: "/og-default.jpg", width: 1200, height: 630 }],

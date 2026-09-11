@@ -1,7 +1,12 @@
 import { ProductCard } from "@/components/product/ProductCard";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import { categoryBySlugQuery } from "@/sanity/lib/queries";
-import { urlFor, ogImageProxyUrl } from "@/sanity/lib/image";
+import {
+  urlFor,
+  ogImageUrl,
+  OG_IMAGE_WIDTH,
+  OG_IMAGE_HEIGHT,
+} from "@/sanity/lib/image";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -48,10 +53,10 @@ export async function generateMetadata({
   // Fall back to the first product's photo, then the site's default share
   // image, so a category with no cover photo set still gets a real
   // og:image instead of silently dropping the whole openGraph block.
-  const rawImage = category.image ?? category.products?.[0]?.image;
-  const imageUrl = rawImage
-    ? ogImageProxyUrl(rawImage, { width: 1200, height: 630 })
-    : "/og-default.jpg";
+  const imageUrl =
+    ogImageUrl(category.image) ??
+    ogImageUrl(category.products?.[0]?.image) ??
+    "/og-default.jpg";
 
   return {
     title: name,
@@ -62,7 +67,7 @@ export async function generateMetadata({
       description,
       url: `/category/${slug}`,
       type: "website",
-      images: [{ url: imageUrl, width: 1200, height: 630 }],
+      images: [{ url: imageUrl, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT }],
     },
     twitter: {
       card: "summary_large_image",

@@ -6,7 +6,7 @@ import { BLOG_POSTS, BLOG_KIND_LABEL, getBlogPost } from "@/lib/blog/posts";
 import { getBlogImagePools, resolveBlogImage } from "@/lib/blog/images";
 import { getFeaturedProductsForPost } from "@/lib/blog/products";
 import { ProductCard } from "@/components/product/ProductCard";
-import { toOgImageUrl } from "@/sanity/lib/image";
+import { OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from "@/sanity/lib/image";
 
 export const revalidate = 3600;
 
@@ -27,9 +27,7 @@ export async function generateMetadata({
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
   const postIndex = BLOG_POSTS.findIndex((p) => p.slug === slug);
   const imagePools = await getBlogImagePools();
-  const imageUrl = toOgImageUrl(
-    resolveBlogImage(post.categorySlug, imagePools, postIndex)
-  );
+  const imageUrl = resolveBlogImage(post.categorySlug, imagePools, postIndex);
 
   return {
     title: post.title[locale],
@@ -40,7 +38,7 @@ export async function generateMetadata({
       description: post.metaDescription[locale],
       url: `/blog/${slug}`,
       type: "article",
-      images: [{ url: imageUrl, width: 1200, height: 900 }],
+      images: [{ url: imageUrl, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT }],
     },
     twitter: {
       card: "summary_large_image",

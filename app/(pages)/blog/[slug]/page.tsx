@@ -8,6 +8,7 @@ import { getFeaturedProductsForPost } from "@/lib/blog/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from "@/sanity/lib/image";
 import { getRequestOrigin } from "@/lib/seo/origin";
+import { cleanMetaText } from "@/lib/seo/meta";
 
 export const revalidate = 3600;
 
@@ -33,21 +34,24 @@ export async function generateMetadata({
   const resolved = resolveBlogImage(post.categorySlug, imagePools, postIndex);
   const imageUrl = resolved.startsWith("/") ? `${origin}${resolved}` : resolved;
 
+  const title = cleanMetaText(post.title[locale], 100) ?? "Karyana Bakery";
+  const description = cleanMetaText(post.metaDescription[locale]);
+
   return {
-    title: post.title[locale],
-    description: post.metaDescription[locale],
+    title,
+    description,
     alternates: { canonical: pageUrl },
     openGraph: {
-      title: post.title[locale],
-      description: post.metaDescription[locale],
+      title,
+      description,
       url: pageUrl,
       type: "article",
       images: [{ url: imageUrl, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT }],
     },
     twitter: {
       card: "summary_large_image",
-      title: post.title[locale],
-      description: post.metaDescription[locale],
+      title,
+      description,
       images: [imageUrl],
     },
   };

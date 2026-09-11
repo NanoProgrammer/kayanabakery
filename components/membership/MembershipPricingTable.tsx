@@ -158,6 +158,14 @@ export function MembershipPricingTable({
                     ? locale === "es"
                       ? "1 pan nuevo en 1ra orden"
                       : "1 new bread on first order"
+                    : tier === "SELECTO"
+                    ? locale === "es"
+                      ? "Agrega 2 panes nuevos al mes GRATIS"
+                      : "Add 2 new breads per month FREE"
+                    : tier === "LEGENDARIO"
+                    ? locale === "es"
+                      ? "Agrega 4 panes al mes GRATIS"
+                      : "Add 4 breads per month FREE"
                     : locale === "es"
                     ? `${data.freeNewBreadPerMonth} pan nuevo/mes`
                     : `${data.freeNewBreadPerMonth} new bread/mo`

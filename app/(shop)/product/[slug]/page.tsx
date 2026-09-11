@@ -15,7 +15,7 @@ export default async function ProductPage({
   const { slug } = await params;
   const product = await sanityFetch<Product | null>({
     query: productBySlugQuery,
-    params: { slug },
+    params: { slug: slug.toLowerCase() },
     tags: ["product"],
   });
   if (!product) notFound();
@@ -30,8 +30,9 @@ export async function generateMetadata({
   const { slug } = await params;
   const p = await sanityFetch<Product | null>({
     query: productBySlugQuery,
-    params: { slug },
-  });
+    params: { slug: slug.toLowerCase() },
+    tags: ["product"],
+  }).catch(() => null);
   if (!p) return { title: "Product not found" };
 
   // Fall back to the gallery, then the site's default share image, so a

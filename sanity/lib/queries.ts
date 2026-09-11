@@ -20,7 +20,7 @@ export const allCategoriesQuery = groq`
 `;
 
 export const categoryBySlugQuery = groq`
-  *[_type == "category" && slug.current == $slug][0] {
+  *[_type == "category" && lower(slug.current) == lower($slug)][0] {
     _id, name, nameEs, "slug": slug.current,
     tagline, taglineEs,
     description, descriptionEs,
@@ -67,7 +67,7 @@ export const allProductsQuery = groq`
 `;
 
 export const productBySlugQuery = groq`
-  *[_type == "product" && slug.current == $slug][0] {
+  *[_type == "product" && lower(slug.current) == lower($slug)][0] {
     _id, name, nameEs, "slug": slug.current,
     description, descriptionEs,
     longDescription, longDescriptionEs,

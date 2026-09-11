@@ -19,8 +19,10 @@ export const allCategoriesQuery = groq`
   }
 `;
 
+// $slug must be lowercased by the caller — slugs are stored lowercase, and
+// doing it here with GROQ's lower() broke every product/category page.
 export const categoryBySlugQuery = groq`
-  *[_type == "category" && lower(slug.current) == lower($slug)][0] {
+  *[_type == "category" && slug.current == $slug][0] {
     _id, name, nameEs, "slug": slug.current,
     tagline, taglineEs,
     description, descriptionEs,
@@ -66,8 +68,9 @@ export const allProductsQuery = groq`
   }
 `;
 
+// $slug must be lowercased by the caller — see categoryBySlugQuery above.
 export const productBySlugQuery = groq`
-  *[_type == "product" && lower(slug.current) == lower($slug)][0] {
+  *[_type == "product" && slug.current == $slug][0] {
     _id, name, nameEs, "slug": slug.current,
     description, descriptionEs,
     longDescription, longDescriptionEs,

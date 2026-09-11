@@ -42,9 +42,9 @@ export async function generateMetadata({
 
   const category = await sanityFetch<CategoryWithProducts | null>({
     query: categoryBySlugQuery,
-    params: { slug },
+    params: { slug: slug.toLowerCase() },
     tags: ["category", "product"],
-  });
+  }).catch(() => null);
 
   if (!category) return { title: "Category not found" };
 
@@ -90,7 +90,7 @@ export default async function CategoryPage({
 
   const category = await sanityFetch<CategoryWithProducts | null>({
     query: categoryBySlugQuery,
-    params: { slug },
+    params: { slug: slug.toLowerCase() },
     tags: ["category", "product"],
   });
 

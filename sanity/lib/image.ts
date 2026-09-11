@@ -8,34 +8,39 @@ export function urlFor(source: SanityImageSource) {
   return builder.image(source).auto("format").quality(80);
 }
 
-/**
- * For og:image/twitter:image URLs specifically. Link-preview crawlers
- * (WhatsApp in particular) negotiate content formats differently than
- * browsers and can silently fail to render AVIF/WebP — which `auto("format")`
- * may serve them — showing no image at all even though the tag is present
- * and correct. Forcing a plain JPEG here sidesteps that entirely.
- */
-export function ogImageUrlFor(source: SanityImageSource) {
-  return builder.image(source).format("jpg").quality(85);
-}
+/** Standard Open Graph banner size. */
+export const OG_IMAGE_WIDTH = 1200;
+export const OG_IMAGE_HEIGHT = 630;
 
 /**
- * Same-domain URL for an og:image/twitter:image — proxies the forced-JPEG
- * Sanity URL through /api/og-image so the crawler's request never touches
- * cdn.sanity.io directly. Relative, resolved against metadataBase.
+ * Absolute og:image/twitter:image URL for a Sanity image, or null when the
+ * source can't produce one (missing/broken asset reference).
+ *
+ * Three things matter here, all of them learned the hard way:
+ *  - Size. WhatsApp silently drops preview images over roughly 300KB, while
+ *    Facebook happily renders multi-megabyte ones — which is why the same
+ *    tags previewed fine in Facebook's debugger and showed no image at all
+ *    in WhatsApp. 1200x630 at quality 70 lands well under that.
+ *  - Format. auto("format") serves WebP/AVIF based on the requester's
+ *    Accept header; crawlers handle those inconsistently, so force JPEG.
+ *  - Never throwing. builder.image() throws on a malformed source, and an
+ *    exception here takes down the page's entire metadata (no title, no
+ *    description, no image), so callers get null instead.
  */
-export function proxySanityUrl(sanityUrl: string): string {
-  return `/api/og-image?src=${encodeURIComponent(sanityUrl)}`;
-}
-
-export function ogImageProxyUrl(
-  source: SanityImageSource,
-  { width, height }: { width: number; height: number }
-): string {
-  return proxySanityUrl(ogImageUrlFor(source).width(width).height(height).url());
-}
-
-/** Proxies a Sanity CDN URL for social crawlers; passes local paths through untouched. */
-export function toOgImageUrl(url: string): string {
-  return url.startsWith("https://cdn.sanity.io/") ? proxySanityUrl(url) : url;
+export function ogImageUrl(
+  source: SanityImageSource | undefined | null
+): string | null {
+  if (!source) return null;
+  try {
+    return builder
+      .image(source)
+      .width(OG_IMAGE_WIDTH)
+      .height(OG_IMAGE_HEIGHT)
+      .fit("crop")
+      .format("jpg")
+      .quality(70)
+      .url();
+  } catch {
+    return null;
+  }
 }

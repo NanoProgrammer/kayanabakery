@@ -1,6 +1,6 @@
 import { sanityFetch } from "@/sanity/lib/fetch";
 import { allProductsQuery } from "@/sanity/lib/queries";
-import { ogImageUrlFor } from "@/sanity/lib/image";
+import { ogImageUrl } from "@/sanity/lib/image";
 import type { Product } from "@/types";
 
 const FALLBACK_IMAGE = "/og-default.jpg";
@@ -27,8 +27,8 @@ export async function getBlogImagePools(): Promise<BlogImagePools> {
   const fallbackPool: string[] = [];
 
   for (const p of products ?? []) {
-    if (!p.image) continue;
-    const url = ogImageUrlFor(p.image).width(900).height(675).url();
+    const url = ogImageUrl(p.image);
+    if (!url) continue;
     fallbackPool.push(url);
     for (const cat of p.categories ?? []) {
       if (cat?.slug && !byCategory[cat.slug]) {

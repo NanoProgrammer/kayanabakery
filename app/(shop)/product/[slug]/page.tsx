@@ -45,9 +45,12 @@ export async function generateMetadata({
   return {
     title: p.name,
     description: p.description,
+    alternates: { canonical: `/product/${slug}` },
     openGraph: {
       title: p.name,
       description: p.description,
+      url: `/product/${slug}`,
+      type: "website",
       images: [{ url: imageUrl, width: 1200, height: 1200 }],
     },
     twitter: {

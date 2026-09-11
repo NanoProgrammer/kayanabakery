@@ -55,6 +55,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Karyana Bakery",
     description: "More than bread, a home memory.",
+    url: "/",
     type: "website",
     locale: "en_CA",
     images: [{ url: "/og-default.jpg", width: 1200, height: 630 }],

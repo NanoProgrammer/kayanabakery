@@ -24,19 +24,26 @@ export async function generateMetadata({
 
   const cookieStore = await cookies();
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
+  const postIndex = BLOG_POSTS.findIndex((p) => p.slug === slug);
+  const imagePools = await getBlogImagePools();
+  const imageUrl = resolveBlogImage(post.categorySlug, imagePools, postIndex);
 
   return {
     title: post.title[locale],
     description: post.metaDescription[locale],
+    alternates: { canonical: `/blog/${slug}` },
     openGraph: {
       title: post.title[locale],
       description: post.metaDescription[locale],
+      url: `/blog/${slug}`,
       type: "article",
+      images: [{ url: imageUrl, width: 1200, height: 900 }],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title[locale],
       description: post.metaDescription[locale],
+      images: [imageUrl],
     },
   };
 }

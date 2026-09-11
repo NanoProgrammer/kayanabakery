@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import { productBySlugQuery } from "@/sanity/lib/queries";
 import { ProductDetail } from "@/components/product/ProductDetail";
-import { urlFor } from "@/sanity/lib/image";
+import { ogImageUrlFor } from "@/sanity/lib/image";
 import type { Product } from "@/types";
 
 export const revalidate = 60;
@@ -39,7 +39,7 @@ export async function generateMetadata({
   // instead of silently dropping the whole openGraph/twitter block.
   const rawImage = p.image ?? p.gallery?.[0];
   const imageUrl = rawImage
-    ? urlFor(rawImage).width(1200).height(1200).url()
+    ? ogImageUrlFor(rawImage).width(1200).height(1200).url()
     : "/og-default.jpg";
 
   return {

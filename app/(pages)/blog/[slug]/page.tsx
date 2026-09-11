@@ -7,6 +7,7 @@ import { getBlogImagePools, resolveBlogImage } from "@/lib/blog/images";
 import { getFeaturedProductsForPost } from "@/lib/blog/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from "@/sanity/lib/image";
+import { getRequestOrigin } from "@/lib/seo/origin";
 
 export const revalidate = 3600;
 
@@ -27,16 +28,19 @@ export async function generateMetadata({
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
   const postIndex = BLOG_POSTS.findIndex((p) => p.slug === slug);
   const imagePools = await getBlogImagePools();
-  const imageUrl = resolveBlogImage(post.categorySlug, imagePools, postIndex);
+  const origin = await getRequestOrigin();
+  const pageUrl = `${origin}/blog/${slug}`;
+  const resolved = resolveBlogImage(post.categorySlug, imagePools, postIndex);
+  const imageUrl = resolved.startsWith("/") ? `${origin}${resolved}` : resolved;
 
   return {
     title: post.title[locale],
     description: post.metaDescription[locale],
-    alternates: { canonical: `/blog/${slug}` },
+    alternates: { canonical: pageUrl },
     openGraph: {
       title: post.title[locale],
       description: post.metaDescription[locale],
-      url: `/blog/${slug}`,
+      url: pageUrl,
       type: "article",
       images: [{ url: imageUrl, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT }],
     },

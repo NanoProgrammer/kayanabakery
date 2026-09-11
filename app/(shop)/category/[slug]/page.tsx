@@ -7,6 +7,7 @@ import {
   OG_IMAGE_WIDTH,
   OG_IMAGE_HEIGHT,
 } from "@/sanity/lib/image";
+import { getRequestOrigin } from "@/lib/seo/origin";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -53,19 +54,21 @@ export async function generateMetadata({
   // Fall back to the first product's photo, then the site's default share
   // image, so a category with no cover photo set still gets a real
   // og:image instead of silently dropping the whole openGraph block.
+  const origin = await getRequestOrigin();
+  const pageUrl = `${origin}/category/${slug}`;
   const imageUrl =
     ogImageUrl(category.image) ??
     ogImageUrl(category.products?.[0]?.image) ??
-    "/og-default.jpg";
+    `${origin}/og-default.jpg`;
 
   return {
     title: name,
     description,
-    alternates: { canonical: `/category/${slug}` },
+    alternates: { canonical: pageUrl },
     openGraph: {
       title: name,
       description,
-      url: `/category/${slug}`,
+      url: pageUrl,
       type: "website",
       images: [{ url: imageUrl, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT }],
     },

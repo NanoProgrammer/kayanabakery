@@ -14,13 +14,25 @@ import { config as loadEnv } from "dotenv";
 loadEnv();
 loadEnv({ path: ".env.local", override: true });
 
-// Same client the live site uses (perspective: "published"), so this
-// script only sees what visitors actually see — not unpublished drafts
-// that could have an image the live product page doesn't.
-import { serverClient } from "../sanity/lib/client";
+import { createClient } from "@sanity/client";
+
+// Mirrors sanity/lib/client.ts's serverClient config (perspective:
+// "published") so this only sees what visitors actually see — not
+// unpublished drafts that could have an image the live product page
+// doesn't. Built inline (not imported from sanity/lib/client.ts)
+// because that module constructs its client at import time, before
+// this script's dotenv loading runs.
+const client = createClient({
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
+  apiVersion: process.env.NEXT_PUBLIC_SANITY_API_VERSION || "2024-10-01",
+  token: process.env.SANITY_API_READ_TOKEN,
+  useCdn: false,
+  perspective: "published",
+});
 
 async function run() {
-  const products = await serverClient.fetch<
+  const products = await client.fetch<
     { _id: string; name: string; slug: string; hasImage: boolean; galleryCount: number }[]
   >(`
     *[_type == "product"] | order(name asc) {

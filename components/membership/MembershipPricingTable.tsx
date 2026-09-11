@@ -69,17 +69,27 @@ export function MembershipPricingTable({
             {
               ok: data.includedBreadWithPayment,
               label:
-                locale === "es"
+                tier === "SELECTO" || tier === "LEGENDARIO"
+                  ? locale === "es"
+                    ? "Pan incluido con pago mensual"
+                    : "Bread included with monthly payment"
+                  : locale === "es"
                   ? "Pan gratis con pago mensual"
                   : "Free bread with payment",
             },
-            {
-              ok: data.firstBoxWith6FreePieces,
-              label:
-                locale === "es"
-                  ? "1ra caja con 6 panes gratis"
-                  : "First box: 6 pieces free",
-            },
+            ...(
+              tier === "SELECTO" || tier === "LEGENDARIO"
+                ? []
+                : [
+                    {
+                      ok: data.firstBoxWith6FreePieces,
+                      label:
+                        locale === "es"
+                          ? "1ra caja con 6 panes gratis"
+                          : "First box: 6 pieces free",
+                    },
+                  ]
+            ),
             {
               ok: data.weeklyOrderSkip,
               label:

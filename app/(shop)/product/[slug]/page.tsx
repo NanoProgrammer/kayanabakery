@@ -4,6 +4,7 @@ import { productBySlugQuery } from "@/sanity/lib/queries";
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { ogImageUrl, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from "@/sanity/lib/image";
 import { getRequestOrigin } from "@/lib/seo/origin";
+import { cleanMetaText } from "@/lib/seo/meta";
 import type { Product } from "@/types";
 
 export const revalidate = 60;
@@ -47,21 +48,24 @@ export async function generateMetadata({
     ogImageUrl(p.gallery?.[0]) ??
     `${origin}/og-default.jpg`;
 
+  const title = cleanMetaText(p.name, 100) ?? "Karyana Bakery";
+  const description = cleanMetaText(p.description);
+
   return {
-    title: p.name,
-    description: p.description,
+    title,
+    description,
     alternates: { canonical: pageUrl },
     openGraph: {
-      title: p.name,
-      description: p.description,
+      title,
+      description,
       url: pageUrl,
       type: "website",
       images: [{ url: imageUrl, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT }],
     },
     twitter: {
       card: "summary_large_image",
-      title: p.name,
-      description: p.description,
+      title,
+      description,
       images: [imageUrl],
     },
   };

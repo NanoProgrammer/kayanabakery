@@ -8,6 +8,7 @@ import {
   OG_IMAGE_HEIGHT,
 } from "@/sanity/lib/image";
 import { getRequestOrigin } from "@/lib/seo/origin";
+import { cleanMetaText } from "@/lib/seo/meta";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,8 +50,8 @@ export async function generateMetadata({
 
   if (!category) return { title: "Category not found" };
 
-  const name = pickI18n(category, "name", locale);
-  const description = pickI18n(category, "description", locale);
+  const name = cleanMetaText(pickI18n(category, "name", locale), 100) ?? "Karyana Bakery";
+  const description = cleanMetaText(pickI18n(category, "description", locale));
   // Fall back to the first product's photo, then the site's default share
   // image, so a category with no cover photo set still gets a real
   // og:image instead of silently dropping the whole openGraph block.

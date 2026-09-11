@@ -1,7 +1,7 @@
 import { ProductCard } from "@/components/product/ProductCard";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import { categoryBySlugQuery } from "@/sanity/lib/queries";
-import { urlFor, ogImageUrlFor } from "@/sanity/lib/image";
+import { urlFor, ogImageProxyUrl } from "@/sanity/lib/image";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -50,7 +50,7 @@ export async function generateMetadata({
   // og:image instead of silently dropping the whole openGraph block.
   const rawImage = category.image ?? category.products?.[0]?.image;
   const imageUrl = rawImage
-    ? ogImageUrlFor(rawImage).width(1200).height(630).url()
+    ? ogImageProxyUrl(rawImage, { width: 1200, height: 630 })
     : "/og-default.jpg";
 
   return {

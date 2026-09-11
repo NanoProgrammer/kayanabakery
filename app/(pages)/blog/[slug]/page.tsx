@@ -6,6 +6,7 @@ import { BLOG_POSTS, BLOG_KIND_LABEL, getBlogPost } from "@/lib/blog/posts";
 import { getBlogImagePools, resolveBlogImage } from "@/lib/blog/images";
 import { getFeaturedProductsForPost } from "@/lib/blog/products";
 import { ProductCard } from "@/components/product/ProductCard";
+import { toOgImageUrl } from "@/sanity/lib/image";
 
 export const revalidate = 3600;
 
@@ -26,7 +27,9 @@ export async function generateMetadata({
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
   const postIndex = BLOG_POSTS.findIndex((p) => p.slug === slug);
   const imagePools = await getBlogImagePools();
-  const imageUrl = resolveBlogImage(post.categorySlug, imagePools, postIndex);
+  const imageUrl = toOgImageUrl(
+    resolveBlogImage(post.categorySlug, imagePools, postIndex)
+  );
 
   return {
     title: post.title[locale],

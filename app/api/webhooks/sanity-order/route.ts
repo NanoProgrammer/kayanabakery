@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { createHmac } from "crypto";
-import { render } from "@react-email/render";
 import { resend, FROM_EMAIL } from "@/lib/email/resend";
-import OrderCompleted from "@/emails/OrderCompleted";
+import { sendOrderCompletedEmail } from "@/lib/email/order-completed";
 import { sendCustomerMessage } from "@/lib/notifications/send";
 import {
   orderStatusMessage,
@@ -77,24 +76,16 @@ async function notifyCustomer(
     );
   }
 
-  if (status === "COMPLETED" && order.customerEmail) {
-    try {
-      const html = await render(
-        OrderCompleted({
-          appUrl: APP_URL,
-          orderNumber: order.orderNumber,
-          customerName: order.customerName,
-        })
-      );
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: order.customerEmail,
-        subject: `Tu pedido ${order.orderNumber} fue entregado — Karyana Bakery`,
-        html,
-      });
-    } catch (err) {
-      console.error("[sanity-order webhook] completion email failed", err);
-    }
+  if (status === "COMPLETED") {
+    await sendOrderCompletedEmail({
+      email: order.customerEmail,
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      locale: resolveCustomerLocale({
+        preferredLang: order.preferredLang,
+        name: order.customerName,
+      }),
+    });
   }
 }
 

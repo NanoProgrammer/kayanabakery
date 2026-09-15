@@ -8,6 +8,7 @@ import {
   type NotifiableStatus,
 } from "@/lib/notifications/order-messages";
 import { nextStatus, type AutomatableOrder } from "@/lib/orders/auto-status";
+import { sendOrderCompletedEmail } from "@/lib/email/order-completed";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -27,21 +28,29 @@ type OrderForAutomation = AutomatableOrder & {
   orderNumber: string;
   guestName: string | null;
   guestPhone: string | null;
+  guestEmail: string | null;
   readyMsgSid: string | null;
   completedMsgSid: string | null;
-  user: { phone: string | null; preferredLang: string; name: string | null } | null;
+  user: {
+    phone: string | null;
+    email: string | null;
+    preferredLang: string;
+    name: string | null;
+  } | null;
 };
+
+function customerLocale(order: OrderForAutomation) {
+  return resolveCustomerLocale({
+    preferredLang: order.user?.preferredLang,
+    name: order.user?.name ?? order.guestName,
+  });
+}
 
 async function notify(order: OrderForAutomation, status: NotifiableStatus) {
   const phone = order.user?.phone ?? order.guestPhone;
   if (!phone) return "none";
 
-  const locale = resolveCustomerLocale({
-    preferredLang: order.user?.preferredLang,
-    name: order.user?.name ?? order.guestName,
-  });
-
-  const body = orderStatusMessage(status, locale, {
+  const body = orderStatusMessage(status, customerLocale(order), {
     orderNumber: order.orderNumber,
     isPickup: order.fulfillmentType !== "DELIVERY",
   });
@@ -97,10 +106,13 @@ export async function GET(req: Request) {
       pickupTime: true,
       guestName: true,
       guestPhone: true,
+      guestEmail: true,
       readyMsgSid: true,
       completedMsgSid: true,
       deliverySlot: { select: { startTime: true } },
-      user: { select: { phone: true, preferredLang: true, name: true } },
+      user: {
+        select: { phone: true, email: true, preferredLang: true, name: true },
+      },
     },
   })) as OrderForAutomation[];
 
@@ -144,6 +156,18 @@ export async function GET(req: Request) {
       notified = await notify(order, "COMPLETED");
     } else if (target === "READY" || target === "COMPLETED") {
       notified = "pre-scheduled";
+    }
+
+    // The completion email used to fire only when a staff member marked the
+    // order done in Studio, so orders closed out automatically at 11 PM never
+    // got one. Twilio only ever holds the text, never the email.
+    if (target === "COMPLETED") {
+      await sendOrderCompletedEmail({
+        email: order.user?.email ?? order.guestEmail,
+        orderNumber: order.orderNumber,
+        customerName: order.user?.name ?? order.guestName ?? "there",
+        locale: customerLocale(order),
+      });
     }
 
     changed.push({

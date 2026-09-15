@@ -12,6 +12,11 @@ import { sendSms } from "@/lib/sms/twilio";
  *
  * The original recipient and message ride along in the callback URL, so no
  * pending-message table is needed.
+ *
+ * Dormant while notifications are SMS-only (see lib/notifications/send.ts):
+ * nothing points Twilio at this route until TWILIO_WHATSAPP_FROM is set, and
+ * without TWILIO_STATUS_CALLBACK_SECRET it rejects everything anyway. Kept
+ * wired up so turning WhatsApp on later is a matter of env vars, not code.
  */
 
 // Delivery failed for good — retrying WhatsApp won't help, send an SMS.

@@ -1,5 +1,4 @@
 {
-  "$comment": "Order status automation is NOT here on purpose: it needs to run every 15 minutes, and Vercel's Hobby plan rejects any cron more frequent than daily (it fails the whole deployment). It runs from .github/workflows/order-status-cron.yml instead. On a Pro plan you can move it back here as { \"path\": \"/api/cron/order-status\", \"schedule\": \"*/15 * * * *\" } and disable that workflow.",
   "crons": [
     {
       "path": "/api/cron/renew-memberships",

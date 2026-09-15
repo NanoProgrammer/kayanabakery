@@ -13,6 +13,14 @@ export type SendChannel = "whatsapp" | "sms" | "none";
  *    returns 201 and only reports it later, so the message carries a
  *    StatusCallback and app/api/webhooks/twilio-status sends the SMS when the
  *    delivery report comes back failed.
+ *
+ * STATUS (Sept 2026): WhatsApp is OFF. The bakery doesn't have a WhatsApp
+ * sender approved through Twilio yet, so TWILIO_WHATSAPP_FROM is unset and
+ * every notification below goes out as plain SMS — which works fine and needs
+ * nothing else configured. The WhatsApp path is left in place rather than
+ * deleted: the day the sender is approved, setting TWILIO_WHATSAPP_FROM (and
+ * TWILIO_STATUS_CALLBACK_SECRET, so a WhatsApp that fails late still becomes
+ * an SMS) turns it on with no code change.
  */
 export async function sendCustomerMessage(
   phone: string | null | undefined,

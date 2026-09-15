@@ -9,15 +9,26 @@ import type { Product } from "@/types";
 
 export const revalidate = 60;
 
+/**
+ * Catch-all rather than [slug]: some products are stored in Sanity with a
+ * slash inside their slug (e.g. "pan-de-muerto/traditional"), which splits
+ * into two URL segments. A single [slug] segment can't match those, so every
+ * such product 404'd — and a 404 page carries no title, description or
+ * image, which is what made their link previews come back empty.
+ */
+function joinSlug(segments: string[]): string {
+  return segments.map(decodeURIComponent).join("/").toLowerCase();
+}
+
 export default async function ProductPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string[] }>;
 }) {
   const { slug } = await params;
   const product = await sanityFetch<Product | null>({
     query: productBySlugQuery,
-    params: { slug: slug.toLowerCase() },
+    params: { slug: joinSlug(slug) },
     tags: ["product"],
   });
   if (!product) notFound();
@@ -27,18 +38,18 @@ export default async function ProductPage({
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string[] }>;
 }) {
   const { slug } = await params;
   const p = await sanityFetch<Product | null>({
     query: productBySlugQuery,
-    params: { slug: slug.toLowerCase() },
+    params: { slug: joinSlug(slug) },
     tags: ["product"],
   }).catch(() => null);
   if (!p) return { title: "Product not found" };
 
   const origin = await getRequestOrigin();
-  const pageUrl = `${origin}/product/${slug}`;
+  const pageUrl = `${origin}/product/${slug.join("/")}`;
 
   // Fall back to the gallery, then the site's default share image, so a
   // product with a missing/broken main photo still gets a real og:image

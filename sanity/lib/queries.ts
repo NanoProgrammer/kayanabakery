@@ -188,3 +188,18 @@ export const membershipPlansQuery = groq`
     image, isFeatured
   }
 `;
+
+// ── SITEMAP ──
+// Slug + last-modified only. _updatedAt gives search engines a real
+// <lastmod> per URL instead of "now" on every entry, which they ignore.
+export const sitemapProductsQuery = groq`
+  *[_type == "product" && defined(slug.current)] | order(_updatedAt desc) {
+    "slug": slug.current, _updatedAt
+  }
+`;
+
+export const sitemapCategoriesQuery = groq`
+  *[_type == "category" && defined(slug.current)] | order(_updatedAt desc) {
+    "slug": slug.current, _updatedAt
+  }
+`;

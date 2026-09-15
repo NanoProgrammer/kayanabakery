@@ -15,6 +15,7 @@ import { randomUUID } from "crypto";
 import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calendar";
 import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
 import { getServerLocale } from "@/lib/i18n/server";
+import { scheduleOrderNotifications } from "@/lib/notifications/schedule-order-messages";
 
 async function reserveDeliverySlot({
   slotStartTime,
@@ -687,6 +688,39 @@ paymentId = result.payment?.id ?? undefined;
     await sendOrderEmails(order.id).catch((err) =>
       console.warn("[checkout] email send failed", err)
     );
+
+    // ============================================================
+    // 14. Hand the "ready" / "completed" texts to Twilio to deliver
+    //     at their own times. Whatever can't be scheduled here (no
+    //     phone, no schedule, too soon, too far out) comes back null
+    //     and the status cron sends that one itself instead.
+    // ============================================================
+    try {
+      const sids = await scheduleOrderNotifications({
+        orderNumber,
+        phone: (user as any)?.phone ?? data.guestPhone ?? null,
+        customerName: user?.name ?? data.guestName ?? null,
+        preferredLang: (user as any)?.preferredLang ?? null,
+        status: order.status,
+        fulfillmentType: data.fulfillmentType,
+        createdAt: order.createdAt,
+        pickupDate: order.pickupDate,
+        pickupTime: order.pickupTime,
+        deliverySlot: deliverySlot ? { startTime: deliverySlot.startTime } : null,
+      });
+
+      if (sids.readyMsgSid || sids.completedMsgSid) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            readyMsgSid: sids.readyMsgSid,
+            completedMsgSid: sids.completedMsgSid,
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("[checkout] scheduling order notifications failed", err);
+    }
   });
 
   return NextResponse.json({

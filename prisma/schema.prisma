@@ -186,6 +186,12 @@ model Order {
   completedAt        DateTime?
   cancelledAt        DateTime?
 
+  // Twilio message SIDs for the "ready" / "completed" notifications, which are
+  // scheduled with Twilio at checkout instead of being polled for. Stored so
+  // they can be cancelled if the order is.
+  readyMsgSid     String?
+  completedMsgSid String?
+
   // Coupon redemption (1-to-1)
   couponRedemption CouponRedemption?
 
@@ -515,4 +521,19 @@ model NewsletterSubscriber {
   active    Boolean  @default(true)
   source    String?
   createdAt DateTime @default(now())
+}
+
+// ==================== "LAS PENAS CON PAN SON MENOS" ====================
+
+/// One row per nomination sent through the community program, used only to
+/// show the public counter on /refer-a-friend.
+///
+/// Deliberately stores nothing but the timestamp: nominations describe real
+/// people going through hard times, and that story belongs in the owner's
+/// inbox, not in the database behind a public count.
+model Nomination {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

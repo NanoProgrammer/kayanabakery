@@ -63,6 +63,19 @@ async function run() {
     }
   }
 
+  const slashSlugs = products.filter((p) => p.slug?.includes("/"));
+  if (slashSlugs.length) {
+    console.log(
+      `\n⚠️  ${slashSlugs.length} product(s) with a "/" inside the slug — these used to 404 (a slash splits the URL into two segments):\n`
+    );
+    for (const p of slashSlugs) {
+      console.log(`  - ${p.name}  →  slug: "${p.slug}"`);
+    }
+    console.log(
+      `  The site now handles these, but cleaner slugs (pan-de-muerto-traditional) are worth fixing in Studio.`
+    );
+  }
+
   console.log(`\n👉 Fix these in Sanity Studio (karyanabakery.ca/studio) — open each product and upload a photo under "Main image".\n`);
 }
 

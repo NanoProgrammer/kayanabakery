@@ -1,0 +1,40 @@
+name: Order status automation
+
+# Advances order statuses and sends the customer notifications.
+#
+# This lives here instead of vercel.json because Vercel's Hobby plan allows
+# only one cron run per day (and two crons total, both already in use), while
+# these rules need a check every 15 minutes. GitHub's scheduler can run a few
+# minutes late under load, which is fine: the endpoint derives each order's
+# status from its own timestamps rather than from when it last ran, so a late
+# or skipped run still lands on the correct status.
+#
+# Requires two repository secrets:
+#   CRON_SECRET  — same value as the CRON_SECRET env var on Vercel
+#   SITE_URL     — https://www.karyanabakery.ca
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: # lets you trigger a run by hand from the Actions tab
+
+jobs:
+  advance-orders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run order status automation
+        run: |
+          response=$(curl -sS -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/cron/order-status")
+
+          body=$(echo "$response" | sed '$d')
+          code=$(echo "$response" | tail -n1)
+
+          echo "HTTP $code"
+          echo "$body"
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Order status cron failed with HTTP $code"
+            exit 1
+          fi

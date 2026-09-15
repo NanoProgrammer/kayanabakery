@@ -2,18 +2,26 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { createHmac } from "crypto";
-import { render } from "@react-email/render";
 import { resend, FROM_EMAIL } from "@/lib/email/resend";
-import OrderCompleted from "@/emails/OrderCompleted";
-import { sendSms } from "@/lib/sms/twilio";
+import { sendOrderCompletedEmail } from "@/lib/email/order-completed";
+import { sendCustomerMessage } from "@/lib/notifications/send";
+import {
+  orderStatusMessage,
+  resolveCustomerLocale,
+} from "@/lib/notifications/order-messages";
+import { cancelOrderNotifications } from "@/lib/notifications/schedule-order-messages";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 
+// CANCELLED is accepted so a cancellation in Studio reaches Prisma and, more
+// importantly, calls off the notifications Twilio is already holding — without
+// it a cancelled order would still text the customer "your order is ready".
 const VALID_STATUSES = [
   "IN_PROGRESS",
   "READY",
   "OUT_FOR_DELIVERY",
   "COMPLETED",
+  "CANCELLED",
 ] as const;
 
 type ValidStatus = (typeof VALID_STATUSES)[number];
@@ -36,37 +44,48 @@ async function notifyCustomer(
     customerName: string;
     customerEmail: string | null;
     customerPhone: string | null;
+    preferredLang?: string | null;
+    isPickup: boolean;
   }
 ) {
-  if (status === "OUT_FOR_DELIVERY" && order.customerPhone) {
-    try {
-      await sendSms(
-        order.customerPhone,
-        `🚚 Karyana Bakery: ¡Tu pedido ${order.orderNumber} va en camino! / Your order is on its way!`
-      );
-    } catch (err) {
-      console.error("[sanity-order webhook] SMS send failed", err);
-    }
+  // Ready, on the way, and completed all get a message — WhatsApp first,
+  // SMS if that can't be delivered — written in the customer's language
+  // instead of the old bilingual one-liner.
+  if (
+    (status === "READY" ||
+      status === "OUT_FOR_DELIVERY" ||
+      status === "COMPLETED") &&
+    order.customerPhone
+  ) {
+    const locale = resolveCustomerLocale({
+      preferredLang: order.preferredLang,
+      name: order.customerName,
+    });
+
+    const channel = await sendCustomerMessage(
+      order.customerPhone,
+      orderStatusMessage(status, locale, {
+        orderNumber: order.orderNumber,
+        isPickup: order.isPickup,
+      }),
+      APP_URL
+    );
+
+    console.log(
+      `[sanity-order webhook] ${order.orderNumber} → ${status} notified via ${channel}`
+    );
   }
 
-  if (status === "COMPLETED" && order.customerEmail) {
-    try {
-      const html = await render(
-        OrderCompleted({
-          appUrl: APP_URL,
-          orderNumber: order.orderNumber,
-          customerName: order.customerName,
-        })
-      );
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: order.customerEmail,
-        subject: `Tu pedido ${order.orderNumber} fue entregado — Karyana Bakery`,
-        html,
-      });
-    } catch (err) {
-      console.error("[sanity-order webhook] completion email failed", err);
-    }
+  if (status === "COMPLETED") {
+    await sendOrderCompletedEmail({
+      email: order.customerEmail,
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      locale: resolveCustomerLocale({
+        preferredLang: order.preferredLang,
+        name: order.customerName,
+      }),
+    });
   }
 }
 
@@ -107,7 +126,8 @@ export async function POST(req: Request) {
   const cleanId = String(_id).replace(/^drafts\./, "");
   const order = await sanityClient.fetch(
     `*[_id == "drafts." + $id || _id == $id] | order(_updatedAt desc) [0] {
-      orderNumber, prismaId, customerName, customerEmail, customerPhone
+      orderNumber, prismaId, customerName, customerEmail, customerPhone,
+      fulfillmentType
     }`,
     { id: cleanId }
   );
@@ -124,6 +144,7 @@ export async function POST(req: Request) {
       READY: "readyAt",
       OUT_FOR_DELIVERY: "outForDeliveryAt",
       COMPLETED: "completedAt",
+      CANCELLED: "cancelledAt",
     };
 
     try {
@@ -139,7 +160,44 @@ export async function POST(req: Request) {
     }
   }
 
-  await notifyCustomer(status as ValidStatus, order);
+  // The customer's language and the pending Twilio message SIDs live in
+  // Prisma, not in the Sanity mirror.
+  let preferredLang: string | null = null;
+  let scheduled: { readyMsgSid: string | null; completedMsgSid: string | null } =
+    { readyMsgSid: null, completedMsgSid: null };
+
+  if (order.prismaId) {
+    const record = await prisma.order
+      .findUnique({
+        where: { id: order.prismaId },
+        select: {
+          readyMsgSid: true,
+          completedMsgSid: true,
+          user: { select: { preferredLang: true } },
+        },
+      })
+      .catch(() => null);
+
+    preferredLang = record?.user?.preferredLang ?? null;
+    scheduled = {
+      readyMsgSid: record?.readyMsgSid ?? null,
+      completedMsgSid: record?.completedMsgSid ?? null,
+    };
+  }
+
+  if (status === "CANCELLED") {
+    // Call off whatever Twilio is still holding for this order instead of
+    // texting the customer about a cancelled one.
+    await cancelOrderNotifications(scheduled);
+    console.log(`[sanity-order webhook] ${cleanId} cancelled — pending texts called off`);
+    return NextResponse.json({ ok: true, cancelled: true });
+  }
+
+  await notifyCustomer(status as ValidStatus, {
+    ...order,
+    preferredLang,
+    isPickup: order.fulfillmentType !== "DELIVERY",
+  });
 
   console.log(`[sanity-order webhook] ${cleanId} → ${status}`);
 

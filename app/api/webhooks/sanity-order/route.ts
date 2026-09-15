@@ -5,7 +5,11 @@ import { createHmac } from "crypto";
 import { render } from "@react-email/render";
 import { resend, FROM_EMAIL } from "@/lib/email/resend";
 import OrderCompleted from "@/emails/OrderCompleted";
-import { sendSms } from "@/lib/sms/twilio";
+import { sendCustomerMessage } from "@/lib/notifications/send";
+import {
+  orderStatusMessage,
+  resolveCustomerLocale,
+} from "@/lib/notifications/order-messages";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 
@@ -36,17 +40,36 @@ async function notifyCustomer(
     customerName: string;
     customerEmail: string | null;
     customerPhone: string | null;
+    preferredLang?: string | null;
+    isPickup: boolean;
   }
 ) {
-  if (status === "OUT_FOR_DELIVERY" && order.customerPhone) {
-    try {
-      await sendSms(
-        order.customerPhone,
-        `🚚 Karyana Bakery: ¡Tu pedido ${order.orderNumber} va en camino! / Your order is on its way!`
-      );
-    } catch (err) {
-      console.error("[sanity-order webhook] SMS send failed", err);
-    }
+  // Ready, on the way, and completed all get a message — WhatsApp first,
+  // SMS if that can't be delivered — written in the customer's language
+  // instead of the old bilingual one-liner.
+  if (
+    (status === "READY" ||
+      status === "OUT_FOR_DELIVERY" ||
+      status === "COMPLETED") &&
+    order.customerPhone
+  ) {
+    const locale = resolveCustomerLocale({
+      preferredLang: order.preferredLang,
+      name: order.customerName,
+    });
+
+    const channel = await sendCustomerMessage(
+      order.customerPhone,
+      orderStatusMessage(status, locale, {
+        orderNumber: order.orderNumber,
+        isPickup: order.isPickup,
+      }),
+      APP_URL
+    );
+
+    console.log(
+      `[sanity-order webhook] ${order.orderNumber} → ${status} notified via ${channel}`
+    );
   }
 
   if (status === "COMPLETED" && order.customerEmail) {
@@ -107,7 +130,8 @@ export async function POST(req: Request) {
   const cleanId = String(_id).replace(/^drafts\./, "");
   const order = await sanityClient.fetch(
     `*[_id == "drafts." + $id || _id == $id] | order(_updatedAt desc) [0] {
-      orderNumber, prismaId, customerName, customerEmail, customerPhone
+      orderNumber, prismaId, customerName, customerEmail, customerPhone,
+      fulfillmentType
     }`,
     { id: cleanId }
   );
@@ -139,7 +163,23 @@ export async function POST(req: Request) {
     }
   }
 
-  await notifyCustomer(status as ValidStatus, order);
+  // The customer's language lives in Prisma, not in the Sanity mirror.
+  let preferredLang: string | null = null;
+  if (order.prismaId) {
+    preferredLang = await prisma.order
+      .findUnique({
+        where: { id: order.prismaId },
+        select: { user: { select: { preferredLang: true } } },
+      })
+      .then((o) => o?.user?.preferredLang ?? null)
+      .catch(() => null);
+  }
+
+  await notifyCustomer(status as ValidStatus, {
+    ...order,
+    preferredLang,
+    isPickup: order.fulfillmentType !== "DELIVERY",
+  });
 
   console.log(`[sanity-order webhook] ${cleanId} → ${status}`);
 

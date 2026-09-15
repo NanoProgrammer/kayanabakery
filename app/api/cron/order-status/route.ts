@@ -27,6 +27,8 @@ type OrderForAutomation = AutomatableOrder & {
   orderNumber: string;
   guestName: string | null;
   guestPhone: string | null;
+  readyMsgSid: string | null;
+  completedMsgSid: string | null;
   user: { phone: string | null; preferredLang: string; name: string | null } | null;
 };
 
@@ -47,10 +49,22 @@ async function notify(order: OrderForAutomation, status: NotifiableStatus) {
   return sendCustomerMessage(phone, body, APP_URL);
 }
 
-/** Keeps Sanity Studio showing the same status the site does. */
+/**
+ * Keeps Sanity Studio showing the same status the site does.
+ *
+ * Looked up by prismaId rather than by a derived document id: checkout
+ * creates its Sanity doc with an auto-generated _id, while the backfill
+ * script uses "order-<prismaId>", so assuming either one would silently miss
+ * half the orders.
+ */
 async function syncToSanity(orderId: string, status: string) {
   try {
-    await sanityClient.patch(`order-${orderId}`).set({ status }).commit();
+    const doc = await sanityClient.fetch<{ _id: string } | null>(
+      `*[_type == "order" && prismaId == $prismaId][0]{ _id }`,
+      { prismaId: orderId }
+    );
+    if (!doc?._id) return;
+    await sanityClient.patch(doc._id).set({ status }).commit();
   } catch (err) {
     // A missing Sanity doc (older order, manual entry) shouldn't fail the run.
     console.warn(
@@ -83,6 +97,8 @@ export async function GET(req: Request) {
       pickupTime: true,
       guestName: true,
       guestPhone: true,
+      readyMsgSid: true,
+      completedMsgSid: true,
       deliverySlot: { select: { startTime: true } },
       user: { select: { phone: true, preferredLang: true, name: true } },
     },
@@ -117,10 +133,17 @@ export async function GET(req: Request) {
 
     await syncToSanity(order.id, target);
 
-    // The customer hears from us when the order is ready and when it's done.
+    // The ready/completed texts are normally handed to Twilio at checkout to
+    // be delivered at their own time. Only send here when that didn't happen
+    // for this order (no schedule at the time, too far out, Twilio down) —
+    // otherwise the customer gets the same message twice.
     let notified: string | undefined;
-    if (target === "READY" || target === "COMPLETED") {
-      notified = await notify(order, target as NotifiableStatus);
+    if (target === "READY" && !order.readyMsgSid) {
+      notified = await notify(order, "READY");
+    } else if (target === "COMPLETED" && !order.completedMsgSid) {
+      notified = await notify(order, "COMPLETED");
+    } else if (target === "READY" || target === "COMPLETED") {
+      notified = "pre-scheduled";
     }
 
     changed.push({

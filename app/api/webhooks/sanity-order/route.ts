@@ -10,14 +10,19 @@ import {
   orderStatusMessage,
   resolveCustomerLocale,
 } from "@/lib/notifications/order-messages";
+import { cancelOrderNotifications } from "@/lib/notifications/schedule-order-messages";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 
+// CANCELLED is accepted so a cancellation in Studio reaches Prisma and, more
+// importantly, calls off the notifications Twilio is already holding — without
+// it a cancelled order would still text the customer "your order is ready".
 const VALID_STATUSES = [
   "IN_PROGRESS",
   "READY",
   "OUT_FOR_DELIVERY",
   "COMPLETED",
+  "CANCELLED",
 ] as const;
 
 type ValidStatus = (typeof VALID_STATUSES)[number];
@@ -148,6 +153,7 @@ export async function POST(req: Request) {
       READY: "readyAt",
       OUT_FOR_DELIVERY: "outForDeliveryAt",
       COMPLETED: "completedAt",
+      CANCELLED: "cancelledAt",
     };
 
     try {
@@ -163,16 +169,37 @@ export async function POST(req: Request) {
     }
   }
 
-  // The customer's language lives in Prisma, not in the Sanity mirror.
+  // The customer's language and the pending Twilio message SIDs live in
+  // Prisma, not in the Sanity mirror.
   let preferredLang: string | null = null;
+  let scheduled: { readyMsgSid: string | null; completedMsgSid: string | null } =
+    { readyMsgSid: null, completedMsgSid: null };
+
   if (order.prismaId) {
-    preferredLang = await prisma.order
+    const record = await prisma.order
       .findUnique({
         where: { id: order.prismaId },
-        select: { user: { select: { preferredLang: true } } },
+        select: {
+          readyMsgSid: true,
+          completedMsgSid: true,
+          user: { select: { preferredLang: true } },
+        },
       })
-      .then((o) => o?.user?.preferredLang ?? null)
       .catch(() => null);
+
+    preferredLang = record?.user?.preferredLang ?? null;
+    scheduled = {
+      readyMsgSid: record?.readyMsgSid ?? null,
+      completedMsgSid: record?.completedMsgSid ?? null,
+    };
+  }
+
+  if (status === "CANCELLED") {
+    // Call off whatever Twilio is still holding for this order instead of
+    // texting the customer about a cancelled one.
+    await cancelOrderNotifications(scheduled);
+    console.log(`[sanity-order webhook] ${cleanId} cancelled — pending texts called off`);
+    return NextResponse.json({ ok: true, cancelled: true });
   }
 
   await notifyCustomer(status as ValidStatus, {

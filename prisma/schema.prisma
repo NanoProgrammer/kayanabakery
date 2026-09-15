@@ -186,6 +186,12 @@ model Order {
   completedAt        DateTime?
   cancelledAt        DateTime?
 
+  // Twilio message SIDs for the "ready" / "completed" notifications, which are
+  // scheduled with Twilio at checkout instead of being polled for. Stored so
+  // they can be cancelled if the order is.
+  readyMsgSid     String?
+  completedMsgSid String?
+
   // Coupon redemption (1-to-1)
   couponRedemption CouponRedemption?
 

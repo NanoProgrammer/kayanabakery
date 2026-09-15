@@ -522,3 +522,18 @@ model NewsletterSubscriber {
   source    String?
   createdAt DateTime @default(now())
 }
+
+// ==================== "LAS PENAS CON PAN SON MENOS" ====================
+
+/// One row per nomination sent through the community program, used only to
+/// show the public counter on /refer-a-friend.
+///
+/// Deliberately stores nothing but the timestamp: nominations describe real
+/// people going through hard times, and that story belongs in the owner's
+/// inbox, not in the database behind a public count.
+model Nomination {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

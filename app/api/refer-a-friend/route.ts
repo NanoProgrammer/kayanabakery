@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resend, FROM_EMAIL, OWNER_EMAIL } from "@/lib/email/resend";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const schema = z.object({
@@ -57,5 +58,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to send nomination" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Counted only once the email is actually on its way, so the number on the
+  // page reflects nominations that reached the bakery. Nothing about the
+  // nominee is stored — see the Nomination model.
+  let count: number | null = null;
+  try {
+    await prisma.nomination.create({ data: {} });
+    count = await prisma.nomination.count();
+  } catch (err) {
+    // The nomination was delivered; a counter hiccup shouldn't fail the form.
+    console.error("[refer-a-friend] counter update failed", err);
+  }
+
+  return NextResponse.json({ ok: true, count });
+}
+
+/** Current total, for the counter on the program page. */
+export async function GET() {
+  try {
+    const count = await prisma.nomination.count();
+    return NextResponse.json({ count });
+  } catch {
+    return NextResponse.json({ count: 0 });
+  }
 }

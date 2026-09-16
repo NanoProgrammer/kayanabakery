@@ -45,17 +45,29 @@ export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // A Sanity outage shouldn't take the whole sitemap down with it — fall back
-  // to the static pages rather than returning a 500 to a crawler.
+  // to the static pages rather than returning a 500 to a crawler. It gets
+  // logged loudly though: silently serving a sitemap with no products looks
+  // exactly like a working one, and that is how it went unnoticed before.
   const [products, categories] = await Promise.all([
     sanityFetch<SitemapDoc[]>({
       query: sitemapProductsQuery,
       tags: ["product"],
-    }).catch(() => [] as SitemapDoc[]),
+    }).catch((err) => {
+      console.error("[sitemap] product fetch failed — sitemap will ship WITHOUT products:", err);
+      return [] as SitemapDoc[];
+    }),
     sanityFetch<SitemapDoc[]>({
       query: sitemapCategoriesQuery,
       tags: ["category"],
-    }).catch(() => [] as SitemapDoc[]),
+    }).catch((err) => {
+      console.error("[sitemap] category fetch failed — sitemap will ship WITHOUT categories:", err);
+      return [] as SitemapDoc[];
+    }),
   ]);
+
+  if (!products?.length) {
+    console.error("[sitemap] Sanity returned 0 products. Every product page is missing from the sitemap.");
+  }
 
   const now = new Date();
 

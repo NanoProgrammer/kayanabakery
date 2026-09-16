@@ -9,9 +9,17 @@ name: Order status automation
 # status from its own timestamps rather than from when it last ran, so a late
 # or skipped run still lands on the correct status.
 #
-# Requires two repository secrets:
+# Requires one repository secret:
 #   CRON_SECRET  — same value as the CRON_SECRET env var on Vercel
-#   SITE_URL     — https://www.karyanabakery.ca
+#
+# The site URL is not a secret, so it's just the default below. Set a SITE_URL
+# repository variable to point a fork or a staging deployment somewhere else.
+#
+# On a Vercel Pro plan this can move back into vercel.json as
+#   { "path": "/api/cron/order-status", "schedule": "*/15 * * * *" }
+# and this workflow gets disabled. Note vercel.json is validated against a
+# strict schema and rejects any key it doesn't recognise, so that file can
+# carry no comments at all — this note has to live here.
 
 on:
   schedule:
@@ -26,7 +34,7 @@ jobs:
         run: |
           response=$(curl -sS -w "\n%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.SITE_URL }}/api/cron/order-status")
+            "${{ vars.SITE_URL || 'https://www.karyanabakery.ca' }}/api/cron/order-status")
 
           body=$(echo "$response" | sed '$d')
           code=$(echo "$response" | tail -n1)

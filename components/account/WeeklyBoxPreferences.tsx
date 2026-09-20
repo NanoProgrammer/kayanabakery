@@ -191,8 +191,11 @@ export function WeeklyBoxPreferences({
         >
           <span
             className={cn(
-              "absolute top-0.5 h-5 w-5 rounded-full shadow-sm transition-transform",
-              autoDelivery ? "translate-x-5 bg-cream" : "translate-x-0.5 bg-ink-soft/60"
+              // left-0.5 is load-bearing: without an explicit left the knob
+              // falls at its static position, which a button centres, and the
+              // translate then pushes it outside the track.
+              "absolute left-0.5 top-0.5 h-5 w-5 rounded-full shadow-sm transition-transform",
+              autoDelivery ? "translate-x-5 bg-cream" : "translate-x-0 bg-ink-soft/60"
             )}
           />
         </button>
@@ -235,10 +238,10 @@ export function WeeklyBoxPreferences({
           >
             <span
               className={cn(
-                "absolute top-0.5 h-5 w-5 rounded-full shadow-sm transition-transform",
+                "absolute left-0.5 top-0.5 h-5 w-5 rounded-full shadow-sm transition-transform",
                 frequency === "EVERY_4_WEEKS"
                   ? "translate-x-5 bg-cream"
-                  : "translate-x-0.5 bg-ink-soft/60"
+                  : "translate-x-0 bg-ink-soft/60"
               )}
             />
           </button>

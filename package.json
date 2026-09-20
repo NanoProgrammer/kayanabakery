@@ -17,7 +17,8 @@
     "demo:order": "npx tsx scripts/demo-weekly-order.ts",
     "members:problems": "npx tsx scripts/list-members.ts --problems",
     "members:weekly": "npx tsx scripts/list-members.ts --weekly",
-    "diagnose:crons": "npx tsx scripts/diagnose-crons.ts"
+    "diagnose:crons": "npx tsx scripts/diagnose-crons.ts",
+    "check:cards": "npx tsx scripts/check-square-cards.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

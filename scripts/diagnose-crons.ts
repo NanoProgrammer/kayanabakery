@@ -17,41 +17,49 @@ const prisma = new PrismaClient();
 const CANONICAL = "https://www.karyanabakery.ca";
 
 async function checkRedirect() {
-  console.log("1. The URL the daily cron calls its sub-tasks through\n");
+  console.log("1. Whether a cron call would keep its Authorization header\n");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) {
-    console.log("   NEXT_PUBLIC_APP_URL is not set locally — checking the canonical domain instead.");
-  }
-  const target = appUrl ?? CANONICAL;
-  console.log(`   NEXT_PUBLIC_APP_URL = ${appUrl ?? "(unset)"}`);
-
-  let res;
-  try {
-    res = await fetch(`${target}/api/cron/weekly-box-notify`, { redirect: "manual" });
-  } catch (err: any) {
-    console.log(`   ✗ Could not reach ${target}: ${err.message}\n`);
-    return;
+  // Deliberately not driven by the local NEXT_PUBLIC_APP_URL: that is whatever
+  // you use for `next dev`, and the value that actually matters lives on
+  // Vercel. Both public domains get checked instead, so the answer holds
+  // whichever one is configured there.
+  const local = process.env.NEXT_PUBLIC_APP_URL;
+  if (local && !local.startsWith("http://localhost")) {
+    console.log(`   (your local NEXT_PUBLIC_APP_URL is ${local})`);
   }
 
-  if (res.status >= 300 && res.status < 400) {
-    const location = res.headers.get("location") ?? "";
-    const from = new URL(target).origin;
-    const to = location.startsWith("http") ? new URL(location).origin : from;
-
-    if (from !== to) {
-      console.log(`   ✗ ${from} redirects to ${to}`);
-      console.log("     A redirect to a different origin DROPS the Authorization header,");
-      console.log("     so the sub-task answers 401 and quietly does nothing.");
-      console.log("     Fixed in code (the cron now uses its own origin), but set");
-      console.log(`     NEXT_PUBLIC_APP_URL to ${CANONICAL} on Vercel as well.\n`);
-      return;
+  for (const domain of ["https://karyanabakery.com", CANONICAL]) {
+    let res;
+    try {
+      res = await fetch(`${domain}/api/cron/weekly-box-notify`, {
+        redirect: "manual",
+      });
+    } catch (err: any) {
+      console.log(`   ? ${domain} — unreachable (${err.message})`);
+      continue;
     }
-    console.log(`   ~ Redirects, but to the same origin (${to}) — the header survives.\n`);
-    return;
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location") ?? "";
+      const from = new URL(domain).origin;
+      const to = location.startsWith("http") ? new URL(location).origin : from;
+
+      if (from !== to) {
+        console.log(`   ✗ ${domain} -> ${to}`);
+        console.log("       Different origin, so the Authorization header is dropped");
+        console.log("       and the cron answers 401. If NEXT_PUBLIC_APP_URL on Vercel");
+        console.log("       is set to this domain, that is what broke the weekly emails.");
+        continue;
+      }
+      console.log(`   ~ ${domain} redirects, but within the same origin — header survives.`);
+      continue;
+    }
+
+    console.log(`   ✓ ${domain} — no redirect (HTTP ${res.status}), header survives.`);
   }
 
-  console.log(`   ✓ No redirect (HTTP ${res.status}) — the header would survive.\n`);
+  console.log(`\n   Set NEXT_PUBLIC_APP_URL on Vercel to ${CANONICAL} if it is not already.`);
+  console.log("   The cron no longer depends on it, but other things still do.\n");
 }
 
 async function checkMembers() {

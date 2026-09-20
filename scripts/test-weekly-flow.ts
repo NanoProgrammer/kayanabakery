@@ -103,7 +103,30 @@ async function main() {
   });
 
   if (!log) {
-    console.error("   ✗ No log row was written. The email cannot have gone out.");
+    // Before concluding nothing happened, look for a row under any other week
+    // key. One exists when the deployed site is still computing weekStart from
+    // the server's UTC clock while this copy uses the bakery's — the two then
+    // file the same week under different instants and neither can see the
+    // other's rows.
+    const stray = await prisma.weeklyOrderLog.findMany({
+      where: { membershipId: m.id },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    });
+
+    if (stray.length > 0) {
+      console.error(`   ✗ Nothing under this week (${weekStart.toISOString()}),`);
+      console.error("     but rows exist for this member under other week keys:\n");
+      for (const r of stray) {
+        console.error(`       ${r.weekStart.toISOString()}  ${r.status}  (written ${r.createdAt.toISOString().slice(0, 16)}Z)`);
+      }
+      console.error("\n     A row an exact 6 or 7 hours off is the deployed site still");
+      console.error("     running the older weekStart. Deploy, then delete those rows —");
+      console.error("     they belong to a week definition nothing uses any more.");
+      process.exit(1);
+    }
+
+    console.error("   ✗ No log row was written at all. The email cannot have gone out.");
     process.exit(1);
   }
 

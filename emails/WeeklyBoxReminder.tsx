@@ -16,6 +16,9 @@ type Props = {
   appUrl: string;
   customerName: string;
   modeLabel: string;
+  /** "Every week" / "Cada 4 semanas" — so the cadence is visible in the email
+   *  the member actually reads, not only buried in their account page. */
+  frequencyLabel?: string;
   sendUrl: string;
   skipUrl: string;
   editUrl: string;
@@ -30,6 +33,7 @@ export default function WeeklyBoxReminder(props: Props) {
           title: `Hola, ${props.customerName}`,
           subtitle: "¿Quieres recibir tu pan esta semana?",
           modeText: `Tu modo actual: ${props.modeLabel}`,
+          freqText: `Frecuencia: ${props.frequencyLabel ?? "Cada semana"}`,
           send: "Enviar esta semana",
           skip: "Omitir esta semana",
           edit: "Editar mi caja",
@@ -40,6 +44,7 @@ export default function WeeklyBoxReminder(props: Props) {
           title: `Hi ${props.customerName}`,
           subtitle: "Do you want to receive your bread this week?",
           modeText: `Your current mode: ${props.modeLabel}`,
+          freqText: `Frequency: ${props.frequencyLabel ?? "Every week"}`,
           send: "Send this week",
           skip: "Skip this week",
           edit: "Edit my box",
@@ -69,6 +74,9 @@ export default function WeeklyBoxReminder(props: Props) {
             <Section style={styles.pinkBox}>
               <Text style={{ fontSize: 13, margin: 0, color: "#2B2B2B" }}>
                 {t.modeText}
+              </Text>
+              <Text style={{ fontSize: 13, margin: "4px 0 0", color: "#2B2B2B" }}>
+                {t.freqText}
               </Text>
             </Section>
 

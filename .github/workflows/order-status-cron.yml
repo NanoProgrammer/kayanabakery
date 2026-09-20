@@ -30,17 +30,50 @@ jobs:
   advance-orders:
     runs-on: ubuntu-latest
     steps:
+      # An unset secret expands to an empty string, so without this the run
+      # sends "Authorization: Bearer " and the only clue is a bare HTTP 401
+      # that reads like the site is broken. Say what is actually wrong.
+      - name: Check the CRON_SECRET secret is set
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET is not set for GitHub Actions in this repository."
+            echo ""
+            echo "This is a repository setting, not a code problem. Vercel having"
+            echo "CRON_SECRET does not give it to Actions — they are separate stores."
+            echo ""
+            echo "To fix it:"
+            echo "  1. Vercel -> this project -> Settings -> Environment Variables"
+            echo "     -> copy the value of CRON_SECRET"
+            echo "  2. GitHub -> this repo -> Settings -> Secrets and variables"
+            echo "     -> Actions -> New repository secret"
+            echo "  3. Name it exactly CRON_SECRET, paste the value, save"
+            echo ""
+            echo "Then re-run this workflow from the Actions tab."
+            exit 1
+          fi
+          echo "CRON_SECRET is set (${#CRON_SECRET} characters)."
+
       - name: Run order status automation
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://www.karyanabakery.ca' }}
         run: |
           response=$(curl -sS -w "\n%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ vars.SITE_URL || 'https://www.karyanabakery.ca' }}/api/cron/order-status")
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/order-status")
 
           body=$(echo "$response" | sed '$d')
           code=$(echo "$response" | tail -n1)
 
           echo "HTTP $code"
           echo "$body"
+
+          if [ "$code" = "401" ]; then
+            echo "::error::The site rejected CRON_SECRET. The value stored in GitHub does not match the one on Vercel — copy it again from Vercel's environment variables."
+            exit 1
+          fi
 
           if [ "$code" != "200" ]; then
             echo "::error::Order status cron failed with HTTP $code"

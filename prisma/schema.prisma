@@ -275,7 +275,22 @@ lastRenewedAt      DateTime?
 weeklyMode           WeeklyBoxMode? // null until user completes onboarding
 autoDeliveryEnabled  Boolean        @default(false)
 
+// How often the box actually goes out. Weekly is the default because that is
+// what the membership is sold as; EVERY_4_WEEKS is the opt-out for members who
+// found weekly bread to be too much.
+weeklyFrequency      WeeklyFrequency @default(WEEKLY)
+
+// Which week the every-4-weeks rhythm counts from. Set to the Monday of the
+// week the member switched, so their first monthly box lands that same week
+// rather than at some arbitrary point in the calendar.
+weeklyAnchorAt       DateTime?
+
 weeklyLogs WeeklyOrderLog[]
+}
+
+enum WeeklyFrequency {
+  WEEKLY
+  EVERY_4_WEEKS
 }
 
 enum WeeklyBoxMode {

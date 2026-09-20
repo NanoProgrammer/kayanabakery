@@ -80,6 +80,7 @@ export default async function MembershipAccountPage() {
           <WeeklyBoxPreferences
             initialMode={membership.weeklyMode}
             initialAutoDelivery={membership.autoDeliveryEnabled}
+            initialFrequency={membership.weeklyFrequency}
           />
         )}
 

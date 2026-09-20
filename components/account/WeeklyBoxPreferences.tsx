@@ -1,27 +1,108 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Repeat, Sparkles, MessageSquare } from "lucide-react";
+import { Check, Repeat, Sparkles, MessageSquare, CalendarDays } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
 type WeeklyMode = "REPEAT_LAST" | "CURATED" | "MANUAL";
+type WeeklyFrequency = "WEEKLY" | "EVERY_4_WEEKS";
+
+/**
+ * Retypes the cadence whenever it changes — deletes the old word letter by
+ * letter, then types the new one.
+ *
+ * The animation is the point: this toggle decides whether bread arrives one
+ * week or four weeks from now, and a label that swaps instantly is the kind of
+ * change people miss and then blame on the bakery. Reduced-motion users get the
+ * word outright, and it always settles on the real value either way.
+ */
+function TypewriterWord({ word, className }: { word: string; className?: string }) {
+  const [shown, setShown] = useState(word);
+  const [blinking, setBlinking] = useState(false);
+  const previous = useRef(word);
+
+  useEffect(() => {
+    if (previous.current === word) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      previous.current = word;
+      setShown(word);
+      return;
+    }
+
+    const from = previous.current;
+    previous.current = word;
+    setBlinking(true);
+
+    let i = from.length;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const erase = () => {
+      i -= 1;
+      setShown(from.slice(0, Math.max(i, 0)));
+      timer = i > 0 ? setTimeout(erase, 28) : setTimeout(type, 90);
+    };
+
+    let j = 0;
+    const type = () => {
+      j += 1;
+      setShown(word.slice(0, j));
+      if (j < word.length) {
+        timer = setTimeout(type, 45);
+      } else {
+        setBlinking(false);
+      }
+    };
+
+    timer = setTimeout(erase, 40);
+
+    return () => {
+      clearTimeout(timer);
+      // Unmounting mid-animation must not leave half a word on screen.
+      setShown(word);
+      setBlinking(false);
+    };
+  }, [word]);
+
+  return (
+    <span className={className} aria-label={word}>
+      <span aria-hidden="true">{shown}</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "ml-0.5 inline-block w-[2px] translate-y-[2px] self-stretch bg-current transition-opacity",
+          blinking ? "animate-pulse opacity-70" : "opacity-0"
+        )}
+        style={{ height: "1em" }}
+      />
+    </span>
+  );
+}
 
 export function WeeklyBoxPreferences({
   initialMode,
   initialAutoDelivery,
+  initialFrequency = "WEEKLY",
 }: {
   initialMode: WeeklyMode | null;
   initialAutoDelivery: boolean;
+  initialFrequency?: WeeklyFrequency;
 }) {
   const { locale } = useLocale();
   const es = locale === "es";
   const [mode, setMode] = useState<WeeklyMode | null>(initialMode);
   const [autoDelivery, setAutoDelivery] = useState(initialAutoDelivery);
+  const [frequency, setFrequency] = useState<WeeklyFrequency>(initialFrequency);
   const [saving, setSaving] = useState(false);
 
-  async function save(next: { weeklyMode?: WeeklyMode; autoDeliveryEnabled?: boolean }) {
+  async function save(next: {
+    weeklyMode?: WeeklyMode;
+    autoDeliveryEnabled?: boolean;
+    weeklyFrequency?: WeeklyFrequency;
+  }) {
     setSaving(true);
     try {
       const res = await fetch("/api/membership/weekly-preferences", {
@@ -115,6 +196,98 @@ export function WeeklyBoxPreferences({
             )}
           />
         </button>
+      </div>
+
+      {/* Frequency toggle — weekly by default, every 4 weeks when switched on.
+          The cadence is spelled out as a word that retypes itself, because
+          "4" and "1" a few pixels apart is not a difference people notice. */}
+      <div className="mt-3 rounded-2xl border-2 border-canela/30 bg-white p-3 sm:p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <CalendarDays className="h-4 w-4 shrink-0 text-canela-dark" />
+              {es ? "Frecuencia de entrega" : "Delivery frequency"}
+            </p>
+            <p className="mt-1 text-[11px] leading-snug text-ink-soft sm:text-xs">
+              {es
+                ? "Actívalo si una caja por semana es demasiado pan."
+                : "Turn it on if a box every week is too much bread."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={frequency === "EVERY_4_WEEKS"}
+            aria-label={es ? "Entregar cada 4 semanas" : "Deliver every 4 weeks"}
+            disabled={saving}
+            onClick={() => {
+              const next: WeeklyFrequency =
+                frequency === "EVERY_4_WEEKS" ? "WEEKLY" : "EVERY_4_WEEKS";
+              setFrequency(next);
+              save({ weeklyFrequency: next });
+            }}
+            className={cn(
+              "relative h-7 w-12 shrink-0 rounded-full border-2 transition-colors",
+              frequency === "EVERY_4_WEEKS"
+                ? "border-canela-dark bg-canela-dark"
+                : "border-ink-soft/40 bg-white"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 h-5 w-5 rounded-full shadow-sm transition-transform",
+                frequency === "EVERY_4_WEEKS"
+                  ? "translate-x-5 bg-cream"
+                  : "translate-x-0.5 bg-ink-soft/60"
+              )}
+            />
+          </button>
+        </div>
+
+        {/* The live sentence. aria-live announces the new cadence once the
+            word has settled, rather than one letter at a time. */}
+        <div
+          className={cn(
+            "mt-3 rounded-xl px-3 py-2.5 transition-colors duration-500",
+            frequency === "EVERY_4_WEEKS" ? "bg-canela-dark" : "bg-canela-light/70"
+          )}
+        >
+          <p
+            aria-live="polite"
+            className={cn(
+              "text-sm transition-colors duration-500",
+              frequency === "EVERY_4_WEEKS" ? "text-cream" : "text-ink"
+            )}
+          >
+            {es ? "Recibes tu pan " : "You get your bread "}
+            <TypewriterWord
+              word={
+                frequency === "EVERY_4_WEEKS"
+                  ? es
+                    ? "cada 4 semanas"
+                    : "every 4 weeks"
+                  : es
+                  ? "cada semana"
+                  : "every week"
+              }
+              className="inline-flex items-baseline font-display text-base font-semibold sm:text-lg"
+            />
+          </p>
+          <p
+            className={cn(
+              "mt-1 text-[11px] leading-snug transition-colors duration-500 sm:text-xs",
+              frequency === "EVERY_4_WEEKS" ? "text-cream/80" : "text-ink-soft"
+            )}
+          >
+            {frequency === "EVERY_4_WEEKS"
+              ? es
+                ? "Te escribimos solo en tu semana de entrega. Las otras tres no recibes nada nuestro."
+                : "We only write to you on your delivery week. The other three you won't hear from us."
+              : es
+              ? "Te avisamos todos los martes para que decidas."
+              : "We check in every Tuesday so you can decide."}
+          </p>
+        </div>
       </div>
 
       {/* Mode selector */}

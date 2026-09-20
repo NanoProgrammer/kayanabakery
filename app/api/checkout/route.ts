@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
+import { createSanityOrder } from "@/lib/orders/sanity-sync";
 import { squareClient, SQUARE_LOCATION_ID as locationId } from "@/lib/square/client";
 import { computePricing } from "@/lib/checkout/pricing";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
@@ -607,54 +608,25 @@ paymentId = result.payment?.id ?? undefined;
   // can get cut off mid-flight the instant the response goes out, which is
   // how an order confirms and emails send but never lands in Sanity Studio.
   after(async () => {
-    try {
-      await sanityClient.create({
-        _type: "order",
-        orderNumber,
-        prismaId: order.id,
-        customerName: user?.name ?? data.guestName ?? "Guest",
-        customerEmail: user?.email ?? data.guestEmail ?? "",
-        customerPhone: (user as any)?.phone ?? data.guestPhone ?? "",
-        fulfillmentType: data.fulfillmentType,
-        total: pricing.totalCents / 100,
-        items: items.map((it) => ({
-          _key: it.productId,
-          name: it.name,
-          quantity: it.quantity,
-          price: it.price / 100,
-        })),
-        deliveryAddress,
-        pickupDate: slotLabel,
-        status: "IN_PROGRESS",
-        createdAt: new Date().toISOString(),
-      });
-    } catch (err: any) {
-      console.error("[checkout] sanity sync failed:", err?.message, err?.statusCode);
-      // The order is paid and safe in Prisma either way, but if it silently
-      // fails to reach Sanity Studio nobody would otherwise find out until a
-      // customer or the owner notices it's missing — so alert immediately.
-      if (process.env.RESEND_API_KEY) {
-        resend.emails
-          .send({
-            from: FROM_EMAIL,
-            to: ORDERS_EMAIL,
-            subject: `[ALERT] Order ${orderNumber} did not sync to Sanity Studio`,
-            text: [
-              `Order ${orderNumber} (Prisma id ${order.id}) was paid successfully`,
-              `but failed to create its document in Sanity Studio, so it will`,
-              `NOT appear in the Orders list.`,
-              ``,
-              `Error: ${err?.statusCode ?? ""} ${err?.message ?? err}`,
-              ``,
-              `This usually means SANITY_API_READ_TOKEN is expired or only has`,
-              `Viewer permission — it needs Editor permission to write orders.`,
-            ].join("\n"),
-          })
-          .catch((emailErr) =>
-            console.error("[checkout] sanity-failure alert email also failed:", emailErr)
-          );
-      }
-    }
+    await createSanityOrder({
+      orderNumber,
+      prismaId: order.id,
+      customerName: user?.name ?? data.guestName ?? "Guest",
+      customerEmail: user?.email ?? data.guestEmail ?? "",
+      customerPhone: (user as any)?.phone ?? data.guestPhone ?? "",
+      fulfillmentType: data.fulfillmentType,
+      totalCents: pricing.totalCents,
+      items: items.map((it) => ({
+        productId: it.productId,
+        name: it.name,
+        quantity: it.quantity,
+        price: it.price,
+      })),
+      deliveryAddress,
+      pickupDate: slotLabel,
+      status: "IN_PROGRESS",
+      source: "checkout",
+    });
 
     if (userId && user?.email) {
       const orderCount = await prisma.order.count({

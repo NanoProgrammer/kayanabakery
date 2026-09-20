@@ -13,6 +13,7 @@ import { chargeCardOnFile } from "@/lib/square/subscriptions";
 import { computePricing } from "@/lib/checkout/pricing";
 import { generateOrderNumber } from "@/lib/checkout/order-number";
 import { sendOrderEmails } from "@/lib/email/send-order-emails";
+import { createSanityOrder } from "@/lib/orders/sanity-sync";
 import type { MembershipTier } from "@/lib/membership/tiers";
 
 export async function createWeeklyOrder({
@@ -111,6 +112,34 @@ export async function createWeeklyOrder({
       },
     });
   }
+
+  // Mirror it into Studio. Without this the bakery never sees the order:
+  // it was charged and emailed but stayed invisible in the Orders list, which
+  // looks exactly like the weekly automation being broken.
+  const customer = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, email: true, phone: true },
+  });
+
+  await createSanityOrder({
+    orderNumber,
+    prismaId: order.id,
+    customerName: customer?.name ?? "Member",
+    customerEmail: customer?.email ?? "",
+    customerPhone: customer?.phone ?? "",
+    fulfillmentType: "PICKUP",
+    totalCents: pricing.totalCents,
+    items: items.map((it) => ({
+      productId: it.productId,
+      name: it.name,
+      quantity: it.quantity,
+      price: it.price,
+    })),
+    deliveryAddress: null,
+    pickupDate: "Weekly auto-order — contact member to schedule",
+    status: "IN_PROGRESS",
+    source: "weekly-auto",
+  });
 
   sendOrderEmails(order.id).catch((err) =>
     console.warn("[weekly-order] email send failed", err)

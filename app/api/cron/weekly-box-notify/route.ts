@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resend, FROM_EMAIL } from "@/lib/email/resend";
 import { render } from "@react-email/render";
 import WeeklyBoxReminder from "@/emails/WeeklyBoxReminder";
-import { weekStartOf, signWeeklyAction } from "@/lib/membership/weekly";
+import { weekStartOf, signWeeklyAction, isDueThisWeek } from "@/lib/membership/weekly";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 
@@ -36,11 +36,30 @@ export async function GET(req: Request) {
     include: { user: { select: { id: true, email: true, name: true, preferredLang: true } } },
   });
 
-  const results = { notified: 0, skippedNoEmail: 0, alreadyLogged: 0, errors: [] as string[] };
+  const results = {
+    notified: 0,
+    skippedNoEmail: 0,
+    alreadyLogged: 0,
+    notDueThisWeek: 0,
+    errors: [] as string[],
+  };
 
   for (const m of memberships) {
     if (!m.user?.email) {
       results.skippedNoEmail++;
+      continue;
+    }
+
+    // Members on the every-4-weeks rhythm only hear from us on their own
+    // weeks — no log, no email, nothing to decide.
+    if (
+      !isDueThisWeek({
+        frequency: m.weeklyFrequency,
+        anchorAt: m.weeklyAnchorAt,
+        weekStart,
+      })
+    ) {
+      results.notDueThisWeek++;
       continue;
     }
 
@@ -72,6 +91,14 @@ export async function GET(req: Request) {
           appUrl: APP_URL,
           customerName: m.user.name ?? "there",
           modeLabel: MODE_LABEL[m.weeklyMode!][locale],
+          frequencyLabel:
+            m.weeklyFrequency === "EVERY_4_WEEKS"
+              ? locale === "es"
+                ? "Cada 4 semanas"
+                : "Every 4 weeks"
+              : locale === "es"
+              ? "Cada semana"
+              : "Every week",
           sendUrl: `${APP_URL}/api/membership/weekly/action?log=${log.id}&action=send&token=${sendToken}`,
           skipUrl: `${APP_URL}/api/membership/weekly/action?log=${log.id}&action=skip&token=${skipToken}`,
           editUrl: `${APP_URL}/account/membership`,

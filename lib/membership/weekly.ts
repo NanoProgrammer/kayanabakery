@@ -1,13 +1,37 @@
 import crypto from "crypto";
+import { bakeryDateString, bakeryWallClockToUtc } from "@/lib/time/edmonton";
 
-/** Monday 00:00 (server local time) of the week containing `date`. */
+/**
+ * Monday 00:00 Calgary time of the week containing `date`, as a UTC instant.
+ *
+ * This used to use the machine's own clock, which made the answer depend on
+ * where the code ran: Vercel is UTC, so it bucketed weeks from Monday 00:00
+ * UTC — Sunday 6 PM in Calgary — while a laptop here computed a different
+ * instant for the same week. The two never matched, so a local script looking
+ * up the week the server had just written found nothing, and a decision made
+ * on a Sunday evening landed in the following week.
+ *
+ * Anchoring it to the bakery's own clock makes the week mean the same thing
+ * everywhere, which is what a unique key on (membership, weekStart) needs.
+ */
 export function weekStartOf(date = new Date()): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  const day = d.getDay(); // 0 Sun ... 6 Sat
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diffToMonday);
-  return d;
+  const localDate = bakeryDateString(date); // YYYY-MM-DD in Calgary
+  const [y, m, d] = localDate.split("-").map(Number);
+
+  // Day of week for that Calgary calendar date, read at noon UTC so the date
+  // itself can't drift across a boundary while we're asking.
+  const dow = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay(); // 0 Sun … 6 Sat
+  const daysBack = dow === 0 ? 6 : dow - 1;
+
+  const monday = new Date(Date.UTC(y, m - 1, d, 12));
+  monday.setUTCDate(monday.getUTCDate() - daysBack);
+
+  return bakeryWallClockToUtc(
+    `${monday.getUTCFullYear()}-${String(monday.getUTCMonth() + 1).padStart(2, "0")}-${String(
+      monday.getUTCDate()
+    ).padStart(2, "0")}`,
+    0
+  );
 }
 
 /** Whole weeks between two week-start dates, DST-safe. */

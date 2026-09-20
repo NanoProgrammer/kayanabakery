@@ -27,11 +27,17 @@ export async function GET(req: Request) {
 
   const weekStart = weekStartOf(new Date());
 
+  // Restricts the run to one member, for testing the email end to end without
+  // writing to real customers. Still behind CRON_SECRET, and it changes who is
+  // included, never what happens to them.
+  const onlyEmail = new URL(req.url).searchParams.get("onlyEmail");
+
   const memberships = await prisma.membership.findMany({
     where: {
       status: "ACTIVE",
       tier: { in: ["SELECTO", "LEGENDARIO"] },
       weeklyMode: { not: null },
+      ...(onlyEmail ? { user: { email: onlyEmail } } : {}),
     },
     include: { user: { select: { id: true, email: true, name: true, preferredLang: true } } },
   });
@@ -123,6 +129,9 @@ export async function GET(req: Request) {
     }
   }
 
-  console.log("[cron] weekly-box-notify results:", results);
-  return NextResponse.json(results);
+  console.log(
+    `[cron] weekly-box-notify${onlyEmail ? ` (only ${onlyEmail})` : ""} results:`,
+    results
+  );
+  return NextResponse.json({ ...results, onlyEmail: onlyEmail ?? null });
 }

@@ -13,7 +13,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? `https://${process.env.VERCEL_URL}`;
+  // Built from the request that just arrived, not from NEXT_PUBLIC_APP_URL.
+  // That variable points at the .com mirror, which redirects to .ca — and a
+  // redirect to a different origin drops the Authorization header, so every
+  // sub-task below answered 401 and silently did nothing. No weekly emails
+  // went out and no WeeklyOrderLog rows were ever written.
+  const base = new URL(req.url).origin;
   const headers = { authorization: `Bearer ${process.env.CRON_SECRET}` };
 
   const now = new Date();
@@ -45,5 +50,18 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json(results);
+  // A sub-task that answers "Unauthorized" looks like success from here — the
+  // fetch resolved, the JSON parsed. Call it out so it shows up in the logs
+  // as a failure instead of hiding inside a 200.
+  const rejected = Object.entries(results)
+    .filter(([, r]) => r && typeof r === "object" && (r.error || r.error === "Unauthorized"))
+    .map(([name]) => name);
+
+  if (rejected.length > 0) {
+    console.error(`[cron/daily-tasks] sub-tasks failed: ${rejected.join(", ")}`, results);
+  } else {
+    console.log("[cron/daily-tasks] ran", Object.keys(results).join(", "), results);
+  }
+
+  return NextResponse.json({ base, results, failed: rejected });
 }

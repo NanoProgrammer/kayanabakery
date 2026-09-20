@@ -36,7 +36,11 @@ export async function GET(req: Request) {
     return htmlPage("Not found", "We couldn't find this week's request.", false);
   }
 
-  if (log.status !== "PENDING") {
+  // FAILED is deliberately not terminal. A declined card is not a decision —
+  // locking the week on it left the member unable to retry after fixing their
+  // card, and unable to even skip, which is the one thing that should always
+  // work. Only a box actually sent or actually skipped closes the week.
+  if (log.status === "CONFIRMED" || log.status === "SKIPPED") {
     return htmlPage(
       "Already decided",
       "You've already made a decision for this week's box.",
@@ -65,7 +69,7 @@ export async function GET(req: Request) {
     });
     return htmlPage(
       "Couldn't charge your card",
-      "We don't have a card on file for you. Please add one in your account and contact us.",
+      "We don't have a card on file for you. Add one in your account, then use the same link from the email again.",
       false
     );
   }
@@ -82,7 +86,13 @@ export async function GET(req: Request) {
       where: { id: log.id },
       data: { status: "FAILED", decidedBy: "USER", decidedAt: new Date(), failureNote: result.error },
     });
-    return htmlPage("Couldn't send your box", result.error, false);
+    // The link stays live, so they can fix the card and press send again, or
+    // skip instead. Saying so matters: the page is a dead end otherwise.
+    return htmlPage(
+      "Couldn't send your box",
+      `${result.error}. Your card may have expired or been replaced — update it in your account and use the same email link again, or use the skip link if you'd rather pass this week.`,
+      false
+    );
   }
 
   await prisma.weeklyOrderLog.update({

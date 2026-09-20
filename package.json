@@ -18,7 +18,9 @@
     "members:problems": "npx tsx scripts/list-members.ts --problems",
     "members:weekly": "npx tsx scripts/list-members.ts --weekly",
     "diagnose:crons": "npx tsx scripts/diagnose-crons.ts",
-    "check:cards": "npx tsx scripts/check-square-cards.ts"
+    "check:cards": "npx tsx scripts/check-square-cards.ts",
+    "brevo:lists": "npx tsx scripts/brevo-lists.ts",
+    "sync:brevo": "npx tsx scripts/sync-to-brevo.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

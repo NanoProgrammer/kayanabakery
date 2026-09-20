@@ -13,7 +13,8 @@
     "seed:sanity": "node scripts/seed-sanity.js",
     "check:sitemap": "node scripts/check-sitemap.mjs",
     "test:weekly": "npx tsx scripts/test-weekly-automation.ts",
-    "members": "npx tsx scripts/list-members.ts"
+    "members": "npx tsx scripts/list-members.ts",
+    "demo:order": "npx tsx scripts/demo-weekly-order.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

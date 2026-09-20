@@ -6,10 +6,16 @@
  * arrived — which piece of their setup is missing.
  *
  * Usage:
- *   npm run members                      every membership
- *   npm run members -- --weekly          only those on the weekly box
- *   npm run members -- --problems        only the ones with something wrong
- *   npm run members -- --email a@b.com   one person, in full
+ *   npm run members             every membership
+ *   npm run members:problems    only the ones with something wrong
+ *   npm run members:weekly      only those on the weekly box
+ *
+ * Those have their own npm scripts because `npm run members -- --problems`
+ * silently loses the flag on Windows — npm and npx each re-parse the argument
+ * list on the way through, and the filter just never arrives.
+ *
+ * For one person, call it directly (npm is not in the way, so this is fine):
+ *   npx tsx scripts/list-members.ts --email someone@example.com
  */
 import { config as loadEnv } from "dotenv";
 loadEnv();

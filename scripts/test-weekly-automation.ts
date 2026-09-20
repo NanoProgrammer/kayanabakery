@@ -106,8 +106,47 @@ function testFrequency() {
   );
 }
 
+function testWeekBoundaries() {
+  console.log("\n2. Which week a moment belongs to\n");
+
+  // The bakery is in Calgary, the server is in UTC. When this read the
+  // machine's clock they disagreed, so a row written by the server could not
+  // be found by a script here, and a Sunday-evening decision was filed under
+  // the following week.
+  const week = (iso: string) => weekStartOf(new Date(iso)).toISOString();
+
+  check(
+    "Sunday 11:59 PM Calgary still belongs to the week that is ending",
+    week("2026-09-21T05:59:00Z"),
+    "2026-09-14T06:00:00.000Z"
+  );
+  check(
+    "Monday 12:01 AM Calgary starts the new week",
+    week("2026-09-21T06:01:00Z"),
+    "2026-09-21T06:00:00.000Z"
+  );
+  check(
+    "midweek lands on that same Monday",
+    week("2026-09-23T18:00:00Z"),
+    "2026-09-21T06:00:00.000Z"
+  );
+
+  // Winter is UTC-7, summer UTC-6 — the instant shifts because the wall clock
+  // is what stays fixed, which is the point.
+  check(
+    "a week in standard time anchors at 07:00Z",
+    week("2026-02-04T12:00:00Z"),
+    "2026-02-02T07:00:00.000Z"
+  );
+  check(
+    "a week in daylight time anchors at 06:00Z",
+    week("2026-07-08T12:00:00Z"),
+    "2026-07-06T06:00:00.000Z"
+  );
+}
+
 async function testSanitySync() {
-  console.log("\n2. Automatic orders reaching Sanity Studio\n");
+  console.log("\n3. Automatic orders reaching Sanity Studio\n");
 
   const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
   const token = process.env.SANITY_API_READ_TOKEN;
@@ -183,6 +222,7 @@ async function main() {
   console.log("==================================");
 
   testFrequency();
+  testWeekBoundaries();
   await testSanitySync();
 
   console.log("\n==================================");

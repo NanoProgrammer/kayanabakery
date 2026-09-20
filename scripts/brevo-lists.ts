@@ -102,6 +102,55 @@ async function main() {
       console.log(`  The list has ${have}. Nothing missing.`);
     }
   }
+  // Brevo's list view only renders the columns it has selected, so attributes
+  // can be stored and still look missing. Print what is actually on the
+  // contacts, which is what campaigns and segments read.
+  if (membersId) {
+    console.log("\nWhat is actually stored on those contacts");
+    console.log("=".repeat(68));
+
+    const cRes = await fetch(
+      `https://api.brevo.com/v3/contacts/lists/${membersId}/contacts?limit=50`,
+      { headers: { "api-key": key, Accept: "application/json" } }
+    );
+
+    if (!cRes.ok) {
+      console.log(`  Could not read the list's contacts (HTTP ${cRes.status})`);
+    } else {
+      const { contacts = [] } = await cRes.json();
+      const inBrevo = new Set<string>();
+
+      for (const c of contacts) {
+        inBrevo.add(String(c.email).toLowerCase());
+        const a = c.attributes ?? {};
+        const shown = ["FIRSTNAME", "MEMBERSHIP_TIER", "MEMBERSHIP_STATUS", "LANGUAGE", "TOTAL_ORDERS", "TOTAL_SPENT"]
+          .map((k) => `${k}=${a[k] ?? "—"}`)
+          .join("  ");
+        console.log(`  ${c.email}`);
+        console.log(`    ${shown}`);
+      }
+
+      // Anyone the database calls a paying member but the list doesn't have.
+      const paying = await prisma.membership.findMany({
+        where: { status: "ACTIVE", tier: { in: ["ARTESANO", "SELECTO", "LEGENDARIO"] } },
+        include: { user: { select: { email: true, name: true } } },
+      });
+      const missing = paying.filter(
+        (m) => m.user?.email && !inBrevo.has(m.user.email.toLowerCase())
+      );
+
+      if (missing.length > 0) {
+        console.log("\n  Paying members NOT in this list:");
+        for (const m of missing) {
+          console.log(`    ${m.user?.name ?? "(no name)"} <${m.user?.email}> — ${m.tier}`);
+        }
+        console.log("\n  Fix with: npm run sync:brevo");
+      } else {
+        console.log("\n  Every paying member is in the list.");
+      }
+    }
+  }
+
   console.log("");
 }
 

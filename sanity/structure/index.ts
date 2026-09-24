@@ -82,14 +82,62 @@ export const karyanaStructure = (S: StructureBuilder) =>
             ])
         ),
 
-      // ── Memberships ─────────────────────────────────────────
+      // ── Memberships & customers ─────────────────────────────
+      // Split by what the bakery actually asks: who is paying, who is on the
+      // weekly box, and who has an account but no membership yet. The last
+      // one is the list worth having — it's who there is left to convert.
       S.listItem()
         .title("Memberships")
         .icon(Crown)
         .child(
           S.list()
-            .title("Memberships")
+            .title("Memberships & customers")
             .items([
+              S.listItem()
+                .title("Members")
+                .icon(Crown)
+                .child(
+                  S.documentTypeList("customer")
+                    .title("Members")
+                    .filter(
+                      '_type == "customer" && defined(tier) && tier != "NONE" && tier != "BASICO"'
+                    )
+                    .defaultOrdering([{ field: "memberSince", direction: "desc" }])
+                ),
+
+              S.listItem()
+                .title("Weekly bread box")
+                .icon(Crown)
+                .child(
+                  S.documentTypeList("customer")
+                    .title("On the weekly box")
+                    .filter('_type == "customer" && defined(weeklyMode)')
+                    .defaultOrdering([{ field: "name", direction: "asc" }])
+                ),
+
+              S.listItem()
+                .title("No membership")
+                .icon(Users)
+                .child(
+                  S.documentTypeList("customer")
+                    .title("Accounts without a membership")
+                    .filter(
+                      '_type == "customer" && (!defined(tier) || tier == "NONE" || tier == "BASICO")'
+                    )
+                    .defaultOrdering([{ field: "totalSpent", direction: "desc" }])
+                ),
+
+              S.listItem()
+                .title("Everyone")
+                .icon(Users)
+                .child(
+                  S.documentTypeList("customer")
+                    .title("All customers")
+                    .defaultOrdering([{ field: "totalSpent", direction: "desc" }])
+                ),
+
+              S.divider(),
+
               S.documentTypeListItem("membershipPlan")
                 .title("Plan copy")
                 .icon(Crown),

@@ -10,6 +10,7 @@ import { popupBanner } from "./popupBanner";
 import { googleReview } from "./googleReview";
 import { membershipPlan } from "./membershipPlan";
 import order from "./order";
+import customer from "./customer";
 
 export const schemaTypes = [
   // Content
@@ -30,4 +31,6 @@ export const schemaTypes = [
   siteSettings,
   // Orders
   order,
+  // People
+  customer,
 ];

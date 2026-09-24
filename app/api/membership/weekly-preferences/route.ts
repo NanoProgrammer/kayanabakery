@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { syncWeeklyAutoDeliveryToggle } from "@/lib/brevo/sync";
+import { syncCustomerToSanity } from "@/lib/sanity/sync-customers";
 import { weekStartOf } from "@/lib/membership/weekly";
 import { sendFrequencyChangedEmail } from "@/lib/email/weekly-frequency";
 
@@ -89,6 +90,10 @@ export async function PATCH(req: Request) {
         });
       }
     }
+
+    // Keep Studio's view of this customer current — the weekly settings are
+    // exactly what staff look up when someone asks about their bread.
+    void syncCustomerToSanity(userId);
 
     return NextResponse.json({
       success: true,

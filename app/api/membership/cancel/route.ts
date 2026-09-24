@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { squareClient } from "@/lib/square/client";
 import { syncMembershipChange } from "@/lib/brevo/sync";
+import { syncCustomerToSanity } from "@/lib/sanity/sync-customers";
 
 export async function DELETE() {
   try {
@@ -50,6 +51,8 @@ export async function DELETE() {
         language: membership.user.preferredLang,
       });
     }
+
+    void syncCustomerToSanity(membership.userId);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

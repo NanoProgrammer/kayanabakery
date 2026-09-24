@@ -9,6 +9,7 @@ import {
   nextRenewDate,
 } from "@/lib/square/subscriptions";
 import { syncMembershipChange } from "@/lib/brevo/sync";
+import { syncCustomerToSanity } from "@/lib/sanity/sync-customers";
 
 export async function POST(req: Request) {
   try {
@@ -147,6 +148,7 @@ export async function POST(req: Request) {
     }
 
     syncMembershipChange({ email: user.email, tier, status: "ACTIVE", language: user.preferredLang });
+    void syncCustomerToSanity(userId);
 
     return NextResponse.json({
       success: true,

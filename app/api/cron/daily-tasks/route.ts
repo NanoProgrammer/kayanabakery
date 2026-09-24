@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { syncAllCustomersToSanity } from "@/lib/sanity/sync-customers";
 
 /**
  * Single daily dispatcher — Vercel Hobby plans cap the number of cron
@@ -36,6 +37,11 @@ export async function GET(req: Request) {
     tasks.weeklyBoxProcess = () =>
       fetch(`${base}/api/cron/weekly-box-process`, { headers }).then((r) => r.json());
   }
+  // Refresh every customer in Studio daily. Individual syncs can fail — a
+  // network blip, a Sanity hiccup — and a stale mirror looks exactly like a
+  // correct one, so nobody would ever notice. This repairs it on its own.
+  tasks.customersToStudio = () => syncAllCustomersToSanity();
+
   tasks.creditExpirationReminders = () =>
     fetch(`${base}/api/cron/credit-expiration-reminders`, { headers }).then((r) => r.json());
   tasks.creditExpirationExecute = () =>

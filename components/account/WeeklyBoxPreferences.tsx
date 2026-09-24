@@ -163,13 +163,15 @@ export function WeeklyBoxPreferences({
             {es ? "Entrega automática semanal" : "Auto Weekly Bread Delivery"}
           </p>
           <p className="text-[11px] leading-snug text-ink-soft sm:text-xs">
+            {/* Says plainly that silence means a charge — this toggle decides
+                whether a card gets charged without the member acting. */}
             {autoDelivery
               ? es
-                ? "Activada — sigue el modo elegido abajo si no respondes."
-                : "ON — follows the mode below if you don't respond."
+                ? "Activada — tu pan sale cada semana. Si no respondes el correo, se envía y se cobra."
+                : "ON — your bread goes out every week. If you don't reply to the email, it's sent and charged."
               : es
-              ? "Desactivada — si no respondes, esa semana se omite."
-              : "OFF — if you don't respond, that week is skipped."}
+              ? "Desactivada — solo sale si confirmas en el correo cada semana."
+              : "OFF — it only goes out if you confirm in the email each week."}
           </p>
         </div>
         <button

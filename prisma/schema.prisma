@@ -273,7 +273,12 @@ lastRenewedAt      DateTime?
 
 // Weekly Box Delivery (Selecto & Legendario only)
 weeklyMode           WeeklyBoxMode? // null until user completes onboarding
-autoDeliveryEnabled  Boolean        @default(false)
+
+// The weekly box is opt-OUT: it goes out unless the member says no. Starting
+// this at false made every week auto-skip, so no automatic order was ever
+// created — which read as the automation being broken rather than off.
+// Turning it off still works and means "only send when I confirm".
+autoDeliveryEnabled  Boolean        @default(true)
 
 // How often the box actually goes out. Weekly is the default because that is
 // what the membership is sold as; EVERY_4_WEEKS is the opt-out for members who

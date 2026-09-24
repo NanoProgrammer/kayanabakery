@@ -3,13 +3,20 @@ import { prisma } from "@/lib/prisma";
 import { resend, ORDERS_EMAIL, FROM_EMAIL } from "@/lib/email/resend";
 import { weekStartOf } from "@/lib/membership/weekly";
 import { createWeeklyOrder } from "@/lib/membership/weekly-order";
+import { weeklyDecision } from "@/lib/membership/weekly-decision";
 
 /**
  * Runs Thursdays, after the Wednesday 11:59PM cutoff — in time for
  * Friday delivery. Finalizes any WeeklyOrderLog still PENDING (user
- * never responded) by applying that membership's default behavior:
- *   - MANUAL mode            -> always auto-skip
- *   - REPEAT_LAST / CURATED  -> auto-send if autoDeliveryEnabled, else auto-skip
+ * never responded).
+ *
+ * Silence means send. The box is a subscription: a member who doesn't open
+ * their email still expects bread on Friday, so not answering is not the same
+ * as declining. Only two things stop it — clicking skip in the email, or
+ * choosing a mode / setting that says otherwise:
+ *   - MANUAL mode            -> always skip (that mode exists to require a yes)
+ *   - auto-delivery OFF      -> skip (the member deliberately opted out)
+ *   - REPEAT_LAST / CURATED  -> send
  * No credits/points are granted on skip — the membership fee already
  * converts to points at payment time, so skipping does not double-pay.
  */
@@ -31,27 +38,41 @@ export async function GET(req: Request) {
   for (const log of pending) {
     const membership = log.membership;
     try {
-      if (log.modeSnapshot === "MANUAL") {
+      const decision = weeklyDecision({
+        modeSnapshot: log.modeSnapshot as never,
+        autoDeliveryEnabled: membership.autoDeliveryEnabled,
+        hasCardOnFile: Boolean(membership.squareCustomerId && membership.squareCardId),
+      });
+
+      if (decision.action === "skip") {
         await prisma.weeklyOrderLog.update({
           where: { id: log.id },
-          data: { status: "SKIPPED", decidedBy: "DEFAULT", decidedAt: new Date() },
+          data: {
+            status: "SKIPPED",
+            decidedBy: "DEFAULT",
+            decidedAt: new Date(),
+            failureNote: decision.reason,
+          },
         });
         results.autoSkipped++;
         continue;
       }
 
-      if (!membership.autoDeliveryEnabled) {
+      if (decision.action === "fail") {
         await prisma.weeklyOrderLog.update({
           where: { id: log.id },
-          data: { status: "SKIPPED", decidedBy: "DEFAULT", decidedAt: new Date() },
+          data: {
+            status: "FAILED",
+            decidedBy: "DEFAULT",
+            decidedAt: new Date(),
+            failureNote: decision.reason,
+          },
         });
-        results.autoSkipped++;
+        results.failed++;
         continue;
       }
 
-      if (log.modeSnapshot === "CURATED") {
-        // Curated boxes need a human to pick contents — flag for staff instead
-        // of auto-charging for an undefined cart.
+      if (decision.action === "queue-for-staff") {
         await prisma.weeklyOrderLog.update({
           where: { id: log.id },
           data: { status: "CONFIRMED", decidedBy: "DEFAULT", decidedAt: new Date() },
@@ -60,27 +81,20 @@ export async function GET(req: Request) {
           from: FROM_EMAIL,
           to: ORDERS_EMAIL,
           subject: `[Weekly Box] Curate & charge for ${membership.user?.name ?? membership.userId}`,
-          html: `<p>Auto-delivery is ON and the customer didn't respond by cutoff — please prepare their Curated Surprise Box and charge manually.</p><p>Membership ID: ${membership.id}<br/>User: ${membership.user?.email ?? membership.userId}</p>`,
+          html: `<p>The customer didn't respond by cutoff — please prepare their Curated Surprise Box and charge manually.</p><p>Membership ID: ${membership.id}<br/>User: ${membership.user?.email ?? membership.userId}</p>`,
         });
         results.curatedQueued++;
         continue;
       }
 
-      // REPEAT_LAST + auto-delivery ON + no response -> auto-charge and create the order
-      if (!membership.squareCustomerId || !membership.squareCardId) {
-        await prisma.weeklyOrderLog.update({
-          where: { id: log.id },
-          data: { status: "FAILED", decidedBy: "DEFAULT", decidedAt: new Date(), failureNote: "No card on file" },
-        });
-        results.failed++;
-        continue;
-      }
-
+      // decision.action === "send". The card is non-null here because
+      // weeklyDecision returns "fail" when it isn't — asserted rather than
+      // re-checked so the two can't drift apart into different answers.
       const result = await createWeeklyOrder({
         userId: log.userId,
         tier: membership.tier as any,
-        squareCustomerId: membership.squareCustomerId,
-        squareCardId: membership.squareCardId,
+        squareCustomerId: membership.squareCustomerId!,
+        squareCardId: membership.squareCardId!,
       });
 
       if ("error" in result) {

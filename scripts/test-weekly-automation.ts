@@ -14,6 +14,7 @@ loadEnv({ path: ".env.local", override: true });
 
 import { createClient } from "next-sanity";
 import { weekStartOf, isDueThisWeek } from "../lib/membership/weekly";
+import { weeklyDecision } from "../lib/membership/weekly-decision";
 
 let passed = 0;
 let failed = 0;
@@ -145,8 +146,34 @@ function testWeekBoundaries() {
   );
 }
 
+function testDecision() {
+  console.log("\n3. What happens when nobody answers\n");
+
+  const d = (
+    mode: "REPEAT_LAST" | "CURATED" | "MANUAL",
+    auto: boolean,
+    card: boolean
+  ) => weeklyDecision({ modeSnapshot: mode, autoDeliveryEnabled: auto, hasCardOnFile: card }).action;
+
+  console.log("  Silence means send — the box is a subscription:");
+  check("repeat-last, auto on, card on file → sends", d("REPEAT_LAST", true, true), "send");
+
+  console.log("\n  Declining takes an action:");
+  check("manual mode → skipped even with auto on", d("MANUAL", true, true), "skip");
+  check("auto-delivery off → skipped", d("REPEAT_LAST", false, true), "skip");
+  check("manual and auto off → skipped", d("MANUAL", false, true), "skip");
+
+  console.log("\n  Nobody is charged for a box that can't be defined or paid:");
+  check("curated → waits for a person, never auto-charged", d("CURATED", true, true), "queue-for-staff");
+  check("no card on file → recorded as failed, not charged", d("REPEAT_LAST", true, false), "fail");
+  check("curated with no card → still a staff job, not a failure", d("CURATED", true, false), "queue-for-staff");
+
+  console.log("\n  Opting out wins over everything:");
+  check("auto off and no card → skipped, not failed", d("REPEAT_LAST", false, false), "skip");
+}
+
 async function testSanitySync() {
-  console.log("\n3. Automatic orders reaching Sanity Studio\n");
+  console.log("\n4. Automatic orders reaching Sanity Studio\n");
 
   const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
   const token = process.env.SANITY_API_READ_TOKEN;
@@ -223,6 +250,7 @@ async function main() {
 
   testFrequency();
   testWeekBoundaries();
+  testDecision();
   await testSanitySync();
 
   console.log("\n==================================");

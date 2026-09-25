@@ -324,6 +324,24 @@ async function checkSite() {
     }
   }
 
+  // A phone edited in Studio only reaches the database through this webhook.
+  // If it isn't deployed, the edit looks saved and is silently undone by the
+  // next sync, while texts keep going to the old number.
+  try {
+    const res = await fetch(`${SITE}/api/webhooks/sanity-customer`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    if (res.status === 404) {
+      record("site", "fail", "the customer webhook is not deployed — Studio phone edits will revert");
+    } else {
+      record("site", "ok", `customer webhook is live (rejects an unsigned call with HTTP ${res.status})`);
+    }
+  } catch (err: any) {
+    record("site", "warn", `could not probe the customer webhook: ${brief(err)}`);
+  }
+
   try {
     const res = await fetch(`${SITE}/sitemap.xml`);
     const xml = await res.text();

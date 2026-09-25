@@ -1,5 +1,6 @@
 import { defineField, defineType } from "sanity";
 import { Users } from "lucide-react";
+import { PhoneInput } from "../structure/components/PhoneInput";
 
 /**
  * A customer as Studio sees them: the account, their membership if they have
@@ -21,7 +22,25 @@ export default defineType({
   fields: [
     defineField({ name: "name", title: "Name", type: "string", readOnly: true }),
     defineField({ name: "email", title: "Email", type: "string", readOnly: true }),
-    defineField({ name: "phone", title: "Phone", type: "string", readOnly: true }),
+    // The one field staff can change here. Phone numbers are what the bakery
+    // actually corrects — a customer calls, the number on file is wrong, and
+    // fixing it should not mean opening the database. Saving writes it back to
+    // the real record through the sanity-customer webhook.
+    defineField({
+      name: "phone",
+      title: "Phone",
+      type: "string",
+      components: { input: PhoneInput },
+      description:
+        "Editable. Saving updates the customer's real record, so order texts go to this number.",
+      validation: (Rule) =>
+        Rule.custom((value) => {
+          if (!value) return true;
+          const digits = String(value).replace(/\D/g, "");
+          if (digits.length === 10 || (digits.length === 11 && digits.startsWith("1"))) return true;
+          return "Enter a 10-digit Canadian number, e.g. (403) 383-3681";
+        }),
+    }),
     defineField({
       name: "language",
       title: "Language",

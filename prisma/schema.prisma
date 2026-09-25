@@ -192,6 +192,11 @@ model Order {
   readyMsgSid     String?
   completedMsgSid String?
 
+  // Set once the kitchen printer has actually printed this order's slip, so
+  // the printer agent can ask for what's still pending without printing the
+  // same ticket twice after a restart.
+  printedAt       DateTime?
+
   // Coupon redemption (1-to-1)
   couponRedemption CouponRedemption?
 

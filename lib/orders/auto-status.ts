@@ -12,7 +12,7 @@ import {
  */
 
 export const PREP_DELAY_MS = 60 * 60 * 1000; // 1h after ordering → in preparation
-export const READY_LEAD_MS = 60 * 60 * 1000; // 1h before the window → ready
+export const READY_LEAD_MS = 60 * 60 * 1000; // 1h before the window → ready (delivery only)
 export const OUT_DELAY_MS = 15 * 60 * 1000; // 15min into the window → out for delivery
 export const CLOSING_HOUR = 23; // 11 PM Calgary → close out whatever is left
 
@@ -68,7 +68,17 @@ export function targetStatus(
       return "OUT_FOR_DELIVERY";
     }
 
-    if (now.getTime() >= start.getTime() - READY_LEAD_MS) return "READY";
+    // Delivery only. For pickup, an hour before the window was a guess about
+    // the kitchen, and the customer was told their bread was waiting when it
+    // wasn't — someone would drive over for nothing. Nobody but the bakery
+    // knows when a pickup order is actually ready, so they mark it in Studio
+    // and that is what texts the customer.
+    if (
+      order.fulfillmentType === "DELIVERY" &&
+      now.getTime() >= start.getTime() - READY_LEAD_MS
+    ) {
+      return "READY";
+    }
   }
 
   if (now.getTime() >= order.createdAt.getTime() + PREP_DELAY_MS) {

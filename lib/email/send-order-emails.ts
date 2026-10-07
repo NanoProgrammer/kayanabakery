@@ -32,7 +32,12 @@ export async function sendOrderEmails(orderId: string): Promise<void> {
 
   if (!order) return;
 
-  const customerEmail = order.user?.email ?? order.guestEmail ?? null;
+  // The order's own contact fields win over the account's. They are normally
+  // empty for a signed-in customer, so this reads the same as before — but when
+  // the bakery corrects an email or phone on the order in Studio, that correction
+  // is what gets used. Fixing it on the account instead would change the
+  // customer's login, which is not what "this order has the wrong email" means.
+  const customerEmail = order.guestEmail ?? order.user?.email ?? null;
   const customerName = order.user?.name ?? order.guestName ?? "Customer";
   const locale = (order.user?.preferredLang as "en" | "es") ?? "en";
 
@@ -152,7 +157,7 @@ export async function sendOrderEmails(orderId: string): Promise<void> {
         orderNumber: order.orderNumber,
         customerName,
         customerEmail: customerEmail ?? "",
-        customerPhone: (order.user as any)?.phone ?? order.guestPhone ?? null,
+        customerPhone: order.guestPhone ?? (order.user as any)?.phone ?? null,
         fulfillmentLabel,
         fulfillmentDetail,
         addressBlock: order.address

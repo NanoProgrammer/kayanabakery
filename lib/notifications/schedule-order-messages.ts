@@ -90,17 +90,24 @@ export async function scheduleOrderNotifications(
   const readyAt = new Date(start.getTime() - READY_LEAD_MS);
   const completedAt = bakeryHourOnSameDay(start, CLOSING_HOUR);
 
-  const readyMsgSid = await trySchedule(
-    order.phone,
-    orderStatusMessage("READY", locale, {
-      orderNumber: order.orderNumber,
-      isPickup,
-    }),
-    readyAt,
-    process.env.TWILIO_CONTENT_SID_READY ?? null,
-    locale,
-    order.orderNumber
-  );
+  // Handed to Twilio for delivery only. A pickup order's ready time is the
+  // kitchen's to know, not a guess an hour before the window — scheduling it
+  // here promised the customer their bread was waiting before anyone had
+  // baked it. Pickup orders are marked ready by hand in Studio, and that is
+  // what sends the text.
+  const readyMsgSid = isPickup
+    ? null
+    : await trySchedule(
+        order.phone,
+        orderStatusMessage("READY", locale, {
+          orderNumber: order.orderNumber,
+          isPickup,
+        }),
+        readyAt,
+        process.env.TWILIO_CONTENT_SID_READY ?? null,
+        locale,
+        order.orderNumber
+      );
 
   const completedMsgSid = await trySchedule(
     order.phone,

@@ -37,10 +37,10 @@ export function MembershipsHero() {
       <div className="pointer-events-none absolute -right-32 bottom-12 h-96 w-96 rounded-full bg-gold/10 blur-3xl" />
 
       <div className="container-bakery relative text-center">
-        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-gold/30 bg-cream px-4 py-1.5 text-xs font-bold uppercase tracking-[0.25em] text-gold">
-          <Crown className="h-3 w-3" />
+        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-gold/30 bg-cream px-6 py-3 text-lg font-bold uppercase tracking-[0.2em] text-gold md:px-8 md:py-3.5 md:text-2xl">
+          <Crown className="h-5 w-5 md:h-6 md:w-6" />
           {copy.club}
-          <Sparkles className="h-3 w-3" />
+          <Sparkles className="h-5 w-5 md:h-6 md:w-6" />
         </div>
 
         <h1 className="mx-auto mt-6 max-w-4xl font-display text-[length:var(--text-display-lg)] leading-[var(--text-display-lg--line-height)] tracking-[var(--text-display-lg--letter-spacing)]">

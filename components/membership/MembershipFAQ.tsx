@@ -13,6 +13,10 @@ export function MembershipFAQ() {
     locale === "es"
       ? [
           {
+            q: "¿Qué es Karyana 1% Club?",
+            a: "Nuestra meta no es venderle a todo el mundo. Es ganarnos la lealtad del 1%.\n\nNo queremos ser la panadería de todos. Queremos ser tu panadería.\n\nKaryana 1% Club representa nuestro sueño de ganarnos la lealtad de tan solo el 1% de cada ciudad de la que Karyana llegue a formar parte. No queremos lograrlo siendo la panadería más grande, sino convirtiéndonos en una panadería a la que quieras volver.\n\nPorque para nosotros, ese 1% no es un número. Son personas. Son familias. Es nuestra comunidad.\n\nUna ciudad a la vez. Una comunidad a la vez. Un recuerdo a la vez.",
+          },
+          {
             q: "¿Cómo se cobran las membresías?",
             a: "Procesamos los pagos con Square. La tarjeta se carga automáticamente cada mes (Selecto, Legendario) o cada año (Artesano). Puedes cancelar cuando quieras.",
           },
@@ -34,6 +38,10 @@ export function MembershipFAQ() {
           },
         ]
       : [
+          {
+            q: "What is the Karyana 1% Club?",
+            a: "Our goal isn't to sell to everyone. It's to earn the loyalty of 1%.\n\nWe don't want to be everyone's bakery. We want to be your bakery.\n\nThe Karyana 1% Club represents our dream of earning the loyalty of just 1% of every city Karyana becomes part of. We don't want to do it by being the biggest bakery, but by becoming a bakery worth coming back to.\n\nBecause to us, that 1% isn't a number. It's people. It's families. It's our community.\n\nOne city at a time. One community at a time. One memory at a time.",
+          },
           {
             q: "How are memberships billed?",
             a: "We process payments through Square. Your card is auto-charged monthly (Selecto, Legendario) or yearly (Artesano). Cancel anytime.",
@@ -85,7 +93,7 @@ export function MembershipFAQ() {
                   />
                 </button>
                 {isOpen && (
-                  <div className="border-t border-canela/15 px-6 py-5 text-sm leading-relaxed text-ink-soft">
+                  <div className="whitespace-pre-line border-t border-canela/15 px-6 py-5 text-sm leading-relaxed text-ink-soft">
                     {item.a}
                   </div>
                 )}

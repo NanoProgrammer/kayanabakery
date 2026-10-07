@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildPackingSlipPdf } from "@/lib/pdf/packing-slip";
 import { printerAuthorized, printerUnauthorized } from "../../_auth";
+import { parsePrintId } from "../../_ids";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +18,15 @@ export async function GET(
   if (!printerAuthorized(req)) return printerUnauthorized();
 
   const { id } = await params;
+  const target = parsePrintId(id);
 
   let result;
   try {
-    result = await buildPackingSlipPdf({ prismaId: id });
+    result = await buildPackingSlipPdf(
+      target.kind === "studio"
+        ? { sanityId: target.sanityId }
+        : { prismaId: target.prismaId }
+    );
   } catch (err: any) {
     // Studio being unreachable is temporary and worth retrying; an order that
     // isn't there is not. A bare 500 makes the agent retry both forever, so

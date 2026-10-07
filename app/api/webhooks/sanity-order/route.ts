@@ -127,13 +127,36 @@ export async function POST(req: Request) {
   const order = await sanityClient.fetch(
     `*[_id == "drafts." + $id || _id == $id] | order(_updatedAt desc) [0] {
       orderNumber, prismaId, customerName, customerEmail, customerPhone,
-      fulfillmentType
+      fulfillmentType, notes
     }`,
     { id: cleanId }
   );
 
   if (!order) {
     return NextResponse.json({ error: "Order not found in Sanity" }, { status: 404 });
+  }
+
+  // Corrections the bakery made in Studio — a mistyped email, a phone that
+  // changed, a note the customer called in — land on the order itself, which
+  // the notification code now prefers over the account. Writing them to the
+  // account instead would change the customer's login.
+  if (order.prismaId) {
+    try {
+      await prisma.order.update({
+        where: { id: order.prismaId },
+        data: {
+          guestName: order.customerName || null,
+          guestEmail: order.customerEmail || null,
+          guestPhone: order.customerPhone || null,
+          notes: order.notes || null,
+        },
+      });
+    } catch (err) {
+      console.error(
+        `[sanity-order webhook] could not save contact edits for ${order.prismaId}:`,
+        err instanceof Error ? err.message : err
+      );
+    }
   }
 
   // Orders created by hand in Studio have no prismaId — nothing to sync

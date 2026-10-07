@@ -2,11 +2,15 @@ import { defineField, defineType } from "sanity";
 import { PhoneInput } from "../structure/components/PhoneInput";
 import { PickupDateTimeInput } from "../structure/components/PickupDateTimeInput";
 
-// Orders synced from Prisma (online checkout) carry a prismaId and should stay
-// read-only so Karyana can't drift from the source of truth. Orders created by
-// hand in Studio (phone/walk-in orders) have no prismaId yet, so their fields
-// stay editable until/unless they get linked to a Prisma order.
-const readOnlyUnlessManual = (context: { document?: Record<string, any> }) =>
+// What the money says is settled; what the kitchen does is not.
+//
+// An order's total and number record a payment that already happened — editing
+// them here would change the paperwork without changing a cent that moved, so
+// they stay locked on anything that came from checkout. Everything the bakery
+// works from — who to call, what to bake, when it's for, what the customer
+// asked for — is editable on every order, because customers get these wrong
+// and someone has to be able to fix it without opening the database.
+const lockedOnCheckoutOrders = (context: { document?: Record<string, any> }) =>
   Boolean(context.document?.prismaId);
 
 export default defineType({
@@ -18,7 +22,7 @@ export default defineType({
       name: "orderNumber",
       title: "Order #",
       type: "string",
-      readOnly: readOnlyUnlessManual,
+      readOnly: lockedOnCheckoutOrders,
       // Orders synced from the online checkout get a real KAR-YYYYMM-XXXXX
       // number from Prisma before this ever renders. A manually-created
       // order has no such number yet, so count the existing manual orders
@@ -32,6 +36,15 @@ export default defineType({
       },
     }),
     defineField({
+      name: "printedAt",
+      title: "Printed at",
+      type: "datetime",
+      readOnly: true,
+      hidden: true,
+      description:
+        "Set by the kitchen printer once this order's slip came out, so a restart doesn't print it twice.",
+    }),
+    defineField({
       name: "prismaId",
       title: "Internal ID",
       type: "string",
@@ -42,26 +55,26 @@ export default defineType({
       name: "customerName",
       title: "Customer",
       type: "string",
-      readOnly: readOnlyUnlessManual,
+      description: "Editable. Saved back to the customer's record.",
     }),
     defineField({
       name: "customerEmail",
       title: "Email",
       type: "string",
-      readOnly: readOnlyUnlessManual,
+      description: "Editable. Order emails go here, so fixing a typo fixes delivery.",
     }),
     defineField({
       name: "customerPhone",
       title: "Phone",
       type: "string",
-      readOnly: readOnlyUnlessManual,
+      description: "Editable. Order texts go here.",
       components: { input: PhoneInput },
     }),
     defineField({
       name: "fulfillmentType",
       title: "Fulfillment",
       type: "string",
-      readOnly: readOnlyUnlessManual,
+      readOnly: lockedOnCheckoutOrders,
       options: {
         list: ["PICKUP", "DELIVERY"],
       },
@@ -70,22 +83,36 @@ export default defineType({
       name: "total",
       title: "Total (CAD)",
       type: "number",
-      readOnly: readOnlyUnlessManual,
-      description: "In dollars (e.g. 14.50)",
+      readOnly: lockedOnCheckoutOrders,
+      description:
+        "In dollars. What the customer was actually charged — changing the items below does not change this. Refund or charge the difference in Square.",
     }),
     defineField({
       name: "items",
       title: "Items",
       type: "array",
-      readOnly: readOnlyUnlessManual,
+      description:
+        "What the kitchen makes. Editable — this is what the packing slip prints. Prices stay as charged.",
       of: [
         {
           type: "object",
           fields: [
             { name: "name", title: "Product", type: "string" },
             { name: "quantity", title: "Qty", type: "number" },
-            { name: "price", title: "Price (CAD)", type: "number" },
+            {
+              name: "price",
+              title: "Price (CAD)",
+              type: "number",
+              // Part of the payment record, not the recipe.
+              readOnly: lockedOnCheckoutOrders,
+            },
           ],
+          preview: {
+            select: { name: "name", quantity: "quantity" },
+            prepare: ({ name, quantity }: any) => ({
+              title: `${quantity ?? 1} × ${name ?? "(no name)"}`,
+            }),
+          },
         },
       ],
     }),
@@ -93,21 +120,21 @@ export default defineType({
       name: "deliveryAddress",
       title: "Delivery address",
       type: "string",
-      readOnly: readOnlyUnlessManual,
+      description: "Editable.",
     }),
     defineField({
       name: "pickupDate",
       title: "Pickup / delivery date & time",
       type: "string",
-      readOnly: readOnlyUnlessManual,
+      description: "Editable — use this to reschedule.",
       components: { input: PickupDateTimeInput },
     }),
     defineField({
       name: "notes",
       title: "Customer notes",
       type: "text",
-      rows: 2,
-      readOnly: readOnlyUnlessManual,
+      rows: 3,
+      description: "Editable. Prints on the packing slip.",
     }),
     defineField({
       name: "status",
@@ -130,7 +157,7 @@ export default defineType({
       name: "createdAt",
       title: "Order date",
       type: "datetime",
-      readOnly: readOnlyUnlessManual,
+      readOnly: lockedOnCheckoutOrders,
       initialValue: () => new Date().toISOString(),
     }),
   ],

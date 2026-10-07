@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { printerAuthorized, printerUnauthorized } from "../_auth";
 
 export const dynamic = "force-dynamic";
@@ -64,20 +65,75 @@ export async function GET(req: Request) {
     },
   });
 
+  // Orders typed into Studio by hand — phone and walk-in — never reach Prisma,
+  // so a queue built only from the database left the kitchen's own orders to be
+  // printed from a browser by hand. They carry their own printedAt and are
+  // addressed with a "sanity:" prefix the agent just passes back.
+  type QueueEntry = {
+    id: string;
+    orderNumber: string;
+    customerName: string;
+    fulfillmentType: string;
+    when: string | null;
+    createdAt: string;
+    source: "checkout" | "studio";
+    pdfUrl: string;
+    ackUrl: string;
+  };
+
+  let manual: QueueEntry[] = [];
+  try {
+    const docs = await sanityClient.fetch<any[]>(
+      `*[_type == "order" && !defined(prismaId) && !defined(printedAt)
+          && defined(createdAt) && createdAt >= $since]
+         | order(createdAt asc) [0...25] {
+           _id, orderNumber, customerName, fulfillmentType, pickupDate, createdAt
+         }`,
+      { since: since.toISOString() }
+    );
+
+    manual = (docs ?? []).map((d) => ({
+      id: `sanity:${d._id}`,
+      orderNumber: d.orderNumber ?? "(no number)",
+      customerName: d.customerName ?? "Customer",
+      fulfillmentType: d.fulfillmentType ?? "PICKUP",
+      when: d.pickupDate ?? null,
+      createdAt: d.createdAt,
+      source: "studio",
+      pdfUrl: `/api/print/${encodeURIComponent(`sanity:${d._id}`)}/pdf`,
+      ackUrl: `/api/print/${encodeURIComponent(`sanity:${d._id}`)}/ack`,
+    }));
+  } catch (err) {
+    // Studio being unreachable must not take the checkout queue down with it —
+    // the kitchen still needs the orders the database knows about.
+    console.error(
+      "[print] could not read manual Studio orders:",
+      err instanceof Error ? err.message : err
+    );
+  }
+
+  const fromCheckout: QueueEntry[] = orders.map((o) => ({
+    id: o.id,
+    orderNumber: o.orderNumber,
+    customerName: o.user?.name ?? o.guestName ?? "Customer",
+    fulfillmentType: o.fulfillmentType,
+    when: o.pickupDate?.toISOString() ?? o.pickupTime ?? null,
+    createdAt: o.createdAt.toISOString(),
+    source: "checkout",
+    pdfUrl: `/api/print/${o.id}/pdf`,
+    ackUrl: `/api/print/${o.id}/ack`,
+  }));
+
+  // Oldest first across both, so the kitchen prints in the order things came in.
+  const all = [...fromCheckout, ...manual].sort((a, b) =>
+    a.createdAt.localeCompare(b.createdAt)
+  );
+
   return NextResponse.json({
-    count: orders.length,
+    count: all.length,
     // Echoed so an empty queue can be told apart from a cutoff set too late.
     since: since.toISOString(),
     configured: Boolean(process.env.PRINT_SINCE),
-    orders: orders.map((o) => ({
-      id: o.id,
-      orderNumber: o.orderNumber,
-      customerName: o.user?.name ?? o.guestName ?? "Customer",
-      fulfillmentType: o.fulfillmentType,
-      when: o.pickupDate ?? o.pickupTime ?? null,
-      createdAt: o.createdAt.toISOString(),
-      pdfUrl: `/api/print/${o.id}/pdf`,
-      ackUrl: `/api/print/${o.id}/ack`,
-    })),
+    orders: all,
   });
 }

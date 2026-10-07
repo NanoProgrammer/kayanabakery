@@ -47,7 +47,12 @@ function customerLocale(order: OrderForAutomation) {
 }
 
 async function notify(order: OrderForAutomation, status: NotifiableStatus) {
-  const phone = order.user?.phone ?? order.guestPhone;
+  // The order's own contact fields win over the account's. They are normally
+  // empty for a signed-in customer, so this reads the same as before — but when
+  // the bakery corrects an email or phone on the order in Studio, that correction
+  // is what gets used. Fixing it on the account instead would change the
+  // customer's login, which is not what "this order has the wrong email" means.
+  const phone = order.guestPhone ?? order.user?.phone;
   if (!phone) return "none";
 
   const body = orderStatusMessage(status, customerLocale(order), {
@@ -163,7 +168,7 @@ export async function GET(req: Request) {
     // got one. Twilio only ever holds the text, never the email.
     if (target === "COMPLETED") {
       await sendOrderCompletedEmail({
-        email: order.user?.email ?? order.guestEmail,
+        email: order.guestEmail ?? order.user?.email,
         orderNumber: order.orderNumber,
         customerName: order.user?.name ?? order.guestName ?? "there",
         locale: customerLocale(order),

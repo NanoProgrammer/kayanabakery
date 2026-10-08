@@ -30,9 +30,9 @@ export function MembershipsHero() {
 
       <div className="container-bakery relative text-center">
         <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-gold/30 bg-cream px-5 py-2.5 text-base font-bold uppercase tracking-[0.18em] text-gold sm:px-6 sm:py-3 sm:text-lg md:px-8 md:py-3.5 md:text-2xl">
-          <Crown className="h-3 w-3" />
-          {t("membership.pageTitle")}
-          <Sparkles className="h-3 w-3" />
+          <Crown className="h-5 w-5 shrink-0 md:h-6 md:w-6" />
+          Karyana 1% Club
+          <Sparkles className="h-5 w-5 shrink-0 md:h-6 md:w-6" />
         </div>
         <h1 className="mt-6 font-display text-[length:var(--text-display-lg)] leading-[var(--text-display-lg--line-height)] tracking-[var(--text-display-lg--letter-spacing)]">
           {copy.title}{" "}

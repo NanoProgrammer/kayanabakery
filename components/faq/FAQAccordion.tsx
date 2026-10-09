@@ -15,22 +15,42 @@ const CATEGORIES = [
   { value: "payment", labelEn: "Payment", labelEs: "Pago" },
 ];
 
+
+const PAYMENT_SECURITY_FAQ: FAQ = {
+  _id: "karyana-square-payment-security",
+  category: "payment",
+  questionEn: "How are payments processed at Karyana Bakery, and how is my card protected?",
+  questionEs: "¿Cómo se procesan los pagos en Karyana Bakery y cómo se protege mi tarjeta?",
+  answerEn:
+    "Your peace of mind matters to us. Our card payments are processed through Square, a company specializing in electronic payments. Square encrypts sensitive payment data when transmitting and storing it, and meets PCI DSS Level 1, the payment card industry's data security standard. Square also restricts access to sensitive information and regularly tests its security systems. These measures help protect your card information when you pay with us. You can read more in Square's official security information below.",
+  answerEs:
+    "Tu tranquilidad nos importa. Nuestros pagos con tarjeta se procesan a través de Square, una empresa especializada en pagos electrónicos. Square cifra los datos sensibles de pago al transmitirlos y almacenarlos, y cumple con PCI DSS Nivel 1, el estándar de seguridad de datos de la industria de tarjetas de pago. También limita el acceso a la información sensible y realiza pruebas periódicas de sus sistemas de seguridad. Estas medidas ayudan a proteger la información de tu tarjeta cuando pagas con nosotros. Puedes conocer más en la información oficial de seguridad de Square que encontrarás a continuación.",
+};
+
+const SQUARE_SECURITY_URL =
+  "https://squareup.com/help/ca/en/article/3797-secure-data-encryption";
+
 export function FAQAccordion({ faqs }: { faqs: FAQ[] }) {
   const { locale } = useLocale();
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
 
+  const allFaqs = useMemo(
+    () => [...faqs.filter((f) => f._id !== PAYMENT_SECURITY_FAQ._id), PAYMENT_SECURITY_FAQ],
+    [faqs]
+  );
+
   const filtered = useMemo(
     () =>
       activeCat
-        ? faqs.filter((f) => f.category === activeCat)
-        : faqs,
-    [activeCat, faqs]
+        ? allFaqs.filter((f) => f.category === activeCat)
+        : allFaqs,
+    [activeCat, allFaqs]
   );
 
   // Only show categories that have entries
   const usedCategories = CATEGORIES.filter((c) =>
-    faqs.some((f) => f.category === c.value)
+    allFaqs.some((f) => f.category === c.value)
   );
 
   return (
@@ -99,6 +119,18 @@ export function FAQAccordion({ faqs }: { faqs: FAQ[] }) {
                 {isOpen && (
                   <div className="whitespace-pre-line border-t border-canela/15 px-6 py-5 text-sm leading-relaxed text-ink-soft">
                     {a}
+                    {f._id === PAYMENT_SECURITY_FAQ._id && (
+                      <a
+                        href={SQUARE_SECURITY_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 block font-medium text-ink underline underline-offset-4"
+                      >
+                        {locale === "es"
+                          ? "Conoce cómo Square protege los datos de tu tarjeta (en inglés)"
+                          : "Learn how Square protects your card information"}
+                      </a>
+                    )}
                   </div>
                 )}
               </div>

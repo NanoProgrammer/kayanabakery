@@ -35,6 +35,7 @@ type OrderForAutomation = AutomatableOrder & {
     phone: string | null;
     email: string | null;
     preferredLang: string;
+    langChosenByUser: boolean;
     name: string | null;
   } | null;
 };
@@ -42,6 +43,7 @@ type OrderForAutomation = AutomatableOrder & {
 function customerLocale(order: OrderForAutomation) {
   return resolveCustomerLocale({
     preferredLang: order.user?.preferredLang,
+    langChosenByUser: order.user?.langChosenByUser,
     name: order.user?.name ?? order.guestName,
   });
 }
@@ -116,7 +118,10 @@ export async function GET(req: Request) {
       completedMsgSid: true,
       deliverySlot: { select: { startTime: true } },
       user: {
-        select: { phone: true, email: true, preferredLang: true, name: true },
+        select: {
+        phone: true, email: true, preferredLang: true,
+        langChosenByUser: true, name: true,
+      },
       },
     },
   })) as OrderForAutomation[];

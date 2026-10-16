@@ -13,9 +13,20 @@ export type Locale = "en" | "es";
 export function resolveCustomerLocale(input: {
   preferredLang?: string | null;
   name?: string | null;
+  /** True only once the customer saved a language in their preferences. */
+  langChosenByUser?: boolean | null;
 }): Locale {
+  // A stated preference settles it, in either direction.
+  if (input.langChosenByUser) {
+    return input.preferredLang === "es" ? "es" : "en";
+  }
+
+  // "es" can only have been set deliberately — the column defaults to "en",
+  // so nobody lands on Spanish by accident. "en" tells us nothing, because
+  // it is also what every untouched account says, and taking it at face
+  // value wrote to the whole customer base in English.
   if (input.preferredLang === "es") return "es";
-  if (input.preferredLang === "en") return "en";
+
   return guessLanguageFromName(input.name);
 }
 

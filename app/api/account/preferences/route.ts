@@ -31,7 +31,12 @@ export async function PATCH(req: Request) {
       ...(data.birthday !== undefined && {
         birthday: data.birthday ? new Date(data.birthday) : null,
       }),
-      ...(data.preferredLang && { preferredLang: data.preferredLang }),
+      // Saving here is the one place a customer states their language, so
+      // it's the one place we can record that they meant it.
+      ...(data.preferredLang && {
+        preferredLang: data.preferredLang,
+        langChosenByUser: true,
+      }),
       ...(data.emailMarketing !== undefined && {
         emailMarketing: data.emailMarketing,
       }),

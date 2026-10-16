@@ -45,6 +45,7 @@ async function notifyCustomer(
     customerEmail: string | null;
     customerPhone: string | null;
     preferredLang?: string | null;
+    langChosenByUser?: boolean | null;
     isPickup: boolean;
   }
 ) {
@@ -59,6 +60,7 @@ async function notifyCustomer(
   ) {
     const locale = resolveCustomerLocale({
       preferredLang: order.preferredLang,
+      langChosenByUser: order.langChosenByUser,
       name: order.customerName,
     });
 
@@ -83,6 +85,7 @@ async function notifyCustomer(
       customerName: order.customerName,
       locale: resolveCustomerLocale({
         preferredLang: order.preferredLang,
+      langChosenByUser: order.langChosenByUser,
         name: order.customerName,
       }),
     });
@@ -186,6 +189,7 @@ export async function POST(req: Request) {
   // The customer's language and the pending Twilio message SIDs live in
   // Prisma, not in the Sanity mirror.
   let preferredLang: string | null = null;
+  let langChosenByUser = false;
   let scheduled: { readyMsgSid: string | null; completedMsgSid: string | null } =
     { readyMsgSid: null, completedMsgSid: null };
 
@@ -196,12 +200,13 @@ export async function POST(req: Request) {
         select: {
           readyMsgSid: true,
           completedMsgSid: true,
-          user: { select: { preferredLang: true } },
+          user: { select: { preferredLang: true, langChosenByUser: true } },
         },
       })
       .catch(() => null);
 
     preferredLang = record?.user?.preferredLang ?? null;
+    langChosenByUser = record?.user?.langChosenByUser ?? false;
     scheduled = {
       readyMsgSid: record?.readyMsgSid ?? null,
       completedMsgSid: record?.completedMsgSid ?? null,
@@ -219,6 +224,7 @@ export async function POST(req: Request) {
   await notifyCustomer(status as ValidStatus, {
     ...order,
     preferredLang,
+    langChosenByUser,
     isPickup: order.fulfillmentType !== "DELIVERY",
   });
 

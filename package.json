@@ -26,6 +26,7 @@
     "test:print": "npx tsx scripts/test-print-order.ts",
     "test:status": "npx tsx scripts/test-order-status.ts",
     "import:phones": "npx tsx scripts/import-contact-phones.ts",
+    "import:phones:apply": "npx tsx scripts/import-contact-phones.ts --apply",
     "test:language": "npx tsx scripts/test-customer-language.ts"
   },
   "dependencies": {

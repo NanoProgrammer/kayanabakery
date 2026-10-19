@@ -24,6 +24,13 @@ model User {
   birthday      DateTime?
   preferredLang String    @default("en") // en | es
 
+  // Whether preferredLang above is something the customer actually picked.
+  // It defaults to "en" for everyone, so without this there is no way to tell
+  // "chose English" from "never touched it" — and every customer who never
+  // opened their preferences was being written to in English regardless of
+  // who they are.
+  langChosenByUser Boolean @default(false)
+
   // Email marketing
   emailMarketing Boolean @default(true)
 

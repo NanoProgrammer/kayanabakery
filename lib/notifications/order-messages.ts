@@ -1,5 +1,7 @@
 import { guessLanguageFromName } from "@/lib/i18n/guess-language";
 
+import { GOOGLE_REVIEW_URL } from "@/lib/reviews/link";
+
 export type NotifiableStatus = "READY" | "OUT_FOR_DELIVERY" | "COMPLETED";
 export type Locale = "en" | "es";
 
@@ -11,9 +13,20 @@ export type Locale = "en" | "es";
 export function resolveCustomerLocale(input: {
   preferredLang?: string | null;
   name?: string | null;
+  /** True only once the customer saved a language in their preferences. */
+  langChosenByUser?: boolean | null;
 }): Locale {
+  // A stated preference settles it, in either direction.
+  if (input.langChosenByUser) {
+    return input.preferredLang === "es" ? "es" : "en";
+  }
+
+  // "es" can only have been set deliberately — the column defaults to "en",
+  // so nobody lands on Spanish by accident. "en" tells us nothing, because
+  // it is also what every untouched account says, and taking it at face
+  // value wrote to the whole customer base in English.
   if (input.preferredLang === "es") return "es";
-  if (input.preferredLang === "en") return "en";
+
   return guessLanguageFromName(input.name);
 }
 
@@ -42,11 +55,18 @@ const MESSAGES: Record<
     en: ({ orderNumber }) =>
       `🚚 Karyana Bakery: Your order ${orderNumber} is on its way!`,
   },
+  // The review ask rides on the message that was already going out, and
+  // arrives while the bread is still in their hands — the only moment anyone
+  // actually writes one.
+  //
+  // It does cost: the two emoji force UCS-2, which caps a segment at 67
+  // characters, so this is three segments instead of one. Kept short for that
+  // reason, and a g.page short link in GOOGLE_REVIEW_URL saves ~16 more.
   COMPLETED: {
     es: ({ orderNumber }) =>
-      `✅ Karyana Bakery: Tu pedido ${orderNumber} fue completado. ¡Gracias por tu compra! 🧡`,
+      `✅ Karyana Bakery: Tu pedido ${orderNumber} fue completado. ¡Gracias por tu compra! 🧡\n¿Nos dejas una reseña? ${GOOGLE_REVIEW_URL}`,
     en: ({ orderNumber }) =>
-      `✅ Karyana Bakery: Your order ${orderNumber} is complete. Thank you for your order! 🧡`,
+      `✅ Karyana Bakery: Your order ${orderNumber} is complete. Thank you for your order! 🧡\nLeave us a review? ${GOOGLE_REVIEW_URL}`,
   },
 };
 

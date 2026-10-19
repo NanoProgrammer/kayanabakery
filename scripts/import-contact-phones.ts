@@ -5,10 +5,11 @@
  *   npx tsx scripts/import-contact-phones.ts <contacts.csv> --apply    write them
  *   ... --overwrite    also replace phones already on file
  *
- * Matches on email only. A phone book has the bakery's whole life in it —
- * suppliers, family, people who were never customers — and two different
- * people share a name far more often than they share an email address. A
- * wrong match here means order texts going to a stranger.
+ * Matches on email first. Then on full name, but only where the name is
+ * unique on BOTH sides: one customer with it, one contact with it. A phone
+ * book has the bakery's whole life in it — suppliers, family, people who were
+ * never customers — and a wrong match means order texts going to a stranger.
+ * Two Maria Garcias and the number could belong to either, so neither gets it.
  *
  * Existing phone numbers are left alone unless --overwrite is passed: what is
  * already on an account was typed by the customer, which beats a contact card
@@ -74,9 +75,25 @@ async function main() {
     return null;
   }
 
+  /** Case, accents and spacing differ between a contact card and a signup. */
+  function normalizeName(raw: string | null | undefined): string {
+    return (raw ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   // email -> first usable phone. Google exports both "E-mail 1" and "E-mail 2";
   // a customer may have signed up with either.
   const byEmail = new Map<string, { phone: string; name: string }>();
+
+  // name -> every contact carrying it, so a repeated name can be recognised
+  // as ambiguous rather than resolved by whichever row came first.
+  const byName = new Map<string, { phone: string; name: string }[]>();
+
   let unusablePhones = 0;
 
   for (const c of contacts) {
@@ -94,6 +111,14 @@ async function main() {
     for (const email of emails) {
       if (!byEmail.has(email)) byEmail.set(email, { phone, name });
     }
+
+    const key = normalizeName(name);
+    if (key) {
+      const list = byName.get(key) ?? [];
+      // The same person exported twice with the same number isn't ambiguous.
+      if (!list.some((e) => e.phone === phone)) list.push({ phone, name });
+      byName.set(key, list);
+    }
   }
 
   console.log(`\nContacts file: ${csvPath}`);
@@ -106,14 +131,57 @@ async function main() {
     select: { id: true, email: true, name: true, phone: true },
   });
 
-  const toFill: { id: string; email: string; name: string | null; from: string | null; to: string }[] = [];
+  type Fill = {
+    id: string;
+    email: string;
+    name: string | null;
+    from: string | null;
+    to: string;
+    how: "email" | "name";
+  };
+
+  const toFill: Fill[] = [];
   const alreadyHave: string[] = [];
-  let matched = 0;
+  const ambiguous: string[] = [];
+  let matchedByEmail = 0;
+  let matchedByName = 0;
+
+  // How many customers answer to each name. A name shared by two customers
+  // can't identify either of them, whatever the contacts file says.
+  const customersPerName = new Map<string, number>();
+  for (const u of users) {
+    const key = normalizeName(u.name);
+    if (key) customersPerName.set(key, (customersPerName.get(key) ?? 0) + 1);
+  }
 
   for (const u of users) {
-    const hit = byEmail.get(u.email.toLowerCase());
-    if (!hit) continue;
-    matched++;
+    let hit = byEmail.get(u.email.toLowerCase());
+    let how: "email" | "name" = "email";
+
+    if (hit) {
+      matchedByEmail++;
+    } else {
+      // No email match — fall back to the name, but only when it points at
+      // exactly one person on each side.
+      const key = normalizeName(u.name);
+      if (!key) continue;
+
+      const contacts = byName.get(key);
+      if (!contacts) continue;
+
+      if (contacts.length > 1) {
+        ambiguous.push(`${u.name} — ${contacts.length} contacts share this name`);
+        continue;
+      }
+      if ((customersPerName.get(key) ?? 0) > 1) {
+        ambiguous.push(`${u.name} — ${customersPerName.get(key)} customers share this name`);
+        continue;
+      }
+
+      hit = contacts[0];
+      how = "name";
+      matchedByName++;
+    }
 
     if (u.phone && !overwrite) {
       alreadyHave.push(`${u.name ?? u.email} (${u.phone})`);
@@ -121,11 +189,16 @@ async function main() {
     }
     if (u.phone === hit.phone) continue;
 
-    toFill.push({ id: u.id, email: u.email, name: u.name, from: u.phone, to: hit.phone });
+    toFill.push({ id: u.id, email: u.email, name: u.name, from: u.phone, to: hit.phone, how });
   }
 
   console.log(`\n${users.length} customers in the database`);
-  console.log(`  ${matched} matched a contact by email`);
+  console.log(`  ${matchedByEmail} matched by email`);
+  console.log(`  ${matchedByName} matched by full name (unique on both sides)`);
+  if (ambiguous.length) {
+    console.log(`  ${ambiguous.length} skipped — the name doesn't identify one person:`);
+    for (const a of ambiguous) console.log(`      ${a}`);
+  }
   console.log(`  ${alreadyHave.length} already have a phone — left alone${overwrite ? " (but --overwrite is on)" : ""}`);
   console.log(`  ${toFill.length} would be updated\n`);
 
@@ -137,7 +210,8 @@ async function main() {
 
   console.log("=".repeat(66));
   for (const u of toFill) {
-    console.log(`  ${(u.name ?? u.email).padEnd(28)} ${u.from ?? "(none)"} → ${u.to}`);
+    const via = u.how === "name" ? "  [matched by name]" : "";
+    console.log(`  ${(u.name ?? u.email).padEnd(26)} ${(u.from ?? "(none)").padEnd(14)} → ${u.to}${via}`);
   }
   console.log("=".repeat(66));
 
@@ -148,17 +222,32 @@ async function main() {
     return;
   }
 
-  const { syncCustomerToSanity } = await import("../lib/sanity/sync-customers");
+  // Loaded separately from the writing below, and allowed to fail. Studio is
+  // a mirror; the phone numbers are the point. Letting a Sanity problem throw
+  // here once aborted the whole run and saved nothing at all.
+  let syncCustomerToSanity: ((id: string) => Promise<boolean>) | null = null;
+  try {
+    ({ syncCustomerToSanity } = await import("../lib/sanity/sync-customers"));
+  } catch (err: any) {
+    console.warn(`\nStudio unavailable (${err?.message ?? err}) — saving anyway.`);
+  }
+
   let saved = 0;
   let syncFailed = 0;
 
   for (const u of toFill) {
     await prisma.user.update({ where: { id: u.id }, data: { phone: u.to } });
     saved++;
+
     // Studio reads its own copy, so a number saved here is invisible there
     // until the customer document is rewritten.
-    const ok = await syncCustomerToSanity(u.id);
-    if (!ok) syncFailed++;
+    if (!syncCustomerToSanity) { syncFailed++; continue; }
+    try {
+      const ok = await syncCustomerToSanity(u.id);
+      if (!ok) syncFailed++;
+    } catch {
+      syncFailed++;
+    }
   }
 
   console.log(`\n${saved} phone number(s) saved.`);

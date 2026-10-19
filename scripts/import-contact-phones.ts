@@ -2,7 +2,7 @@
  * Fills in missing customer phone numbers from a Google Contacts export.
  *
  *   npx tsx scripts/import-contact-phones.ts <contacts.csv>            dry run
- *   npx tsx scripts/import-contact-phones.ts <contacts.csv> --apply    write them
+ *   npx tsx scripts/import-contact-phones.ts --apply <contacts.csv>    write them
  *   ... --overwrite    also replace phones already on file
  *
  * Matches on email first. Then on full name, but only where the name is
@@ -19,7 +19,7 @@ import { config as loadEnv } from "dotenv";
 loadEnv();
 loadEnv({ path: ".env.local", override: true });
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 /** Minimal CSV reader: Google's export quotes fields and embeds newlines. */
 function parseCsv(text: string): Record<string, string>[] {
@@ -51,13 +51,29 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 async function main() {
-  const [csvPath, ...flags] = process.argv.slice(2);
+  const argv = process.argv.slice(2);
+  const flags = argv.filter((a) => a.startsWith("--"));
+  const words = argv.filter((a) => !a.startsWith("--"));
+
+  // The flags are read from anywhere in the line, and from the environment,
+  // because npm on Windows eats an unknown --flag that follows `--` instead of
+  // forwarding it. The npm scripts (import:phones:apply) pass --apply ahead of
+  // the path for that reason, so position cannot be relied on either.
+  const apply = flags.includes("--apply") || process.env.APPLY === "1";
+  const overwrite = flags.includes("--overwrite") || process.env.OVERWRITE === "1";
+
+  // A path like `contacts (3).csv` arrives split in two when the quotes are
+  // lost on the way through npm, so the pieces are joined back up.
+  const csvPath = words.length > 1 && !existsSync(words[0]) ? words.join(" ") : words[0];
   if (!csvPath) {
     console.error("Usage: npx tsx scripts/import-contact-phones.ts <contacts.csv> [--apply] [--overwrite]");
     process.exit(1);
   }
-  const apply = flags.includes("--apply");
-  const overwrite = flags.includes("--overwrite");
+  if (!existsSync(csvPath)) {
+    console.error(`\nNo file at ${csvPath}`);
+    console.error("Put the path in quotes if it has spaces in it.\n");
+    process.exit(1);
+  }
 
   const { PrismaClient } = await import("@prisma/client");
   const { toE164 } = await import("../lib/sms/twilio");
@@ -197,7 +213,8 @@ async function main() {
   console.log(`  ${matchedByName} matched by full name (unique on both sides)`);
   if (ambiguous.length) {
     console.log(`  ${ambiguous.length} skipped — the name doesn't identify one person:`);
-    for (const a of ambiguous) console.log(`      ${a}`);
+    // Both halves of a duplicated pair report the same reason; say it once.
+    for (const a of [...new Set(ambiguous)]) console.log(`      ${a}`);
   }
   console.log(`  ${alreadyHave.length} already have a phone — left alone${overwrite ? " (but --overwrite is on)" : ""}`);
   console.log(`  ${toFill.length} would be updated\n`);
@@ -217,7 +234,7 @@ async function main() {
 
   if (!apply) {
     console.log("\nDry run — nothing was written.");
-    console.log("Run it again with --apply to save these.\n");
+    console.log('To save these:  npm run import:phones:apply -- "<ruta del csv>"\n');
     await prisma.$disconnect();
     return;
   }

@@ -25,6 +25,9 @@
     "sync:customers": "npx tsx scripts/sync-customers-to-sanity.ts",
     "test:print": "npx tsx scripts/test-print-order.ts",
     "test:status": "npx tsx scripts/test-order-status.ts",
+    "test:print-queue": "npx tsx scripts/test-print-queue.ts",
+    "print:stuck": "npx tsx scripts/print-stuck.ts",
+    "print:unstick": "npx tsx scripts/print-stuck.ts",
     "import:phones": "npx tsx scripts/import-contact-phones.ts",
     "import:phones:apply": "npx tsx scripts/import-contact-phones.ts --apply",
     "test:language": "npx tsx scripts/test-customer-language.ts"

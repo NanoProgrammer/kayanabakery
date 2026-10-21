@@ -18,3 +18,16 @@ export function parsePrintId(raw: string): PrintTarget {
     ? { kind: "studio", sanityId: id.slice(SANITY_PREFIX.length) }
     : { kind: "checkout", prismaId: id };
 }
+
+/**
+ * Sanity keeps unpublished work under a prefixed id: `drafts.<id>` while it is
+ * being typed, `versions.<release>.<id>` when it belongs to a content release.
+ *
+ * Nothing with such an id may be printed or stamped. Printing one puts a
+ * half-finished ticket in the kitchen, and stamping one is worse: the draft
+ * carries printedAt with it when the order is finally published, so the real
+ * order silently never prints.
+ */
+export function isUnpublishedId(sanityId: string): boolean {
+  return sanityId.startsWith("drafts.") || sanityId.startsWith("versions.");
+}

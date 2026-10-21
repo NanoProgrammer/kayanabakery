@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { printerAuthorized, printerUnauthorized } from "../_auth";
+import { MANUAL_ORDERS_QUERY } from "../_queries";
 
 export const dynamic = "force-dynamic";
 
@@ -84,12 +85,12 @@ export async function GET(req: Request) {
   let manual: QueueEntry[] = [];
   try {
     const docs = await sanityClient.fetch<any[]>(
-      `*[_type == "order" && !defined(prismaId) && !defined(printedAt)
-          && defined(createdAt) && createdAt >= $since]
-         | order(createdAt asc) [0...25] {
-           _id, orderNumber, customerName, fulfillmentType, pickupDate, createdAt
-         }`,
-      { since: since.toISOString() }
+      MANUAL_ORDERS_QUERY,
+      { since: since.toISOString() },
+      // The query filters drafts out itself; this says so again at the client,
+      // because writeClient is the one client with no perspective of its own
+      // and so reads drafts by default.
+      { perspective: "published" }
     );
 
     manual = (docs ?? []).map((d) => ({

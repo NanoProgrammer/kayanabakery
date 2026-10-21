@@ -17,6 +17,15 @@ import { existsSync } from "node:fs";
 loadEnv({ path: ".env", quiet: true });
 loadEnv({ path: ".env.local", override: true, quiet: true });
 
+// Set PROD_DATABASE_URL to aim a single command at the live database without
+// editing .env.local — and so without leaving it edited afterwards, pointing
+// everyday local work at production.
+if (process.env.PROD_DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.PROD_DATABASE_URL;
+  process.env.DIRECT_URL = process.env.PROD_DATABASE_URL;
+  console.log("*** Using PROD_DATABASE_URL — this is the live database. ***");
+}
+
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL is not set in .env or .env.local.");
   process.exit(1);
@@ -26,7 +35,11 @@ if (!process.env.DATABASE_URL) {
 // silent disagreement between the two files visible.
 try {
   const { host, pathname } = new URL(process.env.DATABASE_URL);
-  const source = existsSync(".env.local") ? ".env.local (or .env)" : ".env";
+  const source = process.env.PROD_DATABASE_URL
+    ? "PROD_DATABASE_URL"
+    : existsSync(".env.local")
+    ? ".env.local (or .env)"
+    : ".env";
   console.log(`Target: ${pathname.replace(/^\//, "")} at ${host}`);
   console.log(`From:   ${source}\n`);
 } catch {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildPackingSlipPdf } from "@/lib/pdf/packing-slip";
 import { printerAuthorized, printerUnauthorized } from "../../_auth";
-import { parsePrintId } from "../../_ids";
+import { isUnpublishedId, parsePrintId } from "../../_ids";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,15 @@ export async function GET(
 
   const { id } = await params;
   const target = parsePrintId(id);
+
+  // Half-typed is not an order. Studio saves a draft on the first keystroke,
+  // and a slip built from one is a ticket with no items on it.
+  if (target.kind === "studio" && isUnpublishedId(target.sanityId)) {
+    return NextResponse.json(
+      { error: "That order isn't published yet", retryable: false },
+      { status: 409 }
+    );
+  }
 
   let result;
   try {

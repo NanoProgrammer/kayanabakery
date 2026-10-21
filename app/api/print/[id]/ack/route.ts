@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { printerAuthorized, printerUnauthorized } from "../../_auth";
-import { parsePrintId } from "../../_ids";
+import { isUnpublishedId, parsePrintId } from "../../_ids";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,17 @@ export async function POST(
   const target = parsePrintId(id);
 
   if (target.kind === "studio") {
+    // A queue built before this check could still be holding a draft id.
+    // Stamping it would hide the order forever: the draft carries printedAt
+    // into the published document, and the queue skips anything stamped.
+    if (isUnpublishedId(target.sanityId)) {
+      console.warn(`[print] refused to stamp unpublished order ${target.sanityId}`);
+      return NextResponse.json(
+        { error: "That order isn't published yet", retryable: false },
+        { status: 409 }
+      );
+    }
+
     try {
       const doc = await sanityClient.fetch<{ _id: string; printedAt?: string } | null>(
         `*[_id == $id][0]{ _id, printedAt }`,

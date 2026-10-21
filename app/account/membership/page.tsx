@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { TIERS } from "@/lib/membership/tiers";
+import { membershipAccessReason, membershipGrantsBenefits } from "@/lib/membership/access";
 import { MembershipManager } from "@/components/account/MembershipManager";
 import { WeeklyBoxPreferences } from "@/components/account/WeeklyBoxPreferences";
 
@@ -17,6 +18,11 @@ export default async function MembershipAccountPage() {
 
   const tier = membership?.tier ?? "BASICO";
   const tierData = TIERS[tier as keyof typeof TIERS];
+
+  // Showing the plan name while the rest of the site treats the person as a
+  // non-member is how a Selecto member ends up being told that members-only
+  // bread needs Artesano. If the benefits aren't live, the page says so.
+  const hasBenefits = membershipGrantsBenefits(membership);
 
   return (
     <div>
@@ -67,6 +73,16 @@ export default async function MembershipAccountPage() {
             Earns <strong>{tierData.pointsMultiplier}x</strong> points on
             every order
           </p>
+          {membership && !hasBenefits && (
+            <div className="rounded-xl bg-amber-50 px-3 py-2 text-amber-900">
+              <p className="font-bold">Your benefits aren&apos;t active right now</p>
+              <p className="mt-1">{membershipAccessReason(membership)}</p>
+              <p className="mt-1">
+                Members-only products and member pricing won&apos;t apply until this
+                is sorted out.
+              </p>
+            </div>
+          )}
         </div>
 
         <MembershipManager
@@ -75,8 +91,7 @@ export default async function MembershipAccountPage() {
 />
       </div>
 
-      {membership?.status === "ACTIVE" &&
-        (tier === "SELECTO" || tier === "LEGENDARIO") && (
+      {membership && hasBenefits && (tier === "SELECTO" || tier === "LEGENDARIO") && (
           <WeeklyBoxPreferences
             initialMode={membership.weeklyMode}
             initialAutoDelivery={membership.autoDeliveryEnabled}

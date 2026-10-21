@@ -17,7 +17,24 @@ import { config as loadEnv } from "dotenv";
 loadEnv();
 loadEnv({ path: ".env.local", override: true });
 
+/**
+ * The local .env.local points wherever the developer's own database is, which
+ * is not necessarily the one the live site uses — and a check that quietly
+ * passes against the wrong database is worse than no check at all. Setting
+ * PROD_DATABASE_URL aims this at that database for one run without editing,
+ * and therefore without forgetting to un-edit, any file.
+ */
+export function useProdUrlIfGiven(): boolean {
+  const prod = process.env.PROD_DATABASE_URL;
+  if (!prod) return false;
+  process.env.DATABASE_URL = prod;
+  process.env.DIRECT_URL = prod;
+  console.log("\n*** Using PROD_DATABASE_URL — this is the live database. ***");
+  return true;
+}
+
 async function main() {
+  useProdUrlIfGiven();
   const { Prisma, PrismaClient } = await import("@prisma/client");
   const prisma = new PrismaClient();
 

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { effectiveTier } from "@/lib/membership/access";
 
 export const metadata = { title: "Checkout" };
 
@@ -29,7 +30,7 @@ export default async function CheckoutPage() {
             select: { id: true },
             take: 1,
           },
-          membership: { select: { tier: true, status: true } },
+          membership: { select: { tier: true, status: true, endsAt: true } },
         },
       }),
       prisma.address.findMany({
@@ -49,10 +50,7 @@ export default async function CheckoutPage() {
               email: user.email,
               phone: user.phone,
               pointsBalance: user.pointsBalance ?? 0,
-              tier:
-                user.membership?.status === "ACTIVE"
-                  ? (user.membership.tier as any)
-                  : "BASICO",
+              tier: effectiveTier(user.membership),
               hasUsedFirstFreeDelivery: (user.orders?.length ?? 0) > 0,
             }
           : null

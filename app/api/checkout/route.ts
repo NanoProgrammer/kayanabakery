@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { createSanityOrder } from "@/lib/orders/sanity-sync";
+import { effectiveTier } from "@/lib/membership/access";
 
 /**
  * Vercel's default is 10 seconds. A checkout is a Square round trip, a dozen
@@ -174,7 +175,7 @@ export async function POST(req: Request) {
       })
     : null;
 
-  const tier = user?.membership?.tier ?? "BASICO";
+  const tier = effectiveTier(user?.membership);
   const hasUsedFirstFreeDelivery = (user?.orders?.length ?? 0) > 0;
 
   // Persist the phone number a logged-in user just entered (no phone on file yet)

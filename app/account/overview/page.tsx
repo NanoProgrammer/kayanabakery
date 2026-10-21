@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Coins, Package, Truck, Crown } from "lucide-react";
 import { formatCents } from "@/lib/checkout/pricing";
 import { TIERS } from "@/lib/membership/tiers";
+import { effectiveTier } from "@/lib/membership/access";
 
 export default async function OverviewPage() {
   const session = await auth();
@@ -34,7 +35,7 @@ export default async function OverviewPage() {
   if (!user) redirect("/login");
 
   const tier =
-    user.membership?.status === "ACTIVE" ? user.membership.tier : "BASICO";
+    effectiveTier(user.membership);
   const tierData = TIERS[tier as keyof typeof TIERS];
 
   return (

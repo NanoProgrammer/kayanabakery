@@ -5,6 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { createSanityOrder } from "@/lib/orders/sanity-sync";
+
+/**
+ * Vercel's default is 10 seconds. A checkout is a Square round trip, a dozen
+ * queries and a cold Neon start, and being cut off halfway through costs a
+ * customer their money — so buy the time instead.
+ */
+export const maxDuration = 60;
 import { squareClient, SQUARE_LOCATION_ID as locationId } from "@/lib/square/client";
 import { computePricing } from "@/lib/checkout/pricing";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
@@ -428,7 +435,9 @@ paymentId = result.payment?.id ?? undefined;
   // ============================================================
   const orderNumber = generateOrderNumber();
 
-  const order = await prisma.$transaction(async (tx) => {
+  let order: Awaited<ReturnType<typeof buildOrder>>;
+
+  const buildOrder = () => prisma.$transaction(async (tx) => {
     let savedAddress = address;
 
     if (data.guestAddress && !data.addressId && userId) {
@@ -587,7 +596,43 @@ paymentId = result.payment?.id ?? undefined;
     }
 
     return created;
+  },
+  {
+    // Prisma's defaults are maxWait 2s and timeout 5s. There are a dozen
+    // round trips in here, and Neon suspends when the bakery is quiet, so the
+    // first one after a lull can spend seconds just waking the database. At
+    // the defaults that transaction is killed — after Square has already taken
+    // the money. These are generous on purpose: a slow checkout beats a
+    // customer charged for an order nobody ever saw.
+    maxWait: 15_000,
+    timeout: 30_000,
   });
+
+  try {
+    order = await buildOrder();
+  } catch (err) {
+    // The card has been charged at this point. Whatever happens, the customer
+    // must not be handed a blank 500 — that reads as "it failed", they pay
+    // again, and the bakery owes a refund it does not know about. Say plainly
+    // that the money went through, and leave the payment id everywhere it can
+    // be found: in the logs, and in the customer's own error message.
+    console.error(
+      `[checkout] PAID BUT NOT SAVED — Square payment ${paymentId} for ${pricing.totalCents} cents was taken and the order could not be written.`,
+      err
+    );
+    return NextResponse.json(
+      {
+        code: "PAID_NOT_SAVED",
+        paid: true,
+        paymentId,
+        error:
+          "Your payment went through but we could not save the order. Please do not pay again — contact the bakery with this reference: " +
+          paymentId,
+      },
+      { status: 500 }
+    );
+  }
+
   // ============================================================
   // 12.5 Sync order to Sanity Studio, CRM, and send emails after response
   // ============================================================

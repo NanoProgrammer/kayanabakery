@@ -22,6 +22,7 @@ import { GuestSignupNudge } from "./GuestSignupNudge";
 import { MembershipGate } from "../membership/MembershipGate";
 import { AddressPicker, type AddressData, type SavedAddress } from "./AddressPicker";
 import { SquarePaymentForm } from "./SquarePaymentForm";
+import { interpretCheckoutResponse } from "@/lib/checkout/response";
 import { OrderSummarySidebar } from "./OrderSummarySidebar";
 
 type UserCtx = {
@@ -44,6 +45,10 @@ export function CheckoutForm({
   const router = useRouter();
   const { locale } = useLocale();
   const submitted = useRef(false);
+  // Set when a payment may have reached Square but we never got a clean answer
+  // back. It permanently disables Pay: a second click is a second real charge,
+  // because the card is tokenized afresh and a new idempotency key goes with it.
+  const [paymentUnconfirmed, setPaymentUnconfirmed] = useState<string | null>(null);
 
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clearCart);
@@ -202,7 +207,8 @@ export function CheckoutForm({
       ? !!pickupDate && !!pickupTime
       : !!deliverySlotId && hasDeliveryAddress) &&
     (!!user || (guestEmail && guestName && guestPhone)) &&
-    (!needsAccountPhone || !!accountPhone);
+    (!needsAccountPhone || !!accountPhone) &&
+    !paymentUnconfirmed;
 
   async function handlePayment(token: string) {
     const payload: any = {
@@ -232,24 +238,48 @@ export function CheckoutForm({
       payload.phone = accountPhone;
     }
 
+    // The message for the one case we must never get wrong: the money may be
+    // gone and we cannot prove the order exists.
+    const unconfirmedMessage = (reference?: string) =>
+      locale === "es"
+        ? `No pudimos confirmar tu pedido. Si tu tarjeta fue cobrada, el pedido está a salvo — NO pagues otra vez. Escríbenos${reference ? ` con esta referencia: ${reference}` : ""}.`
+        : `We couldn't confirm your order. If your card was charged, your order is safe — do NOT pay again. Please contact us${reference ? ` with this reference: ${reference}` : ""}.`;
+
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Checkout failed");
+
+      // res.json() used to be called straight on this. A function cut short
+      // after the card was charged answers with an empty body, and that threw
+      // "Unexpected end of JSON input" at a customer whose money was gone.
+      const body = await res.text();
+      const outcome = interpretCheckoutResponse({ ok: res.ok, status: res.status, body });
+
+      if (outcome.kind === "unconfirmed") {
+        console.error("[checkout] unconfirmed", res.status, body.slice(0, 200));
+        setPaymentUnconfirmed(outcome.reference);
+        toast.error(unconfirmedMessage(outcome.reference), { duration: 30000 });
         return;
       }
+
+      if (outcome.kind === "error") {
+        toast.error(outcome.message);
+        return;
+      }
+
       submitted.current = true;
       clearCart();
       setCartCoupon(null);
       setCartPoints(0);
-      router.push(data.redirect || `/checkout/success?order=${data.orderNumber}`);
+      router.push(outcome.redirect);
     } catch (e: any) {
-      toast.error(e.message || "Network error");
+      // The request left the browser; whether Square saw it is unknowable here.
+      console.error("[checkout] request failed", e);
+      setPaymentUnconfirmed("");
+      toast.error(unconfirmedMessage(), { duration: 30000 });
     }
   }
 
@@ -414,8 +444,37 @@ export function CheckoutForm({
 
           {/* Payment */}
           <Section num={nextNum()} title={locale === "es" ? "Pago" : "Payment"}>
+            {/* Stays on screen: the toast fades, and a Pay button that is dark
+                for no visible reason is exactly what makes someone reload and
+                try again. */}
+            {paymentUnconfirmed !== null && (
+              <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                <p className="font-bold">
+                  {locale === "es"
+                    ? "No pudimos confirmar tu pedido"
+                    : "We couldn't confirm your order"}
+                </p>
+                <p className="mt-2">
+                  {locale === "es"
+                    ? "Si tu tarjeta fue cobrada, tu pedido está a salvo y la panadería lo verá. No vuelvas a pagar."
+                    : "If your card was charged, your order is safe and the bakery will see it. Please don't pay again."}
+                </p>
+                {paymentUnconfirmed && (
+                  <p className="mt-2">
+                    {locale === "es" ? "Referencia: " : "Reference: "}
+                    <span className="font-mono text-xs">{paymentUnconfirmed}</span>
+                  </p>
+                )}
+                <a
+                  href="/contact"
+                  className="mt-3 inline-block font-bold underline"
+                >
+                  {locale === "es" ? "Contactar a la panadería" : "Contact the bakery"}
+                </a>
+              </div>
+            )}
             <SquarePaymentForm totalCents={pricing.totalCents} onTokenReady={handlePayment} disabled={!canPay} />
-            {!canPay && pricing.errors.length === 0 && !needsMembership && (
+            {!canPay && pricing.errors.length === 0 && !needsMembership && paymentUnconfirmed === null && (
               <p className="mt-3 text-xs text-ink-soft">
                 {locale === "es"
                   ? "Completa los pasos anteriores para continuar."

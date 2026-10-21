@@ -25,6 +25,8 @@
     "sync:customers": "npx tsx scripts/sync-customers-to-sanity.ts",
     "test:print": "npx tsx scripts/test-print-order.ts",
     "test:status": "npx tsx scripts/test-order-status.ts",
+    "test:checkout": "npx tsx scripts/test-checkout-response.ts",
+    "payments:orphans": "npx tsx scripts/find-orphan-payments.ts",
     "test:print-queue": "npx tsx scripts/test-print-queue.ts",
     "print:stuck": "npx tsx scripts/print-stuck.ts",
     "print:unstick": "npx tsx scripts/print-stuck.ts",

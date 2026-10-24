@@ -9,15 +9,12 @@ import type { Product } from "@/types";
 
 export const revalidate = 60;
 
-/**
- * Catch-all rather than [slug]: some products are stored in Sanity with a
- * slash inside their slug (e.g. "pan-de-muerto/traditional"), which splits
- * into two URL segments. A single [slug] segment can't match those, so every
- * such product 404'd — and a 404 page carries no title, description or
- * image, which is what made their link previews come back empty.
- */
 function joinSlug(segments: string[]): string {
   return segments.map(decodeURIComponent).join("/").toLowerCase();
+}
+
+function isPanDeMuerto(slug: string): boolean {
+  return slug === "pan-de-muerto" || slug.startsWith("pan-de-muerto/");
 }
 
 export default async function ProductPage({
@@ -32,7 +29,43 @@ export default async function ProductPage({
     tags: ["product"],
   });
   if (!product) notFound();
-  return <ProductDetail product={product} />;
+
+  const origin = await getRequestOrigin();
+  const pageUrl = `${origin}/product/${slug.join("/")}`;
+  const imageUrl =
+    ogImageUrl(product.image) ??
+    ogImageUrl(product.gallery?.[0]) ??
+    `${origin}/og-default.jpg`;
+
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: cleanMetaText(product.description),
+    image: [imageUrl],
+    url: pageUrl,
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "CAD",
+      price: product.price,
+      availability: product.inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      url: pageUrl,
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(productJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+      <ProductDetail product={product} />
+    </>
+  );
 }
 
 export async function generateMetadata({
@@ -41,26 +74,30 @@ export async function generateMetadata({
   params: Promise<{ slug: string[] }>;
 }) {
   const { slug } = await params;
+  const joinedSlug = joinSlug(slug);
   const p = await sanityFetch<Product | null>({
     query: productBySlugQuery,
-    params: { slug: joinSlug(slug) },
+    params: { slug: joinedSlug },
     tags: ["product"],
   }).catch(() => null);
   if (!p) return { title: "Product not found" };
 
   const origin = await getRequestOrigin();
   const pageUrl = `${origin}/product/${slug.join("/")}`;
-
-  // Fall back to the gallery, then the site's default share image, so a
-  // product with a missing/broken main photo still gets a real og:image
-  // instead of silently dropping the whole openGraph/twitter block.
   const imageUrl =
     ogImageUrl(p.image) ??
     ogImageUrl(p.gallery?.[0]) ??
     `${origin}/og-default.jpg`;
 
-  const title = cleanMetaText(p.name, 100) ?? "Karyana Bakery";
-  const description = cleanMetaText(p.description);
+  const baseTitle = cleanMetaText(p.name, 100) ?? "Karyana Bakery";
+  const title = isPanDeMuerto(joinedSlug)
+    ? cleanMetaText(`${baseTitle} in Calgary | Karyana Bakery`, 100)
+    : baseTitle;
+  const description = isPanDeMuerto(joinedSlug)
+    ? cleanMetaText(
+        `${p.description ?? p.name} Order authentic Mexican Pan de Muerto from Karyana Bakery in Calgary, Alberta.`
+      )
+    : cleanMetaText(p.description);
 
   return {
     title,

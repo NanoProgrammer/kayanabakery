@@ -15,7 +15,7 @@ export function MembershipsHero() {
           description:
             "Únete a una comunidad construida alrededor del pan, nuestras tradiciones y esos pequeños recuerdos que nos hacen sentir en casa.",
           journey:
-            "Una ciudad a la vez. Una comunidad a la vez. Un recuerdo a la vez.",
+            "Una familia a la vez. Una comunidad a la vez. Un recuerdo a la vez.",
         }
       : {
           title: "Our goal isn't to sell to everyone.",
@@ -25,7 +25,7 @@ export function MembershipsHero() {
           description:
             "Join a community built around bread, our traditions, and the little memories that make a place feel like home.",
           journey:
-            "One city at a time. One community at a time. One memory at a time.",
+            "One family at a time. One community at a time. One memory at a time.",
         };
 
   return (

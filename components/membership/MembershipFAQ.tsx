@@ -85,7 +85,7 @@ export function MembershipFAQ() {
                   />
                 </button>
                 {isOpen && (
-                  <div className="border-t border-canela/15 px-6 py-5 text-sm leading-relaxed text-ink-soft">
+                  <div className="whitespace-pre-line border-t border-canela/15 px-6 py-5 text-sm leading-relaxed text-ink-soft">
                     {item.a}
                   </div>
                 )}

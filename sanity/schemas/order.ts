@@ -58,6 +58,22 @@ export default defineType({
       description: "Editable. Saved back to the customer's record.",
     }),
     defineField({
+      name: "customerTier",
+      title: "Membership",
+      type: "string",
+      options: {
+        list: [
+          { title: "Básico", value: "BASICO" },
+          { title: "Artesano", value: "ARTESANO" },
+          { title: "Selecto", value: "SELECTO" },
+          { title: "Legendario", value: "LEGENDARIO" },
+          { title: "Embajador", value: "EMBAJADOR" },
+        ],
+      },
+      description:
+        "The customer's plan when they ordered. Printed on the packing slip so the kitchen can see an order's priority at a glance.",
+    }),
+    defineField({
       name: "customerEmail",
       title: "Email",
       type: "string",

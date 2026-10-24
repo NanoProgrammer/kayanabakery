@@ -24,9 +24,39 @@ function formatDate(iso: string): string {
 }
 
 const ORDER_FIELDS = `{
-  orderNumber, customerName, customerPhone, fulfillmentType,
-  deliveryAddress, pickupDate, notes, items, createdAt
+  orderNumber, customerName, customerPhone, customerEmail, customerTier,
+  fulfillmentType, deliveryAddress, pickupDate, notes, items, createdAt
 }`;
+
+/**
+ * The customer's plan, for the badge the kitchen reads priority off.
+ *
+ * Orders placed since the field existed carry it. Anything older, and every
+ * order typed into Studio by hand, does not — so for those the account is
+ * looked up by email. A walk-in with no account is simply Básico, which is
+ * true and is also what the kitchen needs to know.
+ */
+async function resolveTier(order: {
+  customerTier?: string | null;
+  customerEmail?: string | null;
+}): Promise<string> {
+  if (order.customerTier) return order.customerTier;
+  if (!order.customerEmail) return "BASICO";
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const { effectiveTier } = await import("@/lib/membership/access");
+    const user = await prisma.user.findUnique({
+      where: { email: order.customerEmail.toLowerCase() },
+      select: { membership: { select: { tier: true, status: true, endsAt: true } } },
+    });
+    return effectiveTier(user?.membership);
+  } catch (err) {
+    // A slip that prints without the badge beats a slip that does not print.
+    console.error("[packing-slip] could not resolve the tier:", err);
+    return "BASICO";
+  }
+}
 
 export type PackingSlipLookup =
   /** The Sanity document id, as the Studio button has it. */
@@ -62,6 +92,7 @@ export async function buildPackingSlipPdf(
   }
 
   const data: PackingSlipData = {
+    customerTier: await resolveTier(order),
     orderNumber: order.orderNumber ?? "—",
     date: order.pickupDate || formatDate(order.createdAt),
     fulfillmentType: isPickup ? "PICKUP" : "DELIVERY",

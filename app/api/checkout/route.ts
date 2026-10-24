@@ -660,6 +660,7 @@ paymentId = result.payment?.id ?? undefined;
       customerName: user?.name ?? data.guestName ?? "Guest",
       customerEmail: user?.email ?? data.guestEmail ?? "",
       customerPhone: (user as any)?.phone ?? data.guestPhone ?? "",
+      customerTier: tier,
       fulfillmentType: data.fulfillmentType,
       totalCents: pricing.totalCents,
       items: items.map((it) => ({

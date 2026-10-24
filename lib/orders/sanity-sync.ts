@@ -17,6 +17,13 @@ export type SanityOrderInput = {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  /**
+   * The plan the customer was on when they ordered, printed on the kitchen
+   * slip. Recorded at order time rather than read live: what the bakery needs
+   * to see is the priority the order was taken at, which does not change when
+   * the membership later lapses or is upgraded.
+   */
+  customerTier?: string | null;
   fulfillmentType: string;
   /** Total in cents — converted to dollars for Studio. */
   totalCents: number;
@@ -38,6 +45,7 @@ export async function createSanityOrder(input: SanityOrderInput): Promise<boolea
       customerName: input.customerName,
       customerEmail: input.customerEmail,
       customerPhone: input.customerPhone,
+      customerTier: input.customerTier ?? "BASICO",
       fulfillmentType: input.fulfillmentType,
       total: input.totalCents / 100,
       items: input.items.map((it, i) => ({

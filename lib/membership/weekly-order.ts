@@ -127,6 +127,7 @@ export async function createWeeklyOrder({
     customerName: customer?.name ?? "Member",
     customerEmail: customer?.email ?? "",
     customerPhone: customer?.phone ?? "",
+    customerTier: tier,
     fulfillmentType: "PICKUP",
     totalCents: pricing.totalCents,
     items: items.map((it) => ({

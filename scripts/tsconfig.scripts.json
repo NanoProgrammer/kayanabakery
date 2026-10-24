@@ -1,0 +1,7 @@
+{
+  "// why": "The app's tsconfig leaves JSX alone for Next to compile ('preserve'), which makes tsx fall back to the classic React.createElement runtime — and the PDF components don't import React, because under Next they never need to. Scripts that render those components run them through tsx directly, so they ask for the automatic runtime instead of forcing an unused import into production files.",
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  }
+}

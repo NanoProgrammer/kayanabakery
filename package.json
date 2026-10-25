@@ -30,6 +30,8 @@
     "test:print": "npx tsx scripts/test-print-order.ts",
     "messages:pending": "npx tsx scripts/cancel-pending-messages.ts",
     "messages:cancel": "npx tsx scripts/cancel-pending-messages.ts cancel",
+    "orders:dates": "npx tsx scripts/unify-order-dates.ts",
+    "orders:dates:apply": "npx tsx scripts/unify-order-dates.ts apply",
     "test:pickup": "npx tsx scripts/test-pickup-label.ts",
     "test:checkout": "npx tsx scripts/test-checkout-response.ts",
     "test:membership": "npx tsx scripts/test-membership-access.ts",

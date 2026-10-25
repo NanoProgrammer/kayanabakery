@@ -6,6 +6,7 @@ import { sanityFetch } from "@/sanity/lib/fetch";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { createSanityOrder } from "@/lib/orders/sanity-sync";
 import { effectiveTier } from "@/lib/membership/access";
+import { formatPickupFromForm, formatPickupWindow } from "@/lib/studio/pickup-label";
 
 /**
  * Vercel's default is 10 seconds. A checkout is a Square round trip, a dozen
@@ -639,13 +640,14 @@ paymentId = result.payment?.id ?? undefined;
   const deliveryAddress = address
     ? `${address.street}, ${address.city}, ${address.province} ${address.postalCode}`
     : null;
+  // One shape for both, through the same formatter Studio writes with, so the
+  // field can be read back. These used to be two different hand-rolled strings
+  // — and the delivery one was built with no time zone, so on a server running
+  // in UTC a 1 p.m. Calgary slot was written down as 7:00 p.m.
   const slotLabel = deliverySlot
-    ? deliverySlot.startTime.toLocaleString("en-CA", {
-        weekday: "long", month: "short", day: "numeric",
-        hour: "numeric", minute: "2-digit",
-      })
+    ? formatPickupWindow(deliverySlot.startTime, deliverySlot.endTime)
     : data.pickupDate
-    ? `${data.pickupDate}${data.pickupTime ? " · " + data.pickupTime : ""}`
+    ? formatPickupFromForm(data.pickupDate, data.pickupTime)
     : null;
 
   // These run after the response is sent, but `after()` keeps the serverless

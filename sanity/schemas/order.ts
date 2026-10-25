@@ -182,8 +182,14 @@ export default defineType({
       title: "orderNumber",
       subtitle: "customerName",
       status: "status",
+      // When the order is for. The list showed only a number and a name, so
+      // the one thing the bakery plans its day around could not be seen
+      // without opening every order in turn.
+      pickupDate: "pickupDate",
+      fulfillmentType: "fulfillmentType",
+      customerTier: "customerTier",
     },
-    prepare({ title, subtitle, status }) {
+    prepare({ title, subtitle, status, pickupDate, fulfillmentType, customerTier }) {
       const emoji: Record<string, string> = {
         IN_PROGRESS: "⏳",
         READY: "✅",
@@ -196,9 +202,19 @@ export default defineType({
       // without hiding them from the list entirely.
       const strike = (s: string) => s.replace(/./g, (c) => `${c}̶`);
 
+      const who = isCompleted && subtitle ? strike(subtitle) : subtitle;
+      // Tier first, because it is what decides whose bread comes first.
+      const tier =
+        customerTier && customerTier !== "BASICO"
+          ? `👑 ${customerTier.charAt(0)}${customerTier.slice(1).toLowerCase()}`
+          : null;
+      const when = pickupDate
+        ? `${fulfillmentType === "DELIVERY" ? "🚚" : "🏠"} ${pickupDate}`
+        : "⚠️ no date set";
+
       return {
         title: `${emoji[status] ?? "📦"} ${isCompleted ? strike(title) : title}`,
-        subtitle: isCompleted && subtitle ? strike(subtitle) : subtitle,
+        subtitle: [who, tier, when].filter(Boolean).join(" · "),
       };
     },
   },

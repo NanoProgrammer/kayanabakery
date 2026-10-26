@@ -2,8 +2,25 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { chargeCardOnFile, tierPriceCents, nextRenewDate } from "@/lib/square/subscriptions";
 import { syncMembershipChange } from "@/lib/brevo/sync";
+import {
+  graceEndsAt,
+  renewalDecision,
+  type RenewalCandidate,
+} from "@/lib/membership/renewal";
+import { sendRenewalFailedEmail, sendMembershipEndedEmail } from "@/lib/email/renewal";
 
-// Protegido con un secret para que solo Vercel Cron lo llame
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+/**
+ * Charges memberships that are due, and keeps trying the ones that failed.
+ *
+ * This used to give up on the first decline: it set PAST_DUE with endsAt =
+ * now, so benefits stopped that second, and because it only ever queried
+ * ACTIVE memberships it never looked at that member again. A card that worked
+ * the next morning made no difference — the membership was simply over, and
+ * nobody was told. Failures now open a grace window that is retried daily.
+ */
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -12,47 +29,97 @@ export async function GET(req: Request) {
 
   const now = new Date();
 
-  // Membresías que vencen hoy o ya vencieron y siguen activas
-  const due = await prisma.membership.findMany({
+  // Due renewals and everything already in grace, because the point is to
+  // keep trying the second group rather than leave them where they fell.
+  const candidates = await prisma.membership.findMany({
     where: {
-      status: "ACTIVE",
-      renewsAt: { lte: now },
       tier: { in: ["ARTESANO", "SELECTO", "LEGENDARIO"] },
-      squareCardId: { not: null },
-      squareCustomerId: { not: null },
+      OR: [
+        { status: "ACTIVE", renewsAt: { lte: now } },
+        { status: "PAST_DUE" },
+      ],
     },
     include: {
-      user: { select: { email: true, name: true, preferredLang: true } },
+      user: { select: { email: true, name: true, preferredLang: true, langChosenByUser: true } },
     },
   });
 
-  const results = { renewed: 0, failed: 0, errors: [] as string[] };
+  const results = {
+    renewed: 0,
+    retried: 0,
+    failed: 0,
+    expired: 0,
+    skipped: 0,
+    errors: [] as string[],
+  };
 
-  for (const m of due) {
+  for (const m of candidates) {
+    const candidate: RenewalCandidate = {
+      tier: m.tier,
+      status: m.status,
+      renewsAt: m.renewsAt,
+      endsAt: m.endsAt,
+      hasCard: Boolean(m.squareCardId && m.squareCustomerId),
+    };
+
+    const decision = renewalDecision(candidate, now);
+
+    if (decision.action === "skip") {
+      results.skipped++;
+      continue;
+    }
+
+    if (decision.action === "expire") {
+      await prisma.membership.update({
+        where: { id: m.id },
+        data: { status: "EXPIRED" },
+      });
+      if (m.user?.email) {
+        await sendMembershipEndedEmail({
+          email: m.user.email,
+          name: m.user.name,
+          tier: m.tier,
+          preferredLang: m.user.preferredLang,
+          langChosenByUser: m.user.langChosenByUser,
+        });
+        syncMembershipChange({
+          email: m.user.email,
+          tier: m.tier,
+          status: "EXPIRED",
+          language: m.user.preferredLang,
+        });
+      }
+      results.expired++;
+      continue;
+    }
+
+    const priceCents = tierPriceCents(m.tier as any);
+
     try {
-      const priceCents = tierPriceCents(m.tier as any);
-
-      // Cobrar
       await chargeCardOnFile({
         customerId: m.squareCustomerId!,
         cardId: m.squareCardId!,
         amountCents: priceCents,
         note: `Karyana ${m.tier} renewal`,
+        // Keyed by the day, so a retry later the same day is not a second
+        // charge but a retry tomorrow is a real attempt.
         idempotencyKey: `renewal-${m.id}-${now.toISOString().slice(0, 10)}`,
       });
 
-      // Actualizar fecha de renovación
-      const nextRenew = nextRenewDate(m.tier as any, now);
       await prisma.membership.update({
         where: { id: m.id },
         data: {
-          renewsAt: nextRenew,
+          status: "ACTIVE",
+          // A successful retry clears the grace window: the member is simply
+          // paid up again, and leaving endsAt set would end them anyway.
+          endsAt: null,
+          cancelledAt: null,
+          renewsAt: nextRenewDate(m.tier as any, now),
           isTrial: false,
           lastRenewedAt: now,
         },
       });
 
-      // Convert renewal fee to points — same rule as new subscriptions:
       // Selecto & Legendario only, 1 point = 1 cent, no multiplier.
       if (m.tier === "SELECTO" || m.tier === "LEGENDARIO") {
         await prisma.user.update({
@@ -78,31 +145,47 @@ export async function GET(req: Request) {
         });
       }
 
-      results.renewed++;
+      if (decision.attempt === "retry") results.retried++;
+      else results.renewed++;
     } catch (err: any) {
-      console.error(`[cron] renewal failed for membership ${m.id}:`, err.message);
+      const reason = err?.errors?.[0]?.detail ?? err?.message ?? "Payment failed";
+      console.error(`[cron] renewal failed for membership ${m.id}: ${reason}`);
 
-      // Si falla el cobro, cancelar la membresía
-      await prisma.membership.update({
-        where: { id: m.id },
-        data: { status: "PAST_DUE", endsAt: now },
-      });
-
-      if (m.user?.email) {
-        syncMembershipChange({
-          email: m.user.email,
-          tier: m.tier,
-          status: "PAST_DUE",
-          language: m.user.preferredLang,
+      if (decision.attempt === "first") {
+        // Benefits continue through the window — the access rule grants them
+        // while endsAt is in the future — and the card is tried again daily.
+        const endsAt = graceEndsAt(now);
+        await prisma.membership.update({
+          where: { id: m.id },
+          data: { status: "PAST_DUE", endsAt },
         });
+
+        if (m.user?.email) {
+          await sendRenewalFailedEmail({
+            email: m.user.email,
+            name: m.user.name,
+            tier: m.tier,
+            endsAt,
+            reason,
+            preferredLang: m.user.preferredLang,
+            langChosenByUser: m.user.langChosenByUser,
+          });
+          syncMembershipChange({
+            email: m.user.email,
+            tier: m.tier,
+            status: "PAST_DUE",
+            language: m.user.preferredLang,
+          });
+        }
       }
+      // A failed retry changes nothing: the window is already open and
+      // tomorrow's run will try again. Re-emailing daily would be nagging.
 
       results.failed++;
-      results.errors.push(`${m.id}: ${err.message}`);
+      results.errors.push(`${m.user?.email ?? m.id}: ${reason}`);
     }
   }
 
   console.log("[cron] renewal results:", results);
   return NextResponse.json(results);
 }
-

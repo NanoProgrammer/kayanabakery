@@ -10,10 +10,16 @@ export function SquarePaymentForm({
   onTokenReady,
   totalCents,
   disabled,
+  label,
 }: {
   onTokenReady: (token: string) => Promise<void>;
   totalCents: number;
   disabled?: boolean;
+  /**
+   * Overrides the "Pay $X" button text. Saving a card without charging it is
+   * not a payment, and a button offering to pay $0.00 says the opposite.
+   */
+  label?: string;
 }) {
   const { locale } = useLocale();
   const [card, setCard] = useState<any>(null);
@@ -115,6 +121,8 @@ export function SquarePaymentForm({
           ? locale === "es"
             ? "Procesando…"
             : "Processing…"
+          : label
+          ? label
           : locale === "es"
           ? `Pagar $${(totalCents / 100).toFixed(2)} CAD`
           : `Pay $${(totalCents / 100).toFixed(2)} CAD`}

@@ -50,6 +50,33 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  // Outlined rather than filled, so it reads as a label beside the black
+  // pickup/delivery badge instead of competing with it.
+  tierBadge: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: "#111111",
+    border: "1px solid #111111",
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 3,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    // Spacing from the pickup/delivery badge beside it. A margin rather than
+    // the row's gap, which react-pdf's flexbox does not implement.
+    marginRight: 4,
+  },
+  // Members get a filled badge: the whole point is that the kitchen can tell
+  // at a glance, across a stack of slips, which orders come first.
+  tierBadgeMember: {
+    color: "#FFFFFF",
+    backgroundColor: "#111111",
+    border: "1px solid #111111",
+  },
   section: {
     marginBottom: 8,
   },
@@ -129,7 +156,18 @@ const styles = StyleSheet.create({
   },
 });
 
+/** How each plan prints. Básico included: "no membership" is information too. */
+const TIER_LABEL: Record<string, string> = {
+  BASICO: "Basico",
+  ARTESANO: "Artesano",
+  SELECTO: "Selecto",
+  LEGENDARIO: "Legendario",
+  EMBAJADOR: "Embajador",
+};
+
 export type PackingSlipData = {
+  /** The customer's plan, printed so the kitchen can see priority. */
+  customerTier?: string | null;
   orderNumber: string;
   date: string;
   fulfillmentType: "PICKUP" | "DELIVERY";
@@ -145,6 +183,8 @@ export type PackingSlipData = {
 
 export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
   const isPickup = data.fulfillmentType === "PICKUP";
+  const tier = data.customerTier || "BASICO";
+  const isMember = tier !== "BASICO";
 
   return (
     <Document>
@@ -160,9 +200,20 @@ export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
             <Text style={styles.metaLabel}>Order {data.orderNumber}</Text>
             <Text style={[styles.metaLabel, { marginTop: 2 }]}>{data.date}</Text>
           </View>
-          <Text style={styles.fulfillmentBadge}>
-            {isPickup ? "Pickup" : "Delivery"}
-          </Text>
+          <View style={styles.badgeRow}>
+            <Text
+              style={
+                isMember
+                  ? [styles.tierBadge, styles.tierBadgeMember]
+                  : styles.tierBadge
+              }
+            >
+              {TIER_LABEL[tier] ?? tier}
+            </Text>
+            <Text style={styles.fulfillmentBadge}>
+              {isPickup ? "Pickup" : "Delivery"}
+            </Text>
+          </View>
         </View>
 
         {/* Billing address — contact info for the order */}

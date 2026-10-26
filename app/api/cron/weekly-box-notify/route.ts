@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { resend, FROM_EMAIL } from "@/lib/email/resend";
 import { render } from "@react-email/render";
 import WeeklyBoxReminder from "@/emails/WeeklyBoxReminder";
-import { weekStartOf, signWeeklyAction, isDueThisWeek } from "@/lib/membership/weekly";
+import { weekStartOf, signWeeklyAction } from "@/lib/membership/weekly";
+import { weeklyBoxPlan, WEEKLY_TIERS } from "@/lib/membership/weekly-eligibility";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 
@@ -32,11 +33,13 @@ export async function GET(req: Request) {
   // included, never what happens to them.
   const onlyEmail = new URL(req.url).searchParams.get("onlyEmail");
 
+  // Deliberately broad. Who is in or out is decided by weeklyBoxPlan below, so
+  // that an excluded member comes back with a reason instead of simply never
+  // appearing — the previous query filtered on status and weeklyMode here, and
+  // the members it dropped were invisible to everyone, forever.
   const memberships = await prisma.membership.findMany({
     where: {
-      status: "ACTIVE",
-      tier: { in: ["SELECTO", "LEGENDARIO"] },
-      weeklyMode: { not: null },
+      tier: { in: WEEKLY_TIERS as any },
       ...(onlyEmail ? { user: { email: onlyEmail } } : {}),
     },
     include: { user: { select: { id: true, email: true, name: true, preferredLang: true } } },
@@ -47,6 +50,10 @@ export async function GET(req: Request) {
     skippedNoEmail: 0,
     alreadyLogged: 0,
     notDueThisWeek: 0,
+    /** Members with no mode of their own, given the default for their history. */
+    usedDefaultMode: 0,
+    /** Every exclusion, with its reason — an empty run must be explainable. */
+    excluded: [] as string[],
     errors: [] as string[],
   };
 
@@ -56,18 +63,34 @@ export async function GET(req: Request) {
       continue;
     }
 
-    // Members on the every-4-weeks rhythm only hear from us on their own
-    // weeks — no log, no email, nothing to decide.
-    if (
-      !isDueThisWeek({
-        frequency: m.weeklyFrequency,
-        anchorAt: m.weeklyAnchorAt,
-        weekStart,
-      })
-    ) {
-      results.notDueThisWeek++;
+    const plan = weeklyBoxPlan(
+      {
+        tier: m.tier,
+        status: m.status,
+        endsAt: m.endsAt,
+        weeklyMode: m.weeklyMode as never,
+        weeklyFrequency: m.weeklyFrequency,
+        weeklyAnchorAt: m.weeklyAnchorAt,
+        // Only looked up when it can change the answer: it decides the default
+        // mode for a member who never picked one.
+        hasPreviousOrder: m.weeklyMode
+          ? true
+          : (await prisma.order.count({
+              where: { userId: m.userId, status: { not: "CANCELLED" } },
+            })) > 0,
+      },
+      weekStart
+    );
+
+    if (!plan.include) {
+      // Members on the every-4-weeks rhythm only hear from us on their own
+      // weeks; everything else here is a member who should be told why.
+      if (plan.reason === "not due this week") results.notDueThisWeek++;
+      else results.excluded.push(`${m.user.email}: ${plan.reason}`);
       continue;
     }
+
+    if (plan.defaulted) results.usedDefaultMode++;
 
     try {
       const existing = await prisma.weeklyOrderLog.findUnique({
@@ -83,7 +106,7 @@ export async function GET(req: Request) {
           membershipId: m.id,
           userId: m.userId,
           weekStart,
-          modeSnapshot: m.weeklyMode!,
+          modeSnapshot: plan.mode,
           status: "PENDING",
         },
       });
@@ -96,7 +119,7 @@ export async function GET(req: Request) {
         WeeklyBoxReminder({
           appUrl: APP_URL,
           customerName: m.user.name ?? "there",
-          modeLabel: MODE_LABEL[m.weeklyMode!][locale],
+          modeLabel: MODE_LABEL[plan.mode][locale],
           frequencyLabel:
             m.weeklyFrequency === "EVERY_4_WEEKS"
               ? locale === "es"

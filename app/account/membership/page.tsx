@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { TIERS } from "@/lib/membership/tiers";
 import { membershipAccessReason, membershipGrantsBenefits } from "@/lib/membership/access";
 import { MembershipManager } from "@/components/account/MembershipManager";
+import { UpdateCard } from "@/components/account/UpdateCard";
 import { WeeklyBoxPreferences } from "@/components/account/WeeklyBoxPreferences";
 
 export const dynamic = "force-dynamic";
@@ -84,6 +85,15 @@ export default async function MembershipAccountPage() {
             </div>
           )}
         </div>
+
+        {/* A declined renewal used to be a dead end: the member was told their
+            benefits had stopped with nothing on the site that could fix it. */}
+        {membership && ["ARTESANO", "SELECTO", "LEGENDARIO"].includes(tier) && (
+          <UpdateCard
+            behind={membership.status === "PAST_DUE"}
+            priceCents={tierData.priceCents}
+          />
+        )}
 
         <MembershipManager
   currentTier={tier as any}

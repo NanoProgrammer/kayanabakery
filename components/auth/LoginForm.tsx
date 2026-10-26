@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { toast } from "sonner";
+import Link from "next/link";
 
 export function LoginForm() {
   const { t, locale } = useLocale();
@@ -15,10 +15,15 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  // Shown in the form rather than as a toast. The toast rendered at the bottom
+  // of the page, below the footer, so a customer who had just typed her
+  // password never saw why it was refused.
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     const res = await signIn("credentials", {
       email,
       password,
@@ -28,8 +33,15 @@ export function LoginForm() {
     setLoading(false);
 
     if (res?.error) {
-      toast.error(
-        locale === "es" ? "Email o contraseña incorrectos" : "Invalid credentials"
+      // Names the two things that are actually wrong when this happens, without
+      // confirming whether the address has an account — saying "this account
+      // uses Google" would turn the form into a way to find out who shops here.
+      // The Google case is the likeliest: an account made with the Google
+      // button has no password at all, so there is none to get right.
+      setError(
+        locale === "es"
+          ? "No pudimos entrar con esos datos. Si creaste tu cuenta con Google, usa el botón de arriba. Si no, pide un enlace para elegir una contraseña nueva."
+          : "We couldn't sign you in with those details. If you created your account with Google, use the button above. Otherwise, ask for a link to choose a new password."
       );
       return;
     }
@@ -101,9 +113,27 @@ export function LoginForm() {
             className="mt-2 w-full rounded-full border border-canela/30 bg-cream px-5 py-3 text-sm focus:border-canela-dark focus:outline-none"
           />
         </div>
+        {error && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            <p>{error}</p>
+            <Link
+              href="/forgot-password"
+              className="mt-2 inline-block font-bold underline"
+            >
+              {locale === "es" ? "Elegir una contraseña nueva" : "Choose a new password"}
+            </Link>
+          </div>
+        )}
+
         <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-60">
           {loading ? t("common.loading") : t("common.signIn")}
         </button>
+
+        <p className="text-center text-sm">
+          <Link href="/forgot-password" className="text-ink-soft underline">
+            {locale === "es" ? "¿Olvidaste tu contraseña?" : "Forgot your password?"}
+          </Link>
+        </p>
       </form>
     </div>
   );

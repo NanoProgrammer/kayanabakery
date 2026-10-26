@@ -37,6 +37,8 @@
     "test:membership": "npx tsx scripts/test-membership-access.ts",
     "test:renewal": "npx tsx scripts/test-renewal.ts",
     "test:fields": "npx tsx scripts/test-field-validation.ts",
+    "test:reset": "npx tsx scripts/test-password-reset.ts",
+    "user:reset-link": "npx tsx scripts/reset-link.ts",
     "membership:check": "npx tsx scripts/check-membership.ts",
     "db:verify": "npx tsx scripts/verify-db-schema.ts",
     "payments:orphans": "npx tsx scripts/find-orphan-payments.ts",

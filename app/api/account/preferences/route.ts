@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import * as field from "@/lib/validation/fields";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
-  name: z.string().min(2).optional(),
-  phone: z.string().optional(),
-  birthday: z.string().optional(),
+  name: field.personName.optional(),
+  // Normalised to E.164 here as everywhere else, so one customer is one
+  // number however they typed it — order texts depend on that.
+  phone: field.optionalPhone,
+  birthday: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+    .optional(),
   preferredLang: z.enum(["en", "es"]).optional(),
   emailMarketing: z.boolean().optional(),
 });

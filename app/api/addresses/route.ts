@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import * as field from "@/lib/validation/fields";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
@@ -17,13 +18,16 @@ export async function GET() {
   return NextResponse.json({ addresses });
 }
 
+// Shared field rules, so an address saved here, typed at checkout or edited
+// later is held to the same standard. These used to be min(2) on everything,
+// which accepted "db drop table" as a street and "T3M4TB" as a postal code.
 const addressSchema = z.object({
-  street: z.string().min(2),
-  city: z.string().min(2),
-  province: z.string().min(2).max(3),
-  postalCode: z.string().min(6).max(7),
-  buzzer: z.string().optional(),
-  notes: z.string().optional(),
+  street: field.street,
+  city: field.city,
+  province: field.province,
+  postalCode: field.postalCode,
+  buzzer: field.buzzer,
+  notes: field.notes,
   isDefault: z.boolean().optional(),
 });
 
@@ -36,7 +40,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = addressSchema.safeParse(body);
   if (!parsed.success)
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
 
   const data = parsed.data;
   const isSE = isSECalgary(data.postalCode);

@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { resend, FROM_EMAIL, OWNER_EMAIL } from "@/lib/email/resend";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import * as field from "@/lib/validation/fields";
 
 const schema = z.object({
-  yourName: z.string().min(2),
-  yourEmail: z.string().email(),
-  friendName: z.string().min(2),
-  friendEmail: z.string().email(),
-  situation: z.string().min(1),
-  personalMessage: z.string().max(800).optional(),
+  yourName: field.personName,
+  yourEmail: field.email,
+  friendName: field.personName,
+  friendEmail: field.email,
+  situation: field.text(1, 200, "Situation"),
+  personalMessage: field.optionalMultiline(800, "Message"),
 });
 
 function escapeHtml(s: string) {
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
 
   const { yourName, yourEmail, friendName, friendEmail, situation, personalMessage } = parsed.data;

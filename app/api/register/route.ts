@@ -2,21 +2,24 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import * as field from "@/lib/validation/fields";
 import { syncUserRegistered } from "@/lib/brevo/sync";
 import { getServerLocale } from "@/lib/i18n/server";
 
 const schema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-  refCode: z.string().optional(),
+  name: field.personName,
+  email: field.email,
+  // Length only: a password is the one field whose contents are nobody's
+  // business, and rules about its shape make it weaker, not stronger.
+  password: z.string().min(8, "Use at least 8 characters").max(200),
+  refCode: field.code.optional(),
 });
 
 export async function POST(req: Request) {
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
 
   const { name, email, password, refCode } = parsed.data;

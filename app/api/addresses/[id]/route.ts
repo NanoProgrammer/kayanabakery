@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import * as field from "@/lib/validation/fields";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
 
+// Editing an address is held to the same rules as creating one; it used to be
+// held to none at all, so anything rejected on the way in could be set here.
 const patchSchema = z.object({
-  street: z.string().optional(),
-  city: z.string().optional(),
-  province: z.string().optional(),
-  postalCode: z.string().optional(),
-  buzzer: z.string().optional(),
-  notes: z.string().optional(),
+  street: field.street.optional(),
+  city: field.city.optional(),
+  province: field.province.optional(),
+  postalCode: field.postalCode.optional(),
+  buzzer: field.buzzer,
+  notes: field.notes,
   isDefault: z.boolean().optional(),
 });
 
@@ -38,7 +41,10 @@ export async function PATCH(
   const body = await req.json();
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success)
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid input" },
+      { status: 400 }
+    );
 
   const data = parsed.data;
 

@@ -1,19 +1,22 @@
 import { NextResponse } from "next/server";
 import { resend, FROM_EMAIL, OWNER_EMAIL } from "@/lib/email/resend";
 import { z } from "zod";
+import * as field from "@/lib/validation/fields";
 
 const schema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  subject: z.string().min(2),
-  message: z.string().min(5).max(3000),
+  name: field.personName,
+  email: field.email,
+  subject: field.text(2, 150, "Subject"),
+  message: field.optionalMultiline(3000, "Message").pipe(
+    z.string({ required_error: "Message is required" }).min(5, "Message is too short")
+  ),
 });
 
 export async function POST(req: Request) {
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success)
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
 
   const { name, email, subject, message } = parsed.data;
 

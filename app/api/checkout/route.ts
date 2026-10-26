@@ -1,5 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { z } from "zod";
+import * as field from "@/lib/validation/fields";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { sanityFetch } from "@/sanity/lib/fetch";
@@ -82,21 +83,25 @@ const schema = z.object({
   pickupTime: z.string().optional(),
   deliverySlotId: z.string().optional(),
   addressId: z.string().optional(),
-  guestEmail: z.string().email().optional(),
-  guestName: z.string().optional(),
-  guestPhone: z.string().optional(),
-  phone: z.string().optional(), // logged-in user's phone, when missing from their profile
+  // The same field rules the account pages use. A guest's details and address
+  // reached the database and the delivery label unchecked: a postal code that
+  // is not one cannot be matched to a delivery zone, and a phone number that
+  // was never normalised is a customer who does not get their order texts.
+  guestEmail: field.email.optional(),
+  guestName: field.personName.optional(),
+  guestPhone: field.optionalPhone,
+  phone: field.optionalPhone, // logged-in user's phone, when missing from their profile
   guestAddress: z
     .object({
-      street: z.string(),
-      city: z.string(),
-      province: z.string(),
-      postalCode: z.string(),
-      buzzer: z.string().optional(),
-      notes: z.string().optional(),
+      street: field.street,
+      city: field.city,
+      province: field.province,
+      postalCode: field.postalCode,
+      buzzer: field.buzzer,
+      notes: field.notes,
     })
     .optional(),
-  couponCode: z.string().optional(),
+  couponCode: field.code.optional(),
   pointsToRedeem: z.number().int().min(0).optional(),
   tipCents: z.number().int().min(0).optional(),
   items: z
@@ -116,7 +121,13 @@ export async function POST(req: Request) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid input", details: parsed.error.flatten() },
+      {
+        // Name the field: the rules reject real mistakes now — a postal code
+        // that is not one — and "Invalid input" leaves the customer stuck on a
+        // page with their card already typed in.
+        error: parsed.error.issues[0]?.message ?? "Invalid input",
+        details: parsed.error.flatten(),
+      },
       { status: 400 }
     );
   }

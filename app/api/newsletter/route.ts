@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resend } from "@/lib/email/resend";
 import { z } from "zod";
+import * as field from "@/lib/validation/fields";
 import { syncNewsletterSubscribe } from "@/lib/brevo/sync";
 
 const schema = z.object({
-  email: z.string().email(),
-  language: z.string().optional(),
-  source: z.string().optional(),
+  email: field.email,
+  language: z.enum(["en", "es"]).optional(),
+  source: field.optionalText(40, "Source"),
 });
 
 export async function POST(req: Request) {

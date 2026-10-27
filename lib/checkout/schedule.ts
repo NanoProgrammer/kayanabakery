@@ -11,6 +11,8 @@
  *   Sunday:  1:00–3:00 PM (max 10 per slot)
  */
 
+import { isClosedDate } from "./closures";
+
 import {
   addDays,
   setHours,
@@ -153,6 +155,7 @@ export function getPickupSlots({
 
   for (let i = 0; i < daysAhead; i++) {
     const day = startOfDay(addDays(from, i));
+    if (isClosedDate(format(day, "yyyy-MM-dd"))) continue;
     const dow = day.getDay();
 
     for (const w of PICKUP_WINDOWS) {
@@ -186,6 +189,7 @@ export function getDeliverySlotDefs({
 
   for (let i = 0; i < daysAhead; i++) {
     const day = startOfDay(addDays(from, i));
+    if (isClosedDate(format(day, "yyyy-MM-dd"))) continue;
     const dow = day.getDay();
 
     for (const w of DELIVERY_WINDOWS) {

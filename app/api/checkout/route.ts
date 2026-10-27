@@ -8,6 +8,8 @@ import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { createSanityOrder } from "@/lib/orders/sanity-sync";
 import { effectiveTier } from "@/lib/membership/access";
 import { formatPickupFromForm, formatPickupWindow } from "@/lib/studio/pickup-label";
+import { isClosedDate } from "@/lib/checkout/closures";
+import { bakeryDateString } from "@/lib/time/edmonton";
 
 /**
  * Vercel's default is 10 seconds. A checkout is a Square round trip, a dozen
@@ -138,6 +140,17 @@ export async function POST(req: Request) {
   const userId = (session?.user as any)?.id as string | undefined;
   const guestLocale = await getServerLocale();
 
+  const closedDateError = () => NextResponse.json(
+    { error: guestLocale === "es"
+      ? "La panadería está cerrada ese día. Elige otra fecha."
+      : "The bakery is closed that day. Please choose another date." },
+    { status: 409 }
+  );
+
+  if (data.fulfillmentType === "PICKUP" && data.pickupDate && isClosedDate(data.pickupDate.slice(0, 10))) {
+    return closedDateError();
+  }
+
   // ============================================================
   // 1. Re-fetch products from Sanity
   // ============================================================
@@ -262,6 +275,9 @@ export async function POST(req: Request) {
 
     if (!deliverySlot) {
       return NextResponse.json({ error: "Delivery slot not found" }, { status: 404 });
+    }
+    if (isClosedDate(bakeryDateString(deliverySlot.startTime))) {
+      return closedDateError();
     }
     if (deliverySlot._count.orders >= deliverySlot.capacity || !deliverySlot.isOpen) {
       return NextResponse.json({ error: "Delivery slot is full" }, { status: 409 });

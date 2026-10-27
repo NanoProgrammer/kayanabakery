@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Calendar, Clock, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
+import { isClosedDate } from "@/lib/checkout/closures";
 
 type PickupDay = {
   date: string;
@@ -37,7 +38,8 @@ function generatePickupDays(minLeadHours: number, locale = "en"): PickupDay[] {
     windowEnd.setHours(endH, 0, 0, 0);
     if (windowEnd <= earliest) continue;
 
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (isClosedDate(dateStr)) continue;
     const dayLabel = d.toLocaleDateString(locale === "es" ? "es-MX" : "en-CA", {
       weekday: "long",
       month: "short",

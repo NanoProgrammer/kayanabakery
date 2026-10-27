@@ -6,7 +6,6 @@ import { MembershipsHero } from "@/components/membership/MembershipsHero";
 import { MembershipPricingTable } from "@/components/membership/MembershipPricingTable";
 import { MembershipBenefitsGrid } from "@/components/membership/MembershipBenefitsGrid";
 import { MembershipFAQ } from "@/components/membership/MembershipFAQ";
-import { OnePercentClub } from "@/components/membership/OnePercentClub";
 import type { MembershipPlanCMS } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -37,8 +36,6 @@ export default async function MembershipsPage() {
   return (
     <>
       <MembershipsHero />
-
-      <OnePercentClub />
 
       <MembershipPricingTable
         cmsPlans={cmsPlans ?? []}

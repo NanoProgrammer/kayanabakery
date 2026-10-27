@@ -59,6 +59,7 @@ async function status() {
         tier: m.tier,
         status: m.status,
         endsAt: m.endsAt,
+        benefitMode: m.benefitMode,
         weeklyMode: m.weeklyMode as never,
         weeklyFrequency: m.weeklyFrequency,
         weeklyAnchorAt: m.weeklyAnchorAt,

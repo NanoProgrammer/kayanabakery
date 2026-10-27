@@ -20,6 +20,7 @@
  * or out can be tested and printed rather than inferred from an empty table.
  */
 import { membershipGrantsBenefits, type MembershipLike } from "./access";
+import { wantsWeeklyBox } from "./benefit";
 import { isDueThisWeek } from "./weekly";
 
 export type WeeklyBoxMode = "REPEAT_LAST" | "CURATED" | "MANUAL";
@@ -28,6 +29,8 @@ export type WeeklyCandidate = {
   tier: string;
   status: string;
   endsAt?: Date | string | null;
+  /** WEEKLY_BOX or POINTS — what the member chose their fee to buy. */
+  benefitMode?: string | null;
   weeklyMode: WeeklyBoxMode | null;
   weeklyFrequency: "WEEKLY" | "EVERY_4_WEEKS" | null;
   weeklyAnchorAt: Date | null;
@@ -61,6 +64,12 @@ export function weeklyBoxPlan(
 ): WeeklyBoxPlan {
   if (!WEEKLY_TIERS.includes(member.tier)) {
     return { include: false, reason: `${member.tier} has no weekly box` };
+  }
+
+  // They chose to spend the fee as points instead. No box, no reminder — and
+  // nothing to decide each week, so this is not a failure to report.
+  if (!wantsWeeklyBox(member.benefitMode)) {
+    return { include: false, reason: "chose points instead of a weekly box" };
   }
 
   const asMembership: MembershipLike = {

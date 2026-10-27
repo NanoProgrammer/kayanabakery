@@ -5,6 +5,7 @@ import { TIERS } from "@/lib/membership/tiers";
 import { membershipAccessReason, membershipGrantsBenefits } from "@/lib/membership/access";
 import { MembershipManager } from "@/components/account/MembershipManager";
 import { UpdateCard } from "@/components/account/UpdateCard";
+import { BenefitMode } from "@/components/account/BenefitMode";
 import { WeeklyBoxPreferences } from "@/components/account/WeeklyBoxPreferences";
 
 export const dynamic = "force-dynamic";
@@ -102,6 +103,11 @@ export default async function MembershipAccountPage() {
       </div>
 
       {membership && hasBenefits && (tier === "SELECTO" || tier === "LEGENDARIO") && (
+        <BenefitMode current={membership.benefitMode as "WEEKLY_BOX" | "POINTS"} />
+      )}
+
+      {membership && hasBenefits && membership.benefitMode !== "POINTS" &&
+        (tier === "SELECTO" || tier === "LEGENDARIO") && (
           <WeeklyBoxPreferences
             initialMode={membership.weeklyMode}
             initialAutoDelivery={membership.autoDeliveryEnabled}

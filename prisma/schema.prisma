@@ -283,6 +283,17 @@ isTrial            Boolean  @default(false)
 lastPaymentId      String?
 lastRenewedAt      DateTime?
 
+// What the membership fee buys, chosen when they subscribe.
+//
+// WEEKLY_BOX — a box is made for them every week. It spends the points the
+//              fee converted into, and charges the card for anything the
+//              balance does not cover.
+// POINTS     — no automatic order. The fee becomes points and they spend
+//              them whenever they want, on whatever they want.
+//
+// Existing members default to the box, which is what they have today.
+benefitMode          MembershipBenefit @default(WEEKLY_BOX)
+
 // Weekly Box Delivery (Selecto & Legendario only)
 weeklyMode           WeeklyBoxMode? // null until user completes onboarding
 
@@ -308,6 +319,11 @@ weeklyLogs WeeklyOrderLog[]
 enum WeeklyFrequency {
   WEEKLY
   EVERY_4_WEEKS
+}
+
+enum MembershipBenefit {
+  WEEKLY_BOX  // an automatic order every week
+  POINTS      // the fee becomes points they spend themselves
 }
 
 enum WeeklyBoxMode {

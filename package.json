@@ -36,6 +36,7 @@
     "test:checkout": "npx tsx scripts/test-checkout-response.ts",
     "test:membership": "npx tsx scripts/test-membership-access.ts",
     "test:renewal": "npx tsx scripts/test-renewal.ts",
+    "test:benefit": "npx tsx scripts/test-benefit.ts",
     "test:fields": "npx tsx scripts/test-field-validation.ts",
     "test:reset": "npx tsx scripts/test-password-reset.ts",
     "user:reset-link": "npx tsx scripts/reset-link.ts",

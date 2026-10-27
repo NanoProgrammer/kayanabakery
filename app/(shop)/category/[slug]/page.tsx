@@ -18,7 +18,22 @@ import type { Category, Product } from "@/types";
 
 export const revalidate = 60;
 
-type CategoryWithProducts = Category & { products: Product[] };
+type SubCategory = {
+  _id: string;
+  name: string;
+  nameEs?: string;
+  slug: string;
+  tagline?: string;
+  taglineEs?: string;
+  image?: any;
+  productCount?: number;
+};
+
+type CategoryWithProducts = Category & {
+  products: Product[];
+  children?: SubCategory[];
+  parent?: { name: string; nameEs?: string; slug: string } | null;
+};
 
 function pickI18n<T extends Record<string, any>>(
   doc: T,
@@ -183,15 +198,68 @@ export default async function CategoryPage({
       )}
 
       {/* Products grid */}
+      {/* Subcategories. A category that has them is a menu, not a shelf: Cakes
+          leads to Tres Leches, Gourmet and Clásicos rather than listing every
+          cake at once. Products filed directly here still show underneath. */}
+      {!!category.children?.length && (
+        <section className="container-bakery pt-16 md:pt-20">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {category.children.map((child) => {
+              const childName = pickI18n(child as any, "name", locale);
+              const childTagline = pickI18n(child as any, "tagline", locale);
+              return (
+                <Link
+                  key={child._id}
+                  href={`/category/${child.slug}`}
+                  className="group overflow-hidden rounded-3xl border border-canela/15 bg-cream transition hover:border-canela-dark"
+                >
+                  <div className="relative aspect-[4/3] bg-canela-light">
+                    {child.image && (
+                      <Image
+                        src={urlFor(child.image).width(600).height(450).url()}
+                        alt={childName}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 33vw"
+                        className="object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <h2 className="font-display text-2xl">{childName}</h2>
+                    {childTagline && (
+                      <p className="mt-1 text-sm text-ink-soft">{childTagline}</p>
+                    )}
+                    {typeof child.productCount === "number" && (
+                      <p className="mt-2 text-xs uppercase tracking-widest text-ink-soft">
+                        {child.productCount}{" "}
+                        {locale === "es"
+                          ? child.productCount === 1
+                            ? "producto"
+                            : "productos"
+                          : child.productCount === 1
+                          ? "item"
+                          : "items"}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <section className="container-bakery py-16 md:py-20">
         {!category.products?.length ? (
-          <div className="py-12 text-center">
-            <p className="text-ink/60">
-              {locale === "es"
-                ? "Sin productos en esta categoría por ahora. ¡Vuelve pronto!"
-                : "No products in this category yet. Check back soon!"}
-            </p>
-          </div>
+          category.children?.length ? null : (
+            <div className="py-12 text-center">
+              <p className="text-ink/60">
+                {locale === "es"
+                  ? "Sin productos en esta categoría por ahora. ¡Vuelve pronto!"
+                  : "No products in this category yet. Check back soon!"}
+              </p>
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {category.products.map((product) => (

@@ -94,6 +94,15 @@ export const product = defineType({
       of: [{ type: "image", options: { hotspot: true } }],
     }),
     defineField({
+      name: "options",
+      title: "Options the customer picks",
+      type: "array",
+      group: "settings",
+      of: [{ type: "productOption" }],
+      description:
+        "Sizes, flavours. Leave empty for something sold one way only. The price here is the starting price; each choice adds to it.",
+    }),
+    defineField({
       name: "categories",
       title: "Categories",
       type: "array",

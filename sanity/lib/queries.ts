@@ -10,12 +10,17 @@ export const featuredCategoriesQuery = groq`
   }
 `;
 
+// Top level only, with whatever sits under each. Categories written before
+// subcategories existed have no parent, so they all stay where they were.
 export const allCategoriesQuery = groq`
-  *[_type == "category"] | order(displayOrder asc) {
+  *[_type == "category" && !defined(parent)] | order(displayOrder asc) {
     _id, name, nameEs, "slug": slug.current,
     tagline, taglineEs,
     description, descriptionEs,
-    image, accentColor
+    image, accentColor,
+    "children": *[_type == "category" && parent._ref == ^._id] | order(displayOrder asc) {
+      _id, name, nameEs, "slug": slug.current, tagline, taglineEs, image, accentColor
+    }
   }
 `;
 
@@ -27,6 +32,11 @@ export const categoryBySlugQuery = groq`
     tagline, taglineEs,
     description, descriptionEs,
     image, accentColor,
+    "parent": parent->{ name, nameEs, "slug": slug.current },
+    "children": *[_type == "category" && parent._ref == ^._id] | order(displayOrder asc) {
+      _id, name, nameEs, "slug": slug.current, tagline, taglineEs, image, accentColor,
+      "productCount": count(*[_type == "product" && ^._id in categories[]._ref])
+    },
     "products": *[_type == "product" && ^._id in categories[]._ref] | order(displayOrder asc) {
       _id, name, nameEs, "slug": slug.current,
       description, descriptionEs,
@@ -77,6 +87,10 @@ export const productBySlugQuery = groq`
     price, compareAtPrice, image, gallery, tag,
     inStock, stockQuantity, unit, leadTime,
     allergens, membersOnly, isOffSeason,
+    options[]{
+      name, nameEs, key, required,
+      choices[]{ label, labelEs, priceDelta, soldOut, image }
+    },
     "categories": categories[]->{ "slug": slug.current, name, nameEs }
   }
 `;

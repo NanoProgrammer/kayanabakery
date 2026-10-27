@@ -13,6 +13,8 @@ export type CategoryItem = {
   title: string;
   titleEs?: string;
   image?: string;
+  /** Subcategories — Tres Leches, Gourmet and Clásicos under Cakes. */
+  children?: CategoryItem[];
 };
 
 export function CategoryDropdown({
@@ -80,24 +82,38 @@ export function CategoryDropdown({
             : cat.title;
 
         return (
-          <Link
-            key={cat._id}
-            href={`/category/${cat.slug}`}
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 py-3"
-          >
-            {cat.image && (
-              <Image
-                src={cat.image}
-                alt={name}
-                width={32}
-                height={32}
-                className="h-8 w-8 rounded-lg object-cover"
-              />
-            )}
+          <div key={cat._id}>
+            <Link
+              href={`/category/${cat.slug}`}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 py-3"
+            >
+              {cat.image && (
+                <Image
+                  src={cat.image}
+                  alt={name}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-lg object-cover"
+                />
+              )}
 
-            <span className="text-sm">{name}</span>
-          </Link>
+              <span className="text-sm">{name}</span>
+            </Link>
+
+            {/* Tres Leches, Gourmet, Clásicos — reachable without opening
+                Cakes first, which is the point of putting them here. */}
+            {cat.children?.map((child) => (
+              <Link
+                key={child._id}
+                href={`/category/${child.slug}`}
+                onClick={() => setOpen(false)}
+                className="block border-l border-canela/20 py-2 pl-6 text-sm text-ink-soft"
+              >
+                {locale === "es" && child.titleEs ? child.titleEs : child.title}
+              </Link>
+            ))}
+          </div>
         );
       })}
     </div>
@@ -119,22 +135,34 @@ export function CategoryDropdown({
               : cat.title;
 
           return (
-            <Link
-              key={cat._id}
-              href={`/category/${cat.slug}`}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-canela-light"
-            >
-              {cat.image && (
-                <img
-                  src={cat.image}
-                  alt={name}
-                  className="h-8 w-8 rounded-lg object-cover"
-                />
-              )}
+            <div key={cat._id}>
+              <Link
+                href={`/category/${cat.slug}`}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-canela-light"
+              >
+                {cat.image && (
+                  <img
+                    src={cat.image}
+                    alt={name}
+                    className="h-8 w-8 rounded-lg object-cover"
+                  />
+                )}
 
-              <span>{name}</span>
-            </Link>
+                <span>{name}</span>
+              </Link>
+
+              {cat.children?.map((child) => (
+                <Link
+                  key={child._id}
+                  href={`/category/${child.slug}`}
+                  onClick={() => setOpen(false)}
+                  className="block py-2 pl-[3.75rem] pr-4 text-sm text-ink-soft transition-colors hover:bg-canela-light hover:text-ink"
+                >
+                  {locale === "es" && child.titleEs ? child.titleEs : child.title}
+                </Link>
+              ))}
+            </div>
           );
         })}
       </div>

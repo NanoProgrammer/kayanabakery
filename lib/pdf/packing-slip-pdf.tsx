@@ -77,6 +77,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
     border: "1px solid #111111",
   },
+  tdOptions: {
+    fontSize: 8,
+    fontWeight: 700,
+    marginTop: 1,
+  },
   section: {
     marginBottom: 8,
   },
@@ -176,7 +181,7 @@ export type PackingSlipData = {
   // For DELIVERY: the customer's delivery address.
   // For PICKUP: the bakery's own pickup address (siteSettings.pickupAddress).
   shippingAddress?: string | null;
-  items: { name: string; quantity: number }[];
+  items: { name: string; quantity: number; options?: string | null }[];
   note?: string | null;
   logoUrl: string;
 };
@@ -249,7 +254,12 @@ export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
           </View>
           {data.items.map((it, i) => (
             <View key={i} style={styles.tableRow}>
-              <Text style={[styles.td, styles.tdProduct]}>{it.name}</Text>
+              <View style={styles.tdProduct}>
+                <Text style={styles.td}>{it.name}</Text>
+                {/* The size and flavour the customer picked. Without these the
+                    kitchen is reading "Tres Leches" and guessing. */}
+                {it.options && <Text style={styles.tdOptions}>{it.options}</Text>}
+              </View>
               <Text style={styles.tdQty}>{it.quantity}</Text>
             </View>
           ))}

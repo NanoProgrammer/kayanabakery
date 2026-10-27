@@ -102,6 +102,7 @@ export async function buildPackingSlipPdf(
     items: (order.items || []).map((it: any) => ({
       name: it.name,
       quantity: it.quantity,
+      options: it.options ?? null,
     })),
     note: order.notes ?? null,
     logoUrl: `${APP_URL}/logo-print.jpg`,

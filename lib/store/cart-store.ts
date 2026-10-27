@@ -4,6 +4,20 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { CartItem } from "@/types";
 import { trackEvent } from "@/lib/analytics/gtag";
+import { cartLineId } from "@/lib/products/options";
+
+/**
+ * What a line in the cart is.
+ *
+ * Everything used to be keyed by product id, which is right until the same
+ * cake can be ordered in two sizes: adding a 10" after a 6" bumped the 6" to
+ * quantity two and charged the wrong price for both. A product with no
+ * choices still answers to its plain id, so every saved cart and every caller
+ * that passes a product id keeps working.
+ */
+function lineId(item: { productId: string; options?: Record<string, string> }): string {
+  return cartLineId(item.productId, item.options);
+}
 
 type CartState = {
   items: CartItem[];
@@ -48,12 +62,12 @@ export const useCartStore = create<CartState>()(
       addItem: (item, quantity = 1) => {
         set((state) => {
           const existing = state.items.find(
-            (i) => i.productId === item.productId
+            (i) => lineId(i) === lineId(item)
           );
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.productId === item.productId
+                lineId(i) === lineId(item)
                   ? { ...i, quantity: i.quantity + quantity }
                   : i
               ),
@@ -78,7 +92,7 @@ export const useCartStore = create<CartState>()(
 
       removeItem: (productId) => {
         set((state) => ({
-          items: state.items.filter((i) => i.productId !== productId),
+          items: state.items.filter((i) => lineId(i) !== productId),
         }));
       },
 
@@ -89,7 +103,7 @@ export const useCartStore = create<CartState>()(
         }
         set((state) => ({
           items: state.items.map((i) =>
-            i.productId === productId ? { ...i, quantity } : i
+            lineId(i) === productId ? { ...i, quantity } : i
           ),
         }));
       },
@@ -117,10 +131,10 @@ export const useCartStore = create<CartState>()(
         set({ items: [], appliedCouponCode: null, pointsToRedeem: 0 }),
 
       getItem: (productId) =>
-        get().items.find((i) => i.productId === productId),
+        get().items.find((i) => lineId(i) === productId),
 
       getQuantity: (productId) =>
-        get().items.find((i) => i.productId === productId)?.quantity ?? 0,
+        get().items.find((i) => lineId(i) === productId)?.quantity ?? 0,
 
       getSubtotal: () =>
         get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),

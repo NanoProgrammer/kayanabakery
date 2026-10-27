@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Plus, Minus, X, ShoppingBag } from "lucide-react";
 import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
 import { useCartStore } from "@/lib/store/cart-store";
+import { cartLineId } from "@/lib/products/options";
 import { formatPrice, cn } from "@/lib/utils";
 
 export function CartView() {
@@ -56,7 +57,7 @@ export function CartView() {
             const name = pickI18n(it as any, "name", locale) || it.name;
             return (
               <li
-                key={it.productId}
+                key={cartLineId(it.productId, it.options)}
                 className="flex gap-4 rounded-2xl border border-canela/15 bg-cream p-4"
               >
                 {it.image && (
@@ -77,6 +78,9 @@ export function CartView() {
                   >
                     {name}
                   </Link>
+                  {it.optionsLabel && (
+                    <p className="text-xs text-ink-soft">{it.optionsLabel}</p>
+                  )}
                   {it.unit && (
                     <p className="text-xs text-ink-soft">/ {it.unit}</p>
                   )}
@@ -89,7 +93,7 @@ export function CartView() {
                     <div className="inline-flex items-center rounded-full border border-canela/30">
                       <button
                         onClick={() =>
-                          updateQty(it.productId, Math.max(1, it.quantity - 1))
+                          updateQty(cartLineId(it.productId, it.options), Math.max(1, it.quantity - 1))
                         }
                         className="flex h-8 w-8 items-center justify-center hover:bg-canela-light"
                         aria-label="Decrease"
@@ -100,7 +104,7 @@ export function CartView() {
                         {it.quantity}
                       </span>
                       <button
-                        onClick={() => updateQty(it.productId, it.quantity + 1)}
+                        onClick={() => updateQty(cartLineId(it.productId, it.options), it.quantity + 1)}
                         className="flex h-8 w-8 items-center justify-center hover:bg-canela-light"
                         aria-label="Increase"
                       >
@@ -120,7 +124,7 @@ export function CartView() {
                   </div>
                 </div>
                 <button
-                  onClick={() => removeItem(it.productId)}
+                  onClick={() => removeItem(cartLineId(it.productId, it.options))}
                   className="self-start text-ink-soft hover:text-canela-dark"
                   aria-label="Remove"
                 >

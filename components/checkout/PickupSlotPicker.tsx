@@ -10,6 +10,7 @@ type PickupDay = {
   date: string;
   dayLabel: string;
   windowLabel: string;
+  closed: boolean;
 };
 
 function generatePickupDays(minLeadHours: number, locale = "en"): PickupDay[] {
@@ -39,7 +40,7 @@ function generatePickupDays(minLeadHours: number, locale = "en"): PickupDay[] {
     if (windowEnd <= earliest) continue;
 
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    if (isClosedDate(dateStr)) continue;
+    const closed = isClosedDate(dateStr);
     const dayLabel = d.toLocaleDateString(locale === "es" ? "es-MX" : "en-CA", {
       weekday: "long",
       month: "short",
@@ -54,8 +55,11 @@ function generatePickupDays(minLeadHours: number, locale = "en"): PickupDay[] {
 
     days.push({
       date: dateStr,
+      closed,
       dayLabel,
-      windowLabel: `${fmt(startH)} – ${fmt(endH)}`,
+      windowLabel: closed
+        ? locale === "es" ? "Cerrado por el día" : "Closed for the day"
+        : `${fmt(startH)} – ${fmt(endH)}`,
     });
   }
 
@@ -84,6 +88,7 @@ export function PickupSlotPicker({
   }, [minLeadHours, locale]);
 
   function handleSelect(day: PickupDay) {
+    if (day.closed) return;
     onDateChange(day.date);
     onTimeChange(day.windowLabel);
   }
@@ -110,15 +115,18 @@ export function PickupSlotPicker({
       )}
       <div className="grid gap-2 sm:grid-cols-2">
         {pickupDays.map((day) => {
-          const isSelected = date === day.date;
+          const isSelected = !day.closed && date === day.date;
           return (
             <button
               type="button"
               key={day.date}
+              disabled={day.closed}
               onClick={() => handleSelect(day)}
               className={cn(
                 "flex items-center gap-3 rounded-2xl border p-4 text-left transition-all",
-                isSelected
+                day.closed
+                  ? "cursor-not-allowed border-canela/15 bg-cream/50 text-ink-soft opacity-60"
+                  : isSelected
                   ? "border-canela-dark bg-canela-light"
                   : "border-canela/30 bg-cream hover:border-canela"
               )}

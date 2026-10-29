@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { syncAllCustomersToSanity } from "@/lib/sanity/sync-customers";
+import { GET as weeklyBoxNotify } from "../weekly-box-notify/route";
+import { GET as weeklyBoxProcess } from "../weekly-box-process/route";
+import { GET as creditExpirationReminders } from "../credit-expiration-reminders/route";
+import { GET as creditExpirationExecute } from "../credit-expiration-execute/route";
 
 /**
  * Single daily dispatcher — Vercel Hobby plans cap the number of cron
@@ -22,6 +26,33 @@ export async function GET(req: Request) {
   const base = new URL(req.url).origin;
   const headers = { authorization: `Bearer ${process.env.CRON_SECRET}` };
 
+  /**
+   * Runs a sub-task in this same process.
+   *
+   * These used to be called over HTTP, by fetching this deployment's own URL.
+   * That went wrong twice: first a redirect between the .com and the .ca
+   * dropped the Authorization header so every task answered 401, and then
+   * something in front of the site answered the internal request with an HTML
+   * page, which surfaced in the logs as `Unexpected token '<'` for three tasks
+   * at once — naming neither the status nor the route.
+   *
+   * They are functions in the same bundle. Calling them directly cannot be
+   * redirected, intercepted, or served someone else's error page, and a
+   * failure arrives here as the real exception.
+   */
+  const run = async (
+    name: string,
+    handler: (req: Request) => Promise<Response>
+  ) => {
+    const res = await handler(new Request(`${base}/api/cron/${name}`, { headers }));
+    const body = await res.text();
+    try {
+      return JSON.parse(body);
+    } catch {
+      return { error: `${name} answered HTTP ${res.status}`, body: body.slice(0, 300) };
+    }
+  };
+
   const now = new Date();
   const dow = now.getDay(); // 0 Sun ... 6 Sat
 
@@ -30,12 +61,12 @@ export async function GET(req: Request) {
   if (dow === 2) {
     // Tuesday — gives members until Wednesday 11:59 PM to decide before Friday delivery.
     tasks.weeklyBoxNotify = () =>
-      fetch(`${base}/api/cron/weekly-box-notify`, { headers }).then((r) => r.json());
+      run("weekly-box-notify", weeklyBoxNotify);
   }
   if (dow === 4) {
     // Thursday — finalize whatever wasn't answered by the Wednesday cutoff, in time for Friday delivery.
     tasks.weeklyBoxProcess = () =>
-      fetch(`${base}/api/cron/weekly-box-process`, { headers }).then((r) => r.json());
+      run("weekly-box-process", weeklyBoxProcess);
   }
   // Refresh every customer in Studio daily. Individual syncs can fail — a
   // network blip, a Sanity hiccup — and a stale mirror looks exactly like a
@@ -43,9 +74,9 @@ export async function GET(req: Request) {
   tasks.customersToStudio = () => syncAllCustomersToSanity();
 
   tasks.creditExpirationReminders = () =>
-    fetch(`${base}/api/cron/credit-expiration-reminders`, { headers }).then((r) => r.json());
+    run("credit-expiration-reminders", creditExpirationReminders);
   tasks.creditExpirationExecute = () =>
-    fetch(`${base}/api/cron/credit-expiration-execute`, { headers }).then((r) => r.json());
+    run("credit-expiration-execute", creditExpirationExecute);
 
   const results: Record<string, any> = {};
   for (const [name, fn] of Object.entries(tasks)) {

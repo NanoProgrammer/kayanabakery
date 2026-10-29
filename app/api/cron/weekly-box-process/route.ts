@@ -30,7 +30,23 @@ export async function GET(req: Request) {
 
   const pending = await prisma.weeklyOrderLog.findMany({
     where: { status: "PENDING", weekStart },
-    include: { membership: { include: { user: { select: { email: true, name: true } } } } },
+    // Named rather than `include: true`: asking for every membership column
+    // means a column added to the schema and deployed before the database has
+    // it takes this whole run down, and the only sign is an HTML error page
+    // where the cron expected JSON.
+    include: {
+      membership: {
+        select: {
+          id: true,
+          tier: true,
+          userId: true,
+          autoDeliveryEnabled: true,
+          squareCustomerId: true,
+          squareCardId: true,
+          user: { select: { email: true, name: true } },
+        },
+      },
+    },
   });
 
   const results = { autoSkipped: 0, autoSent: 0, curatedQueued: 0, failed: 0, errors: [] as string[] };

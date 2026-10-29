@@ -6,11 +6,32 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { authConfig } from "./auth.config";
+import { effectiveTier } from "@/lib/membership/access";
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  // Lower-cased to match how it was stored. Registration normalises the
+  // address; looking it up raw meant one capital letter at sign-in found no
+  // account and read as a wrong password.
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email(),
+  // Length only, and deliberately lower than the 8 new accounts must meet:
+  // raising it here would lock out everyone who signed up before that rule.
   password: z.string().min(6),
 });
+
+/**
+ * The membership fields signing in actually needs.
+ *
+ * `include: { membership: true }` asked for every column, so adding one to the
+ * schema and deploying before the database had it stopped every sign-in on the
+ * site — the query threw, and the page said the password was wrong.
+ */
+const MEMBERSHIP_FOR_SESSION = {
+  select: { tier: true, status: true, endsAt: true },
+} as const;
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -32,7 +53,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
-          include: { membership: true },
+          include: { membership: MEMBERSHIP_FOR_SESSION },
         });
         if (!user?.password) return null;
 
@@ -45,7 +66,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           image: user.image,
           role: user.role,
-          tier: user.membership?.tier ?? "BASICO",
+          tier: effectiveTier(user.membership),
           points: user.pointsBalance,
         } as any;
       },
@@ -66,10 +87,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         try {
           const u = await prisma.user.findUnique({
             where: { id: token.id as string },
-            include: { membership: true },
+            include: { membership: MEMBERSHIP_FOR_SESSION },
           });
           if (u) {
-            token.tier = u.membership?.tier ?? "BASICO";
+            token.tier = effectiveTier(u.membership);
             token.points = u.pointsBalance;
             token.role = u.role;
             (token as any).refreshedAt = Date.now();

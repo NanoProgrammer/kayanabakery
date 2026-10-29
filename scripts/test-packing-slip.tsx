@@ -125,7 +125,24 @@ async function main() {
   const missing = await textFor({ ...base });
   check("and so does one with no field at all", has(missing, "Basico"));
 
-  console.log("\n4. Delivery slips too\n");
+  console.log("\n4. The size and flavour the customer picked\n");
+
+const withOptions = await textFor({
+  ...base,
+  customerTier: "SELECTO",
+  items: [
+    { name: "Tres Leches", quantity: 1, options: "Size: 10 inch" },
+    { name: "Chocoflan", quantity: 1, options: "Flavour: Chocolate" },
+  ],
+});
+check("the size prints under the cake", has(withOptions, "Size: 10 inch"), withOptions.slice(0, 120));
+check("so does the flavour", has(withOptions, "Flavour: Chocolate"), withOptions.slice(0, 120));
+check("and the cakes themselves still do", has(withOptions, "Tres Leches") && has(withOptions, "Chocoflan"));
+
+const noOptions = await textFor({ ...base, items: [{ name: "Concha", quantity: 6 }] });
+check("a product with nothing to choose prints as before", has(noOptions, "Concha"));
+
+console.log("\n5. Delivery slips too\n");
 
   const delivery = await textFor({
     ...base,

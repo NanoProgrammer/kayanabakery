@@ -27,7 +27,14 @@ export type SanityOrderInput = {
   fulfillmentType: string;
   /** Total in cents — converted to dollars for Studio. */
   totalCents: number;
-  items: { productId?: string; name: string; quantity: number; price: number }[];
+  items: {
+    productId?: string;
+    name: string;
+    quantity: number;
+    price: number;
+    /** "Size: 10 inch · Flavour: Chocolate", when the customer chose. */
+    options?: string | null;
+  }[];
   deliveryAddress?: string | null;
   /** Human-readable pickup/delivery label shown in Studio. */
   pickupDate?: string | null;
@@ -53,6 +60,7 @@ export async function createSanityOrder(input: SanityOrderInput): Promise<boolea
         // within an order, but the index keeps it valid if one ever repeats.
         _key: it.productId ? `${it.productId}-${i}` : `item-${i}`,
         name: it.name,
+        options: it.options ?? null,
         quantity: it.quantity,
         price: it.price / 100,
       })),

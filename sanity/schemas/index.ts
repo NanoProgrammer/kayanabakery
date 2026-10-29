@@ -1,4 +1,5 @@
 import { product } from "./product";
+import { productOption, productOptionChoice } from "./productOption";
 import { category } from "./category";
 import { event } from "./event";
 import { homePromo } from "./homePromo";
@@ -15,6 +16,9 @@ import customer from "./customer";
 export const schemaTypes = [
   // Content
   product,
+  // Building blocks for product options (sizes, flavours).
+  productOption,
+  productOptionChoice,
   category,
   event,
   homePromo,

@@ -8,6 +8,11 @@ import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { createSanityOrder } from "@/lib/orders/sanity-sync";
 import { effectiveTier } from "@/lib/membership/access";
 import { formatPickupFromForm, formatPickupWindow } from "@/lib/studio/pickup-label";
+import {
+  describeChoices,
+  resolveOptions,
+  type ProductOption,
+} from "@/lib/products/options";
 import { isClosedDate } from "@/lib/checkout/closures";
 import { bakeryDateString } from "@/lib/time/edmonton";
 
@@ -111,6 +116,9 @@ const schema = z.object({
       z.object({
         productId: z.string(),
         quantity: z.number().int().min(1),
+        // Which size, which flavour. Labels only — the price for each comes
+        // from Sanity below, never from the browser.
+        options: z.record(z.string().max(48), z.string().max(80)).optional(),
       })
     )
     .min(1),
@@ -166,10 +174,12 @@ export async function POST(req: Request) {
       membersOnly?: boolean;
       isOffSeason?: boolean;
       leadTime?: number;
+      options?: ProductOption[];
     }>
   >({
     query: `*[_type == "product" && _id in $ids]{
-      _id, name, "slug": slug.current, price, inStock, membersOnly, isOffSeason, leadTime
+      _id, name, "slug": slug.current, price, inStock, membersOnly, isOffSeason, leadTime,
+      options[]{ name, nameEs, key, required, choices[]{ label, labelEs, priceDelta, soldOut } }
     }`,
     params: { ids: productIds },
     tags: ["product"],
@@ -227,16 +237,41 @@ export async function POST(req: Request) {
   // ============================================================
   // 4. Build normalized items
   // ============================================================
-  const items = data.items.map((it) => {
+  // Each line is priced from the catalog: the product's own price plus
+  // whatever the chosen size or flavour adds. The browser only says which
+  // choice was picked — a price it sent would be a price it could edit.
+  const items: {
+    productId: string;
+    name: string;
+    slug: string;
+    price: number;
+    quantity: number;
+    options?: Record<string, string>;
+    optionsLabel?: string;
+  }[] = [];
+
+  for (const it of data.items) {
     const p = products.find((pr) => pr._id === it.productId)!;
-    return {
+    const resolved = resolveOptions(p.options, it.options, p.name);
+
+    if (!resolved.ok) {
+      return NextResponse.json({ error: resolved.error }, { status: 400 });
+    }
+
+    items.push({
       productId: p._id,
       name: p.name,
       slug: p.slug,
-      price: p.price * 100,
+      price: p.price * 100 + resolved.priceDeltaCents,
       quantity: it.quantity,
-    };
-  });
+      ...(resolved.choices.length
+        ? {
+            options: Object.fromEntries(resolved.choices.map((c) => [c.key, c.label])),
+            optionsLabel: describeChoices(resolved.choices),
+          }
+        : {}),
+    });
+  }
 
   // ============================================================
   // 5. Address & SE Calgary detection
@@ -694,6 +729,7 @@ paymentId = result.payment?.id ?? undefined;
       items: items.map((it) => ({
         productId: it.productId,
         name: it.name,
+        options: it.optionsLabel ?? null,
         quantity: it.quantity,
         price: it.price,
       })),

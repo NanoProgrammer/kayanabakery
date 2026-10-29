@@ -15,6 +15,7 @@ import { generateOrderNumber } from "@/lib/checkout/order-number";
 import { sendOrderEmails } from "@/lib/email/send-order-emails";
 import { createSanityOrder } from "@/lib/orders/sanity-sync";
 import type { MembershipTier } from "@/lib/membership/tiers";
+import { pointsToSpend } from "@/lib/membership/benefit";
 
 export async function createWeeklyOrder({
   userId,
@@ -46,8 +47,27 @@ export async function createWeeklyOrder({
       where: { userId, fulfillmentType: "DELIVERY", status: { not: "CANCELLED" } },
     })) > 0;
 
-  const pricing = computePricing({
-    items: items.map((it) => ({ productId: it.productId, price: it.price, quantity: it.quantity })),
+  const priceable = items.map((it) => ({
+    productId: it.productId,
+    price: it.price,
+    quantity: it.quantity,
+  }));
+
+  // The membership fee already became points, so the box is paid out of that
+  // balance first and the card covers only what is left. Charging the full
+  // price on top of a fee that had already been converted meant the member
+  // paid twice for the same bread, and the points were decoration.
+  const member = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { pointsBalance: true },
+  });
+
+  // Priced twice: once to learn what the box is worth, then again with the
+  // points applied. computePricing is what spends them, because it takes them
+  // off the subtotal before GST — the same path the website's checkout uses,
+  // and the correct tax treatment.
+  const base = computePricing({
+    items: priceable,
     fulfillmentType: "PICKUP",
     tier,
     isSouthEastCalgary: false,
@@ -55,22 +75,50 @@ export async function createWeeklyOrder({
     isGuest: false,
   });
 
+  if (base.errors.length > 0) {
+    return { error: base.errors.join("; ") };
+  }
+
+  const spend = pointsToSpend(base.subtotalCents, member?.pointsBalance ?? 0);
+
+  const pricing = spend > 0
+    ? computePricing({
+        items: priceable,
+        fulfillmentType: "PICKUP",
+        tier,
+        isSouthEastCalgary: false,
+        hasUsedFirstFreeDelivery,
+        isGuest: false,
+        pointsToRedeem: spend,
+      })
+    : base;
+
   if (pricing.errors.length > 0) {
     return { error: pricing.errors.join("; ") };
   }
 
+  const payment = {
+    pointsSpent: spend,
+    pointsValueCents: pricing.pointsDiscountCents,
+    chargeCents: pricing.totalCents,
+  };
+
   let paymentId: string | undefined;
-  try {
-    const result = await chargeCardOnFile({
-      customerId: squareCustomerId,
-      cardId: squareCardId,
-      amountCents: pricing.totalCents,
-      note: `Karyana weekly box — ${tier}`,
-      idempotencyKey: `weekly-${userId}-${new Date().toISOString().slice(0, 10)}`,
-    });
-    paymentId = result.paymentId;
-  } catch (err: any) {
-    return { error: err?.errors?.[0]?.detail ?? err?.message ?? "Payment failed" };
+  if (payment.chargeCents > 0) {
+    try {
+      const result = await chargeCardOnFile({
+        customerId: squareCustomerId,
+        cardId: squareCardId,
+        amountCents: payment.chargeCents,
+        note: `Karyana weekly box — ${tier}`,
+        idempotencyKey: `weekly-${userId}-${new Date().toISOString().slice(0, 10)}`,
+      });
+      paymentId = result.paymentId;
+    } catch (err: any) {
+      // Nothing has been written yet, so a declined card leaves the balance
+      // untouched rather than spending points on an order that never existed.
+      return { error: err?.errors?.[0]?.detail ?? err?.message ?? "Payment failed" };
+    }
   }
 
   const orderNumber = generateOrderNumber();
@@ -92,10 +140,38 @@ export async function createWeeklyOrder({
       gst: pricing.gstCents,
       total: pricing.totalCents,
       pointsEarned: pricing.pointsEarned,
+      pointsRedeemed: payment.pointsSpent,
       confirmedAt: new Date(),
-      notes: "Auto-created from Weekly Bread Delivery (Repeat Last Order)",
+      notes:
+        payment.pointsSpent > 0
+          ? `Auto-created from Weekly Bread Delivery. ${payment.pointsSpent} points covered $${(
+              payment.pointsValueCents / 100
+            ).toFixed(2)}${
+              payment.chargeCents > 0
+                ? `; $${(payment.chargeCents / 100).toFixed(2)} charged to the card.`
+                : "; nothing was charged."
+            }`
+          : "Auto-created from Weekly Bread Delivery (Repeat Last Order)",
     },
   });
+
+  // Spent only once the order exists, so a crash cannot take someone's points
+  // without giving them bread.
+  if (payment.pointsSpent > 0) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { pointsBalance: { decrement: payment.pointsSpent } },
+    });
+    await prisma.pointsTransaction.create({
+      data: {
+        userId,
+        amount: -payment.pointsSpent,
+        type: "REDEMPTION",
+        orderId: order.id,
+        note: `Spent on weekly order ${orderNumber}`,
+      },
+    });
+  }
 
   if (pricing.pointsEarned > 0) {
     await prisma.user.update({

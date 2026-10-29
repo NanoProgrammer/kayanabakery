@@ -15,6 +15,9 @@ type Props = {
 export function SquareSubscriptionCheckout({ tier }: Props) {
   const { locale } = useLocale();
   const [loading, setLoading] = useState(false);
+  // What the fee buys. Offered only where there is a weekly box to choose
+  // between; Artesano has none, so there is nothing to ask.
+  const [benefitMode, setBenefitMode] = useState<"WEEKLY_BOX" | "POINTS">("WEEKLY_BOX");
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/account/membership";
@@ -96,6 +99,66 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
         </ul>
       </div>
 
+      {/* What the fee buys */}
+      {(tier === "SELECTO" || tier === "LEGENDARIO") && (
+        <div className="rounded-3xl border border-canela/15 bg-cream p-6">
+          <h3 className="font-display text-xl">
+            {es ? "¿Cómo quieres usar tu membresía?" : "How do you want to use your membership?"}
+          </h3>
+          <p className="mt-1 text-sm text-ink-soft">
+            {es
+              ? "Puedes cambiarlo cuando quieras desde tu cuenta."
+              : "You can change this any time from your account."}
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {([
+              {
+                value: "WEEKLY_BOX" as const,
+                title: es ? "Caja cada semana" : "A box every week",
+                body: es
+                  ? "Preparamos tu caja sin que hagas nada. Se paga con tus puntos, y solo cobramos a tu tarjeta lo que falte."
+                  : "We make up your box without you doing anything. It's paid from your points, and your card only covers what they don't.",
+              },
+              {
+                value: "POINTS" as const,
+                title: es ? "Solo puntos" : "Points only",
+                body: es
+                  ? `Tu pago se vuelve $${(tierData.priceCents / 100).toFixed(0)} en puntos y pides cuando tú quieras. Sin orden automática.`
+                  : `Your payment becomes $${(tierData.priceCents / 100).toFixed(0)} in points and you order whenever you like. No automatic order.`,
+              },
+            ]).map((option) => {
+              const selected = benefitMode === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setBenefitMode(option.value)}
+                  aria-pressed={selected}
+                  className={`w-full rounded-2xl border p-4 text-left transition ${
+                    selected
+                      ? "border-canela-dark bg-canela-light/50"
+                      : "border-canela/25 hover:border-canela/50"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                        selected ? "border-canela-dark" : "border-canela/40"
+                      }`}
+                    >
+                      {selected && <span className="h-2 w-2 rounded-full bg-canela-dark" />}
+                    </span>
+                    <span className="font-bold">{option.title}</span>
+                  </span>
+                  <span className="mt-1 block pl-6 text-sm text-ink-soft">{option.body}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Card form */}
       <div className="rounded-3xl border border-canela/15 bg-cream p-6">
         <div className="mb-4 flex items-center gap-2">
@@ -144,7 +207,7 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
               const res = await fetch("/api/membership/subscribe", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sourceId, tier }),
+                body: JSON.stringify({ sourceId, tier, benefitMode }),
               });
 
               const data = await res.json();

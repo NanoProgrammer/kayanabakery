@@ -214,7 +214,13 @@ export function CheckoutForm({
     const payload: any = {
       paymentToken: token,
       fulfillmentType: fulfillment,
-      items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
+      // The chosen size and flavour travel as labels; the server prices them
+      // from the catalog, so nothing about the price comes from here.
+      items: items.map((it) => ({
+        productId: it.productId,
+        quantity: it.quantity,
+        ...(it.options ? { options: it.options } : {}),
+      })),
       couponCode: coupon?.code,
       pointsToRedeem: pointsToRedeem || undefined,
       tipCents: tipCents || undefined,

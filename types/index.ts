@@ -156,4 +156,8 @@ export type CartItem = {
   leadTime?: number;
   quantity: number;
   membersOnly?: boolean;
+  /** Which size, which flavour — keyed by the option's key. */
+  options?: Record<string, string>;
+  /** "Size: 10 inch · Flavour: Chocolate", for showing in the cart. */
+  optionsLabel?: string;
 };

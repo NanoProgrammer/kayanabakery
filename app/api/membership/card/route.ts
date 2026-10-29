@@ -74,6 +74,9 @@ export async function POST(req: Request) {
 
     const saved = await saveCardOnFile({ customerId: squareCustomerId, sourceId });
     cardId = saved.cardId;
+    // Square's answer wins: a card id stored next to the wrong customer id is
+    // a renewal that fails forever with "Did not find matching card".
+    squareCustomerId = saved.customerId;
   } catch (err: any) {
     const reason = err?.errors?.[0]?.detail ?? err?.message ?? "Could not save the card";
     console.error(`[membership/card] saving failed for ${user.email}:`, reason);

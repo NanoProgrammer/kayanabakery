@@ -80,6 +80,29 @@ export const category = defineType({
       initialValue: "bg-canela",
     }),
     defineField({
+      name: "parent",
+      title: "Sits under",
+      type: "reference",
+      group: "settings",
+      to: [{ type: "category" }],
+      description:
+        "Leave empty for a top-level category. Set it to put this one inside another — Tres Leches under Cakes, say — which is what makes it show as a subcategory in the menu.",
+      // One level only. A category inside itself, or a chain three deep, has
+      // nowhere sensible to render in a menu.
+      options: {
+        filter: ({ document }: any) =>
+          document?._id
+            ? {
+                filter: "!defined(parent) && !(_id in [$self, $draft])",
+                params: {
+                  self: document._id.replace(/^drafts\./, ""),
+                  draft: `drafts.${document._id.replace(/^drafts\./, "")}`,
+                },
+              }
+            : { filter: "!defined(parent)" },
+      },
+    }),
+    defineField({
       name: "isFeatured",
       title: "Show on Home (Featured Categories)",
       type: "boolean",

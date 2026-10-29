@@ -114,6 +114,13 @@ export default defineType({
           type: "object",
           fields: [
             { name: "name", title: "Product", type: "string" },
+            {
+              name: "options",
+              title: "Chosen options",
+              type: "string",
+              description:
+                'What the customer picked — "Size: 10 inch · Flavour: Chocolate". Prints on the slip under the product.',
+            },
             { name: "quantity", title: "Qty", type: "number" },
             {
               name: "price",
@@ -124,9 +131,10 @@ export default defineType({
             },
           ],
           preview: {
-            select: { name: "name", quantity: "quantity" },
-            prepare: ({ name, quantity }: any) => ({
+            select: { name: "name", quantity: "quantity", options: "options" },
+            prepare: ({ name, quantity, options }: any) => ({
               title: `${quantity ?? 1} × ${name ?? "(no name)"}`,
+              subtitle: options || undefined,
             }),
           },
         },

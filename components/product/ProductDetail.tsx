@@ -9,6 +9,13 @@ import { PortableText } from "@portabletext/react";
 import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
 import { useCartStore } from "@/lib/store/cart-store";
 import { urlFor } from "@/sanity/lib/image";
+import { ProductOptions } from "./ProductOptions";
+import {
+  describeChoices,
+  optionKey,
+  resolveOptions,
+  type ProductOption,
+} from "@/lib/products/options";
 import { formatPrice, cn } from "@/lib/utils";
 import { tierMeets, type MembershipTier } from "@/lib/membership/tiers";
 import { MembershipUpsellModal } from "@/components/membership/MembershipUpsellModal";
@@ -24,6 +31,33 @@ export function ProductDetail({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [showUpsell, setShowUpsell] = useState(false);
+
+  // Sizes and flavours. Required ones start on their first available choice so
+  // the price on screen is a price somebody can actually pay.
+  const options: ProductOption[] = (product as any).options ?? [];
+  const [selection, setSelection] = useState<Record<string, string>>(() => {
+    const start: Record<string, string> = {};
+    for (const option of options) {
+      if (option.required === false) continue;
+      const first = (option.choices ?? []).find((c) => !c.soldOut);
+      if (first) start[optionKey(option)] = first.label;
+    }
+    return start;
+  });
+
+  const resolved = resolveOptions(options, selection, product.name);
+  const optionsDelta = resolved.ok ? resolved.priceDeltaCents / 100 : 0;
+  const livePrice = product.price + optionsDelta;
+
+  // A chosen flavour with its own photo replaces the product shot.
+  const choiceImage = (() => {
+    for (const option of options) {
+      const label = selection[optionKey(option)];
+      const match = (option.choices ?? []).find((c) => c.label === label);
+      if (match && (match as any).image) return (match as any).image;
+    }
+    return null;
+  })();
 
   const addItem = useCartStore((s) => s.addItem);
   const setOpen = useCartStore((s) => s.setOpen);
@@ -64,6 +98,14 @@ export function ProductDetail({ product }: { product: Product }) {
       return;
     }
 
+    // The same check the server runs. Catching it here means the customer is
+    // told to pick a size instead of being refused at checkout with a card
+    // already typed in.
+    if (!resolved.ok) {
+      toast.error(resolved.error);
+      return;
+    }
+
     // ALWAYS add to cart — even for members-only products
     addItem(
       {
@@ -71,13 +113,21 @@ export function ProductDetail({ product }: { product: Product }) {
         slug: product.slug,
         name: product.name,
         nameEs: product.nameEs,
-        price: product.price,
-        image: product.image
-          ? urlFor(product.image).width(400).height(400).url()
+        price: livePrice,
+        image: (choiceImage ?? product.image)
+          ? urlFor(choiceImage ?? product.image).width(400).height(400).url()
           : "",
         unit: product.unit,
         leadTime: product.leadTime,
         membersOnly: product.membersOnly ?? false,
+        ...(resolved.ok && resolved.choices.length
+          ? {
+              options: Object.fromEntries(
+                resolved.choices.map((c) => [c.key, c.label])
+              ),
+              optionsLabel: describeChoices(resolved.choices),
+            }
+          : {}),
       },
       qty
     );
@@ -96,9 +146,9 @@ export function ProductDetail({ product }: { product: Product }) {
         {/* Gallery */}
         <div>
           <div className="relative aspect-square overflow-hidden rounded-3xl bg-canela-light">
-            {images[activeImg] && (
+            {(choiceImage ?? images[activeImg]) && (
               <Image
-                src={urlFor(images[activeImg]).width(900).height(900).url()}
+                src={urlFor(choiceImage ?? images[activeImg]).width(900).height(900).url()}
                 alt={name}
                 fill
                 priority
@@ -177,7 +227,7 @@ export function ProductDetail({ product }: { product: Product }) {
 
           <div className="mt-6 flex items-baseline gap-3">
             <span className="font-display text-3xl">
-              {formatPrice(product.price, locale)}
+              {formatPrice(livePrice, locale)}
             </span>
             {product.compareAtPrice &&
               product.compareAtPrice > product.price && (
@@ -191,6 +241,19 @@ export function ProductDetail({ product }: { product: Product }) {
               </span>
             )}
           </div>
+
+          <ProductOptions
+            options={options}
+            selection={selection}
+            onChange={(key, label) =>
+              setSelection((current) => {
+                const next = { ...current };
+                if (label) next[key] = label;
+                else delete next[key];
+                return next;
+              })
+            }
+          />
 
           {!!product.leadTime && product.leadTime > 0 && (
             <p className="mt-3 rounded-2xl border border-canela/20 bg-canela-light px-4 py-3 text-xs text-ink">

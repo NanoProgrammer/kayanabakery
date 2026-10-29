@@ -49,10 +49,19 @@ export async function ensureSquareCustomer(input: {
   return id;
 }
 
+/**
+ * Saves a card against a Square customer, and reports who Square says owns it.
+ *
+ * A charge needs the card id and the customer id to agree; when they don't,
+ * Square answers "Did not find matching card" and the renewal fails forever
+ * with no clue why. That has already happened to a real member. So the owner
+ * returned here is Square's answer, not what we asked for, and callers store
+ * that — the pair can then never drift apart.
+ */
 export async function saveCardOnFile(input: {
   customerId: string;
   sourceId: string;
-}): Promise<{ cardId: string }> {
+}): Promise<{ cardId: string; customerId: string }> {
   const res = await squareClient.cards.create({
     idempotencyKey: randomUUID(),
     sourceId: input.sourceId,
@@ -60,7 +69,15 @@ export async function saveCardOnFile(input: {
   });
   const cardId = res.card?.id;
   if (!cardId) throw new Error("Failed to save card on file");
-  return { cardId };
+
+  const owner = res.card?.customerId ?? input.customerId;
+  if (owner !== input.customerId) {
+    console.warn(
+      `[square] card ${cardId} was saved against customer ${owner}, not ${input.customerId} — storing Square's answer`
+    );
+  }
+
+  return { cardId, customerId: owner };
 }
 
 /**

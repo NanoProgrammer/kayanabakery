@@ -10,6 +10,8 @@ import {
 } from "@/lib/square/subscriptions";
 import { syncMembershipChange } from "@/lib/brevo/sync";
 import { syncCustomerToSanity } from "@/lib/sanity/sync-customers";
+import { sendMembershipWelcomeEmail } from "@/lib/email/membership";
+import type { BenefitMode } from "@/lib/membership/benefit";
 
 export async function POST(req: Request) {
   try {
@@ -19,7 +21,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { sourceId, tier } = await req.json();
+    const { sourceId, tier, benefitMode } = await req.json();
+
+    // What the fee buys. Anything but an explicit "POINTS" is the weekly box,
+    // which is what the membership is sold as.
+    const chosenBenefit: BenefitMode = benefitMode === "POINTS" ? "POINTS" : "WEEKLY_BOX";
 
     const validTiers = ["ARTESANO", "SELECTO", "LEGENDARIO"];
     if (!validTiers.includes(tier)) {
@@ -54,7 +60,7 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true, phone: true, squareCustomerId: true, preferredLang: true },
+      select: { email: true, name: true, phone: true, squareCustomerId: true, preferredLang: true, langChosenByUser: true },
     });
     if (!user?.email) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -75,8 +81,10 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2. Save card on file
-    const { cardId } = await saveCardOnFile({
+    // 2. Save card on file. The owner Square reports back is what gets
+    // stored: asking for one customer and getting another is how a member
+    // ended up with a card that could never be charged.
+    const { cardId, customerId: cardOwnerId } = await saveCardOnFile({
       customerId: squareCustomerId,
       sourceId,
     });
@@ -109,7 +117,8 @@ export async function POST(req: Request) {
         startedAt: now,
         renewsAt,
         squareCardId: cardId,
-        squareCustomerId,
+        squareCustomerId: cardOwnerId,
+        benefitMode: chosenBenefit,
         isTrial: isFreeTrial,
         lastPaymentId: squarePaymentId,
       },
@@ -146,6 +155,18 @@ export async function POST(req: Request) {
         },
       });
     }
+
+    // Nothing used to send this. Somebody paid and heard nothing at all, so
+    // the first word they had from their membership was a bank statement.
+    await sendMembershipWelcomeEmail({
+      email: user.email,
+      name: user.name,
+      tier,
+      benefitMode: chosenBenefit,
+      pointsGranted,
+      preferredLang: user.preferredLang,
+      langChosenByUser: (user as any).langChosenByUser,
+    });
 
     syncMembershipChange({ email: user.email, tier, status: "ACTIVE", language: user.preferredLang });
     void syncCustomerToSanity(userId);

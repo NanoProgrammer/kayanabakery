@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { X, ShoppingBag, Minus, Plus, Trash2 } from "lucide-react";
 import { useCartStore } from "@/lib/store/cart-store";
+import { cartLineId } from "@/lib/products/options";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { formatPrice, cn } from "@/lib/utils";
 
@@ -75,7 +76,7 @@ export function CartDrawer() {
                     locale === "es" && item.nameEs ? item.nameEs : item.name;
                   return (
                     <li
-                      key={item.productId}
+                      key={cartLineId(item.productId, item.options)}
                       className="flex gap-4 rounded-xl border border-canela/10 bg-cream p-3"
                     >
                       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-canela-light">
@@ -91,11 +92,20 @@ export function CartDrawer() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="line-clamp-2 text-sm font-medium">
-                            {name}
-                          </p>
+                          <div className="min-w-0">
+                            <p className="line-clamp-2 text-sm font-medium">
+                              {name}
+                            </p>
+                            {/* The size and flavour chosen. Without it, two
+                                lines of the same cake look identical. */}
+                            {item.optionsLabel && (
+                              <p className="mt-0.5 text-xs text-ink-soft">
+                                {item.optionsLabel}
+                              </p>
+                            )}
+                          </div>
                           <button
-                            onClick={() => removeItem(item.productId)}
+                            onClick={() => removeItem(cartLineId(item.productId, item.options))}
                             aria-label="Remove"
                             className="rounded-md p-1 text-ink-soft hover:bg-canela-light hover:text-ink"
                           >
@@ -108,7 +118,7 @@ export function CartDrawer() {
                         <div className="mt-2 flex items-center justify-between">
                           <div className="inline-flex items-center gap-1 rounded-full border border-canela/30">
                             <button
-                              onClick={() => decrement(item.productId)}
+                              onClick={() => decrement(cartLineId(item.productId, item.options))}
                               aria-label="Decrease"
                               className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-canela-light"
                             >
@@ -118,7 +128,7 @@ export function CartDrawer() {
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => increment(item.productId)}
+                              onClick={() => increment(cartLineId(item.productId, item.options))}
                               aria-label="Increase"
                               className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-canela-light"
                             >

@@ -53,7 +53,7 @@ export function RegisterForm() {
       }
       // Says so on the page they land on. Registering used to sign them in and
       // drop them on the account page with nothing confirmed at all.
-      router.push("/account?welcome=1");
+      router.push("/account/overview?welcome=1");
       router.refresh();
     } catch (err: any) {
       toast.error(err.message || "Failed");
@@ -69,6 +69,7 @@ export function RegisterForm() {
         value={name}
         onChange={setName}
         required
+        autoComplete="name"
       />
       <Field
         label="Email"
@@ -76,6 +77,7 @@ export function RegisterForm() {
         value={email}
         onChange={setEmail}
         required
+        autoComplete="email"
       />
       <Field
         label="Password"
@@ -84,6 +86,7 @@ export function RegisterForm() {
         onChange={setPassword}
         required
         minLength={8}
+        autoComplete="new-password"
       />
       {refCode && (
         <p className="rounded-2xl bg-canela-light px-4 py-3 text-xs">
@@ -128,6 +131,7 @@ function Field({
   onChange,
   required,
   minLength,
+  autoComplete,
 }: {
   label: string;
   type?: string;
@@ -135,6 +139,8 @@ function Field({
   onChange: (v: string) => void;
   required?: boolean;
   minLength?: number;
+  /** Without it a password manager cannot offer to save or fill the field. */
+  autoComplete?: string;
 }) {
   return (
     <div>
@@ -145,6 +151,7 @@ function Field({
         type={type}
         required={required}
         minLength={minLength}
+        autoComplete={autoComplete}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="mt-2 w-full rounded-full border border-canela/30 bg-cream px-5 py-3 text-sm focus:border-canela-dark focus:outline-none"

@@ -5,6 +5,7 @@ import { Clock, ChevronLeft, ChevronRight, Check, Truck, Zap } from "lucide-reac
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 import type { MembershipTier } from "@/lib/membership/tiers";
+import { CLOSED_DATES, isClosedDate } from "@/lib/checkout/closures";
 
 type SlotFromAPI = {
   id: string;
@@ -72,7 +73,18 @@ export function DeliverySlotPicker({
     return map;
   }, [slots]);
 
-  const allDates = useMemo(() => Object.keys(slotsByDate).sort(), [slotsByDate]);
+  const allDates = useMemo(() => {
+    const now = new Date();
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() + Math.ceil(minLeadHours / 24));
+    const end = new Date(now);
+    end.setDate(end.getDate() + 21);
+    const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const cutoffStr = localDate(cutoff);
+    const endStr = localDate(end);
+    const closedDates = CLOSED_DATES.filter((date) => date >= cutoffStr && date < endStr);
+    return Array.from(new Set([...Object.keys(slotsByDate), ...closedDates])).sort();
+  }, [slotsByDate, minLeadHours]);
 
   const PAGE_SIZE = 7;
   const pagedDates = allDates.slice(
@@ -91,7 +103,7 @@ export function DeliverySlotPicker({
     );
   }
 
-  if (slots.length === 0) {
+  if (allDates.length === 0) {
     return (
       <div className="rounded-2xl border border-canela/15 bg-cream p-6 text-center text-sm text-ink-soft">
         {locale === "es"
@@ -141,6 +153,7 @@ export function DeliverySlotPicker({
       {/* Calendar grid */}
       <div className="grid gap-3">
         {pagedDates.map((date) => {
+          const closed = isClosedDate(date);
           const daySlots = slotsByDate[date] || [];
           const dateObj = new Date(date + "T12:00:00");
           const dayName = dateObj.toLocaleDateString(
@@ -150,7 +163,7 @@ export function DeliverySlotPicker({
           const dayNum = dateObj.getDate();
 
           return (
-            <div key={date} className="rounded-2xl border border-canela/15 bg-cream p-4">
+            <div key={date} className={cn("rounded-2xl border border-canela/15 bg-cream p-4", closed && "opacity-60")}>
               <div className="mb-3 flex items-center gap-3">
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-xl bg-canela-light text-canela-dark">
                   <span className="text-[10px] font-bold uppercase leading-none">
@@ -166,6 +179,11 @@ export function DeliverySlotPicker({
                 </p>
               </div>
 
+              {closed ? (
+                <p className="rounded-xl border border-canela/15 p-3 text-sm font-medium text-ink-soft">
+                  {locale === "es" ? "Cerrado por el día" : "Closed for the day"}
+                </p>
+              ) : (
               <div className="grid gap-2 sm:grid-cols-2">
                 {daySlots.map((slot) => {
                   const isSelected = selectedId === slot.id;
@@ -231,6 +249,7 @@ export function DeliverySlotPicker({
                   );
                 })}
               </div>
+              )}
             </div>
           );
         })}

@@ -31,7 +31,7 @@ export function RegisterForm() {
       }
       // auto sign-in
       const signRes = await signIn("credentials", {
-        email,
+        email: email.trim().toLowerCase(),
         password,
         redirect: false,
       });
@@ -70,7 +70,7 @@ export function RegisterForm() {
         value={password}
         onChange={setPassword}
         required
-        minLength={6}
+        minLength={8}
       />
       {refCode && (
         <p className="rounded-2xl bg-canela-light px-4 py-3 text-xs">

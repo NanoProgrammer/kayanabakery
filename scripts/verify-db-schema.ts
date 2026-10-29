@@ -38,49 +38,17 @@ async function main() {
   const { Prisma, PrismaClient } = await import("@prisma/client");
   const prisma = new PrismaClient();
 
-  // What the code believes exists, straight from the generated schema.
-  const expected = new Map<string, Set<string>>();
-  for (const model of Prisma.dmmf.datamodel.models) {
-    const table = model.dbName ?? model.name;
-    const columns = new Set<string>();
-    for (const field of model.fields) {
-      // Relations are joins, not columns.
-      if (field.kind === "object") continue;
-      columns.add(field.dbName ?? field.name);
-    }
-    expected.set(table, columns);
-  }
-
-  const rows = await prisma.$queryRaw<{ table_name: string; column_name: string }[]>`
-    SELECT table_name, column_name
-    FROM information_schema.columns
-    WHERE table_schema = current_schema()
-  `;
-
-  const actual = new Map<string, Set<string>>();
-  for (const r of rows) {
-    if (!actual.has(r.table_name)) actual.set(r.table_name, new Set());
-    actual.get(r.table_name)!.add(r.column_name);
-  }
-
-  const missingTables: string[] = [];
-  const missingColumns: string[] = [];
-
-  for (const [table, columns] of expected) {
-    const live = actual.get(table);
-    if (!live) {
-      missingTables.push(table);
-      continue;
-    }
-    for (const col of columns) {
-      if (!live.has(col)) missingColumns.push(`${table}.${col}`);
-    }
-  }
+  const { findSchemaDrift } = await import("../lib/db/schema-drift");
+  const { missingTables, missingColumns } = await findSchemaDrift(
+    prisma as never,
+    Prisma.dmmf.datamodel
+  );
+  const expectedCount = Prisma.dmmf.datamodel.models.length;
 
   const url = process.env.DATABASE_URL ?? "";
   const host = url.replace(/^.*@/, "").replace(/\/.*$/, "") || "(unknown)";
   console.log(`\nDatabase: ${host}`);
-  console.log(`${expected.size} tables expected, ${actual.size} found\n`);
+  console.log(`${expectedCount} tables expected\n`);
 
   if (!missingTables.length && !missingColumns.length) {
     console.log("  Everything the code expects is there.\n");

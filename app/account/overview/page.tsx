@@ -6,6 +6,8 @@ import { Coins, Package, Truck, Crown } from "lucide-react";
 import { formatCents } from "@/lib/checkout/pricing";
 import { TIERS } from "@/lib/membership/tiers";
 import { effectiveTier } from "@/lib/membership/access";
+import { Suspense } from "react";
+import { WelcomeBanner } from "@/components/account/WelcomeBanner";
 
 export default async function OverviewPage() {
   const session = await auth();
@@ -40,6 +42,11 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-8">
+      {/* Shown once, right after registering. */}
+      <Suspense fallback={null}>
+        <WelcomeBanner />
+      </Suspense>
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat
           icon={Coins}

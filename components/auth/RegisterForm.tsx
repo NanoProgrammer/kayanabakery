@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -14,10 +15,14 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<{ message: string; taken: boolean } | null>(
+    null
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/register", {
         method: "POST",
@@ -26,7 +31,13 @@ export function RegisterForm() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "Registration failed");
+        // In the form, not a toast at the bottom of the page. The commonest
+        // failure by far is an address that already has an account, and that
+        // one needs a way forward rather than a message that fades.
+        setError({
+          message: data.error || "We couldn't create the account.",
+          taken: res.status === 409,
+        });
         return;
       }
       // auto sign-in
@@ -40,7 +51,9 @@ export function RegisterForm() {
         router.push("/login");
         return;
       }
-      router.push("/account");
+      // Says so on the page they land on. Registering used to sign them in and
+      // drop them on the account page with nothing confirmed at all.
+      router.push("/account?welcome=1");
       router.refresh();
     } catch (err: any) {
       toast.error(err.message || "Failed");
@@ -77,6 +90,26 @@ export function RegisterForm() {
           Referral code: <span className="font-bold">{refCode}</span> · You'll get $10 credit on your first order.
         </p>
       )}
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <p>{error.message}</p>
+          {/* The commonest failure by far is an address that already has an
+              account. That needs a way forward, not a message that fades. */}
+          {error.taken && (
+            <p className="mt-2">
+              <Link href="/login" className="font-bold underline">
+                Sign in instead
+              </Link>{" "}
+              or{" "}
+              <Link href="/forgot-password" className="font-bold underline">
+                choose a new password
+              </Link>
+              .
+            </p>
+          )}
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={loading}

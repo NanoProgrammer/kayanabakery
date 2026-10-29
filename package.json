@@ -43,6 +43,8 @@
     "test:fields": "npx tsx scripts/test-field-validation.ts",
     "test:reset": "npx tsx scripts/test-password-reset.ts",
     "user:reset-link": "npx tsx scripts/reset-link.ts",
+    "user:delete": "npx tsx scripts/delete-account.ts",
+    "user:delete:apply": "npx tsx scripts/delete-account.ts apply",
     "membership:check": "npx tsx scripts/check-membership.ts",
     "db:verify": "npx tsx scripts/verify-db-schema.ts",
     "payments:orphans": "npx tsx scripts/find-orphan-payments.ts",

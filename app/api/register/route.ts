@@ -12,7 +12,11 @@ const schema = z.object({
   // Length only: a password is the one field whose contents are nobody's
   // business, and rules about its shape make it weaker, not stronger.
   password: z.string().min(8, "Use at least 8 characters").max(200),
-  refCode: field.code.optional(),
+  // The form sends an empty string when there is no referral.
+  refCode: z.preprocess(
+    (value) => typeof value === "string" && field.cleanText(value) === "" ? undefined : value,
+    field.code.optional()
+  ),
 });
 
 export async function POST(req: Request) {

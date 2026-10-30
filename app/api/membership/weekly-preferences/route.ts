@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { syncWeeklyAutoDeliveryToggle } from "@/lib/brevo/sync";
@@ -93,7 +93,12 @@ export async function PATCH(req: Request) {
 
     // Keep Studio's view of this customer current — the weekly settings are
     // exactly what staff look up when someone asks about their bread.
-    void syncCustomerToSanity(userId);
+    // Kept alive past the response. A loose promise is cut off the moment
+    // the response goes out on serverless, so the mirror in Studio quietly
+    // stayed stale.
+    after(async () => {
+      await syncCustomerToSanity(userId);
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { squareClient } from "@/lib/square/client";
@@ -52,7 +52,12 @@ export async function DELETE() {
       });
     }
 
-    void syncCustomerToSanity(membership.userId);
+    // Kept alive past the response. A loose promise is cut off the moment
+    // the response goes out on serverless, so the mirror in Studio quietly
+    // stayed stale.
+    after(async () => {
+      await syncCustomerToSanity(membership.userId);
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

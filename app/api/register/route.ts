@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import * as field from "@/lib/validation/fields";
 import { syncUserRegistered } from "@/lib/brevo/sync";
+import { syncCustomerToSanity } from "@/lib/sanity/sync-customers";
 import { getServerLocale } from "@/lib/i18n/server";
 
 const schema = z.object({
@@ -64,10 +65,20 @@ export async function POST(req: Request) {
       },
     },
   });
-  syncUserRegistered({
-    email: parsed.data.email,
-    name: parsed.data.name,
-    language: locale,
+  // Registering never put the customer in Studio: they appeared only when the
+  // daily cron swept everybody, so the bakery could sign someone up and not
+  // see them for most of a day with no way to tell whether it had worked.
+  //
+  // `after` rather than a loose promise — a plain fire-and-forget here is cut
+  // off the instant the response goes out on serverless, which is how a sync
+  // that looks written down never runs.
+  after(async () => {
+    syncUserRegistered({
+      email: parsed.data.email,
+      name: parsed.data.name,
+      language: locale,
+    });
+    await syncCustomerToSanity(user.id);
   });
 
   return NextResponse.json({ ok: true, id: user.id });

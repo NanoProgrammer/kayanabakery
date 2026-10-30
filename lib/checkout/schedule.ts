@@ -9,6 +9,9 @@
  * DELIVERY:
  *   Tue–Sat: two windows → 6:00–8:00 PM, 7:00–9:00 PM (max 5 per slot)
  *   Sunday:  1:00–3:00 PM (max 10 per slot)
+ *
+ * NOTE: EVENING_ONLY below is currently on, so what is actually being offered
+ * is 6 PM onwards. The definitions above are what comes back when it is off.
  */
 
 import { isClosedDate } from "./closures";
@@ -74,7 +77,25 @@ export type DeliverySlotOption = {
 
 // ─── Constants ───────────────────────────────────────────────
 
-export const PICKUP_WINDOWS: PickupWindow[] = [
+// ─── TEMPORARY: evenings only ────────────────────────────────
+//
+// The bakery is only handing orders over from 6 PM for now. Everything
+// earlier is withdrawn rather than deleted, so putting the normal schedule
+// back is one line: set EVENING_ONLY to false.
+//
+// Pickup windows are MOVED rather than filtered. Every one of them starts
+// before 6 PM, so filtering would leave no pickup times at all and the
+// checkout would simply refuse every pickup order.
+//
+// Delivery windows ARE filtered, because 6–8 PM and 7–9 PM already exist on
+// Tuesday to Saturday. Sunday's only window is an afternoon one, so Sunday
+// delivery is withdrawn along with the rest — say the word and it moves to
+// the evening instead.
+const EVENING_ONLY = true;
+const EVENING_FROM_HOUR = 18;
+const EVENING_PICKUP_END_HOUR = 20;
+
+const ALL_PICKUP_WINDOWS: PickupWindow[] = [
   { dayOfWeek: 1, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0 },
   { dayOfWeek: 2, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0 },
   { dayOfWeek: 3, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0 },
@@ -83,6 +104,16 @@ export const PICKUP_WINDOWS: PickupWindow[] = [
   { dayOfWeek: 6, startHour: 16, startMinute: 0, endHour: 18, endMinute: 0 },
   { dayOfWeek: 0, startHour: 13, startMinute: 0, endHour: 15, endMinute: 0 },
 ];
+
+export const PICKUP_WINDOWS: PickupWindow[] = EVENING_ONLY
+  ? ALL_PICKUP_WINDOWS.map((w) => ({
+      ...w,
+      startHour: EVENING_FROM_HOUR,
+      startMinute: 0,
+      endHour: EVENING_PICKUP_END_HOUR,
+      endMinute: 0,
+    }))
+  : ALL_PICKUP_WINDOWS;
 
 /** Fee constants for priority (before-6-PM) delivery slots */
 export const PRIORITY_SLOT_FEE_BASICO = 899;   // $8.99
@@ -95,7 +126,7 @@ const PRIORITY = {
   feeCentsArtesano: PRIORITY_SLOT_FEE_ARTESANO,
 };
 
-export const DELIVERY_WINDOWS: DeliveryWindowDef[] = [
+const ALL_DELIVERY_WINDOWS: DeliveryWindowDef[] = [
   // ── Priority daytime slots (before 6 PM) — Tue–Sat ───────────
   { dayOfWeek: 2, startHour: 13, startMinute: 0, endHour: 14, endMinute: 0, capacity: 5, label: "1–2 PM", ...PRIORITY },
   { dayOfWeek: 3, startHour: 13, startMinute: 0, endHour: 14, endMinute: 0, capacity: 5, label: "1–2 PM", ...PRIORITY },
@@ -126,6 +157,10 @@ export const DELIVERY_WINDOWS: DeliveryWindowDef[] = [
   // ── Sunday ───────────────────────────────────────────────────
   { dayOfWeek: 0, startHour: 13, startMinute: 0, endHour: 15, endMinute: 0, capacity: 10, label: "1–3 PM" },
 ];
+
+export const DELIVERY_WINDOWS: DeliveryWindowDef[] = EVENING_ONLY
+  ? ALL_DELIVERY_WINDOWS.filter((w) => w.startHour >= EVENING_FROM_HOUR)
+  : ALL_DELIVERY_WINDOWS;
 
 // ─── Helpers ─────────────────────────────────────────────────
 

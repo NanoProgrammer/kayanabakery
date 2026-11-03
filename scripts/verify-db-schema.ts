@@ -39,15 +39,19 @@ async function main() {
   const prisma = new PrismaClient();
 
   const { findSchemaDrift } = await import("../lib/db/schema-drift");
+  const { liveIdentity } = await import("../lib/db/identity");
+  // Asked of the server, and naming the database, schema and role rather than
+  // only the host: this run once said "everything is there" while a build
+  // against the same host said a column was missing, and nothing in either
+  // output could show whether the two were the same database at all.
+  const identity = await liveIdentity(prisma as never, process.env.DATABASE_URL);
   const { missingTables, missingColumns } = await findSchemaDrift(
     prisma as never,
     Prisma.dmmf.datamodel
   );
   const expectedCount = Prisma.dmmf.datamodel.models.length;
 
-  const url = process.env.DATABASE_URL ?? "";
-  const host = url.replace(/^.*@/, "").replace(/\/.*$/, "") || "(unknown)";
-  console.log(`\nDatabase: ${host}`);
+  console.log(`\nDatabase: ${identity}`);
   console.log(`${expectedCount} tables expected\n`);
 
   if (!missingTables.length && !missingColumns.length) {

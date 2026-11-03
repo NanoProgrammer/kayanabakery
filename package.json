@@ -50,6 +50,7 @@
     "user:delete:apply": "npx tsx scripts/delete-account.ts apply",
     "membership:check": "npx tsx scripts/check-membership.ts",
     "db:verify": "npx tsx scripts/verify-db-schema.ts",
+    "test:identity": "npx tsx scripts/test-db-identity.ts",
     "payments:orphans": "npx tsx scripts/find-orphan-payments.ts",
     "test:print-queue": "npx tsx scripts/test-print-queue.ts",
     "print:stuck": "npx tsx scripts/print-stuck.ts",

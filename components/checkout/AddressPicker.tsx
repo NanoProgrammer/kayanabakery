@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, MapPin, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
@@ -29,6 +29,13 @@ export function AddressPicker({
   guestAddress,
   onGuestAddressChange,
   isLoggedIn,
+  // Whether the new-address form is open is lifted out of this component,
+  // because the order payload depends on it: with the form open and filled
+  // in, what is typed there is the address the customer means to use, saved
+  // or not. See lib/checkout/address-choice.ts.
+  isAddingNew,
+  onAddingChange,
+  onAdded,
 }: {
   addresses: SavedAddress[];
   selectedId: string | null;
@@ -36,9 +43,13 @@ export function AddressPicker({
   guestAddress: AddressData | null;
   onGuestAddressChange: (addr: AddressData | null) => void;
   isLoggedIn: boolean;
+  isAddingNew: boolean;
+  onAddingChange: (open: boolean) => void;
+  onAdded: (address: SavedAddress) => void;
 }) {
   const { locale } = useLocale();
-  const [adding, setAdding] = useState(addresses.length === 0 && isLoggedIn);
+  const adding = isAddingNew;
+  const setAdding = onAddingChange;
   const [draft, setDraft] = useState<AddressData>({
     street: "",
     city: "Calgary",
@@ -46,6 +57,14 @@ export function AddressPicker({
     postalCode: "",
   });
   const [saving, setSaving] = useState(false);
+
+  // A logged-in customer with nothing saved yet needs the form open; doing it
+  // in an effect rather than as initial state means it still happens if the
+  // list arrives empty and fills in later.
+  useEffect(() => {
+    if (isLoggedIn && addresses.length === 0) setAdding(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, addresses.length]);
 
   // Guest mode (no addresses, not logged in)
   if (!isLoggedIn) {
@@ -74,10 +93,17 @@ export function AddressPicker({
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
+      // This used to call window.location.reload(), which threw away the
+      // selection made on the line above: the page came back with the old
+      // default address selected and the order went there. A customer paid
+      // twice for deliveries to an address he had moved out of. The new
+      // address is handed to the caller instead, which adds it to the list
+      // and keeps it selected.
+      onAdded({ ...data.address, isSE: !!data.address.isSE });
       onSelect(data.address.id);
+      onGuestAddressChange(null);
       setAdding(false);
-      // Trigger a soft refresh — caller can re-fetch addresses if needed
-      window.location.reload();
+      toast.success(locale === "es" ? "Dirección guardada" : "Address saved");
     } catch {
       toast.error(locale === "es" ? "Error al guardar" : "Failed to save");
     } finally {

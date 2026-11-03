@@ -63,8 +63,18 @@ async function main() {
     console.error("  Missing columns:");
     for (const c of missingColumns) console.error(`    ${c}`);
   }
-  console.error("\n  Deploying this would break every write to those tables:");
-  console.error("  registration answers 500 and sign-in reports a wrong password.");
+  // Naming the consequence generically. An earlier version gave registration
+  // and sign-in as the example, which is only what happens when the missing
+  // column is on User or Membership — it reads as wrong when it is on Order.
+  const tables = [
+    ...new Set([...missingTables, ...missingColumns.map((c) => c.split(".")[0])]),
+  ];
+  console.error(
+    `\n  Prisma names every column when it writes, so deploying this would`
+  );
+  console.error(
+    `  fail every create and update on: ${tables.join(", ")}.`
+  );
   console.error("\n  Fix it with:  npm run db:push");
   console.error("────────────────────────────────────────────────────────\n");
 

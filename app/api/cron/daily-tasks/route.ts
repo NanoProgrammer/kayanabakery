@@ -4,6 +4,7 @@ import { GET as weeklyBoxNotify } from "../weekly-box-notify/route";
 import { GET as weeklyBoxProcess } from "../weekly-box-process/route";
 import { GET as creditExpirationReminders } from "../credit-expiration-reminders/route";
 import { GET as creditExpirationExecute } from "../credit-expiration-execute/route";
+import { GET as reviewRequests } from "../review-requests/route";
 
 /**
  * Single daily dispatcher — Vercel Hobby plans cap the number of cron
@@ -72,6 +73,11 @@ export async function GET(req: Request) {
   // network blip, a Sanity hiccup — and a stale mirror looks exactly like a
   // correct one, so nobody would ever notice. This repairs it on its own.
   tasks.customersToStudio = () => syncAllCustomersToSanity();
+
+  // Runs daily, around midday — which is the point: it asks about orders
+  // completed yesterday, while the customer is having lunch rather than
+  // standing in the shop.
+  tasks.reviewRequests = () => run("review-requests", reviewRequests);
 
   tasks.creditExpirationReminders = () =>
     run("credit-expiration-reminders", creditExpirationReminders);

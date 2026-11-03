@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -169,7 +169,12 @@ export async function POST(req: Request) {
     });
 
     syncMembershipChange({ email: user.email, tier, status: "ACTIVE", language: user.preferredLang });
-    void syncCustomerToSanity(userId);
+    // Kept alive past the response. A loose promise is cut off the moment
+    // the response goes out on serverless, so the mirror in Studio quietly
+    // stayed stale.
+    after(async () => {
+      await syncCustomerToSanity(userId);
+    });
 
     return NextResponse.json({
       success: true,

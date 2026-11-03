@@ -1,6 +1,5 @@
 import { guessLanguageFromName } from "@/lib/i18n/guess-language";
 
-import { GOOGLE_REVIEW_URL } from "@/lib/reviews/link";
 
 export type NotifiableStatus = "READY" | "OUT_FOR_DELIVERY" | "COMPLETED";
 export type Locale = "en" | "es";
@@ -62,11 +61,15 @@ const MESSAGES: Record<
   // It does cost: the two emoji force UCS-2, which caps a segment at 67
   // characters, so this is three segments instead of one. Kept short for that
   // reason, and a g.page short link in GOOGLE_REVIEW_URL saves ~16 more.
+  // No review link here any more. Asking lands while the customer is still in
+  // the shop or just back in the car, which is the worst moment to ask anyone
+  // to sit and write something — and it made this three SMS segments instead
+  // of one. The ask goes out on its own the middle of the next day.
   COMPLETED: {
     es: ({ orderNumber }) =>
-      `✅ Karyana Bakery: Tu pedido ${orderNumber} fue completado. ¡Gracias por tu compra! 🧡\n¿Nos dejas una reseña? ${GOOGLE_REVIEW_URL}`,
+      `✅ Karyana Bakery: Tu pedido ${orderNumber} fue completado. ¡Gracias por tu compra! 🧡`,
     en: ({ orderNumber }) =>
-      `✅ Karyana Bakery: Your order ${orderNumber} is complete. Thank you for your order! 🧡\nLeave us a review? ${GOOGLE_REVIEW_URL}`,
+      `✅ Karyana Bakery: Your order ${orderNumber} is complete. Thank you for your order! 🧡`,
   },
 };
 

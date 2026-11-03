@@ -204,6 +204,12 @@ model Order {
   // same ticket twice after a restart.
   printedAt       DateTime?
 
+  // When the "leave us a review" message went out. Null means it has not, and
+  // is what stops the same customer being asked twice — the ask happens the
+  // day after the order is completed, so it cannot be inferred from the
+  // status alone.
+  reviewRequestedAt DateTime?
+
   // Coupon redemption (1-to-1)
   couponRedemption CouponRedemption?
 

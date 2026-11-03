@@ -33,19 +33,57 @@ if (!process.env.DATABASE_URL) {
 
 // Say which database is about to be touched — the whole point is to make the
 // silent disagreement between the two files visible.
-try {
-  const { host, pathname } = new URL(process.env.DATABASE_URL);
-  const source = process.env.PROD_DATABASE_URL
-    ? "PROD_DATABASE_URL"
-    : existsSync(".env.local")
-    ? ".env.local (or .env)"
-    : ".env";
-  console.log(`Target: ${pathname.replace(/^\//, "")} at ${host}`);
-  console.log(`From:   ${source}\n`);
-} catch {
-  console.error("DATABASE_URL does not look like a valid connection string.");
-  process.exit(1);
+//
+// It names the database, the schema and the role, not just the host, and in
+// the same shape as `db:verify` and the build guard. A push once reported
+// success while the build still reported the column missing, and both outputs
+// named the same host: a Neon endpoint can hold several databases, so the host
+// alone cannot tell two connections apart. These lines are meant to be
+// compared side by side, so they have to match in format.
+//
+// Hand-parsed rather than `new URL()`: a password containing a slash or a hash
+// makes URL() throw, and this script used to exit 1 and refuse to push at all
+// in that case.
+function describe(url) {
+  const withoutScheme = url.replace(/^[a-zA-Z0-9+.-]+:\/\//, "");
+  const at = withoutScheme.lastIndexOf("@");
+  const userinfo = at === -1 ? "" : withoutScheme.slice(0, at);
+  const rest = at === -1 ? withoutScheme : withoutScheme.slice(at + 1);
+  const dec = (v) => {
+    try {
+      return decodeURIComponent(v);
+    } catch {
+      return v;
+    }
+  };
+  const q = rest.indexOf("?");
+  const query = q === -1 ? "" : rest.slice(q + 1);
+  const beforeQuery = q === -1 ? rest : rest.slice(0, q);
+  const slash = beforeQuery.indexOf("/");
+  const host = (slash === -1 ? beforeQuery : beforeQuery.slice(0, slash)) || "(unknown)";
+  const path = slash === -1 ? "" : beforeQuery.slice(slash + 1);
+  const database = path ? dec(path.split("/")[0]) || "(default)" : "(default)";
+  let schema = "(default)";
+  for (const pair of query.split("&")) {
+    const eq = pair.indexOf("=");
+    const key = (eq === -1 ? pair : pair.slice(0, eq)).toLowerCase();
+    if (key === "schema" || key === "search_path") schema = dec(pair.slice(eq + 1)) || "(default)";
+  }
+  const role = userinfo ? dec(userinfo.split(":")[0]) : "";
+  return { host, database, schema, role };
 }
+
+const id = describe(process.env.DATABASE_URL);
+const source = process.env.PROD_DATABASE_URL
+  ? "PROD_DATABASE_URL"
+  : existsSync(".env.local")
+  ? ".env.local (or .env)"
+  : ".env";
+console.log(
+  `Target: host ${id.host}  \u00b7  db ${id.database}  \u00b7  schema ${id.schema}` +
+    (id.role ? `  \u00b7  role ${id.role}` : "")
+);
+console.log(`From:   ${source}\n`);
 
 const result = spawnSync("npx", ["prisma", ...process.argv.slice(2)], {
   stdio: "inherit",

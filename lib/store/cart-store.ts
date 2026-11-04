@@ -30,6 +30,16 @@ type CartState = {
   setAppliedCoupon: (code: string | null) => void;
   setPointsToRedeem: (points: number) => void;
 
+  /**
+   * The last product added, and when. Something has to notice an add in
+   * order to offer a topper for it, and the alternative was passing a
+   * callback down through every Add-to-cart button in the shop.
+   * `at` is a timestamp rather than a boolean so adding the same cake twice
+   * in a row still counts as a new event.
+   */
+  lastAdded: { productId: string; name: string; at: number } | null;
+  clearLastAdded: () => void;
+
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -52,6 +62,9 @@ export const useCartStore = create<CartState>()(
       isOpen: false,
       appliedCouponCode: null,
       pointsToRedeem: 0,
+      lastAdded: null,
+
+      clearLastAdded: () => set({ lastAdded: null }),
 
       setOpen: (open) => set({ isOpen: open }),
       setCoupon: (code) => set({ appliedCouponCode: code }),
@@ -74,6 +87,10 @@ export const useCartStore = create<CartState>()(
             };
           }
           return { items: [...state.items, { ...item, quantity }] };
+        });
+
+        set({
+          lastAdded: { productId: item.productId, name: item.name, at: Date.now() },
         });
 
         trackEvent("add_to_cart", {

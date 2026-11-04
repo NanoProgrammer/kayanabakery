@@ -10,6 +10,7 @@
  */
 import {
   choiceIdentity,
+  TOPPER_CATEGORY,
   SUBCATEGORIES,
   PRODUCT_RULES,
   ruleForProduct,
@@ -47,6 +48,13 @@ check(
   ["tres-leches", "gourmet", "clasicos", "gelatinas-y-flanes"]
 );
 check("gelatinas y flanes is marked gluten free", sub("gelatinas-y-flanes").tagline, "Gluten free");
+// Toppers are something you add to a cake, not a kind of cake. If they were a
+// subcategory the Cakes page would show five cards instead of four.
+check(
+  "toppers are not one of the four",
+  SUBCATEGORIES.some((s) => s.slug === TOPPER_CATEGORY.slug),
+  false
+);
 
 console.log("\n  sizes");
 // Shown the way the customer decides: nobody knows what 8" means, everybody

@@ -98,6 +98,23 @@ export const SUBCATEGORIES: MenuSubcategory[] = [
 ];
 
 /**
+ * Cake toppers and decorations.
+ *
+ * Deliberately NOT one of the four subcategories under Cakes: those are kinds
+ * of cake, and the Cakes page and the header submenu are meant to show four
+ * things to choose between. A topper is something you add to a cake, so it
+ * sits on its own at the top level and is offered at the moment a tres leches
+ * goes into the cart.
+ */
+export const TOPPER_CATEGORY = {
+  slug: "decoraciones",
+  name: "Cake Toppers",
+  nameEs: "Decoraciones",
+  tagline: "Finish your cake",
+  taglineEs: "Dale el toque final",
+};
+
+/**
  * Products that are not what their subcategory's default says.
  *
  * Matched on the product's name, loosely: accents, case, punctuation and

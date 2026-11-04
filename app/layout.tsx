@@ -10,6 +10,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { TopperSuggestions } from "@/components/cart/TopperSuggestions";
 import { PopupBannerProvider } from "@/components/layout/PopupBannerProvider";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import {
@@ -113,6 +114,9 @@ export default async function RootLayout({
             <Footer
             />
             <CartDrawer />
+            {/* Offers a topper when a tres leches is added. Decides nothing
+                itself — it asks the server whether to open at all. */}
+            <TopperSuggestions />
             {popup && <PopupBannerProvider banner={popup} />}
             <Toaster position="bottom-right" richColors />
           </LocaleProvider>

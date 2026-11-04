@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +29,14 @@ export function CategoryDropdown({
   const [categories, setCategories] = useState<CategoryItem[]>(
     initialCategories ?? []
   );
+  // Which parent row the pointer is on, so its subcategories can open beside
+  // the menu instead of being listed inside it.
+  const [hovered, setHovered] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+
+  const submenu = categories.find(
+    (c) => c._id === hovered && !!c.children?.length
+  );
 
   useEffect(() => {
     if (initialCategories && initialCategories.length > 0) return;
@@ -43,6 +50,7 @@ export function CategoryDropdown({
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+        setHovered(null);
       }
     }
     document.addEventListener("mousedown", handler);
@@ -118,54 +126,86 @@ export function CategoryDropdown({
       })}
     </div>
   ) : (
-    <div className="absolute left-0 top-full z-50 mt-3 w-72 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl">
-      <Link
-        href="/shop"
-        onClick={() => setOpen(false)}
-        className="block border-b border-canela/10 px-4 py-3 text-sm font-medium transition-colors hover:bg-canela-light"
-      >
-        {locale === "es" ? "Ver todos" : "View all"}
-      </Link>
+    <div className="absolute left-0 top-full z-50 mt-3 flex items-start">
+      <div className="w-72 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl">
+        <Link
+          href="/shop"
+          onClick={() => setOpen(false)}
+          className="block border-b border-canela/10 px-4 py-3 text-sm font-medium transition-colors hover:bg-canela-light"
+        >
+          {locale === "es" ? "Ver todos" : "View all"}
+        </Link>
 
-      <div className="max-h-[60vh] overflow-y-auto py-1">
-        {categories.map((cat) => {
-          const name =
-            locale === "es" && cat.titleEs
-              ? cat.titleEs
-              : cat.title;
+        <div className="max-h-[60vh] overflow-y-auto py-1">
+          {categories.map((cat) => {
+            const name =
+              locale === "es" && cat.titleEs ? cat.titleEs : cat.title;
+            const hasChildren = !!cat.children?.length;
 
-          return (
-            <div key={cat._id}>
-              <Link
-                href={`/category/${cat.slug}`}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-canela-light"
+            return (
+              <div
+                key={cat._id}
+                // The subcategories used to sit indented under their parent in
+                // this same list, so the menu was one long column of
+                // everything the shop sells. Hovering a parent now opens them
+                // beside it instead, and clicking the parent goes to its page,
+                // where the subcategories are laid out as cards to choose
+                // from. onFocus/onBlur so a keyboard reaches them too.
+                onMouseEnter={() => hasChildren && setHovered(cat._id)}
+                onMouseLeave={() => hasChildren && setHovered((h) => (h === cat._id ? null : h))}
+                onFocus={() => hasChildren && setHovered(cat._id)}
               >
-                {cat.image && (
-                  <img
-                    src={cat.image}
-                    alt={name}
-                    className="h-8 w-8 rounded-lg object-cover"
-                  />
-                )}
-
-                <span>{name}</span>
-              </Link>
-
-              {cat.children?.map((child) => (
                 <Link
-                  key={child._id}
-                  href={`/category/${child.slug}`}
+                  href={`/category/${cat.slug}`}
                   onClick={() => setOpen(false)}
-                  className="block py-2 pl-[3.75rem] pr-4 text-sm text-ink-soft transition-colors hover:bg-canela-light hover:text-ink"
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-canela-light",
+                    hovered === cat._id && "bg-canela-light"
+                  )}
                 >
-                  {locale === "es" && child.titleEs ? child.titleEs : child.title}
+                  {cat.image && (
+                    <img
+                      src={cat.image}
+                      alt={name}
+                      className="h-8 w-8 rounded-lg object-cover"
+                    />
+                  )}
+                  <span className="flex-1">{name}</span>
+                  {hasChildren && (
+                    <ChevronRight className="h-3.5 w-3.5 text-ink-soft" />
+                  )}
                 </Link>
-              ))}
-            </div>
-          );
-        })}
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* The hovered category's subcategories, beside the menu rather than
+          inside it. Kept mounted on hover of the panel itself so the pointer
+          can travel from the parent row across to a child without the panel
+          closing under it. */}
+      {submenu && (
+        <div
+          onMouseEnter={() => setHovered(submenu._id)}
+          onMouseLeave={() => setHovered(null)}
+          className="ml-2 w-60 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl"
+        >
+          <p className="border-b border-canela/10 px-4 py-3 text-xs font-bold uppercase tracking-widest text-canela-dark">
+            {locale === "es" && submenu.titleEs ? submenu.titleEs : submenu.title}
+          </p>
+          {submenu.children!.map((child) => (
+            <Link
+              key={child._id}
+              href={`/category/${child.slug}`}
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-ink-soft transition-colors hover:bg-canela-light hover:text-ink"
+            >
+              {locale === "es" && child.titleEs ? child.titleEs : child.title}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   ))}
     </div>

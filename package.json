@@ -53,6 +53,7 @@
     "test:identity": "npx tsx scripts/test-db-identity.ts",
     "test:address": "npx tsx scripts/test-address-choice.ts",
     "test:signedin": "npx tsx scripts/test-signed-in-redirect.ts",
+    "test:cakes": "npx tsx scripts/test-cake-menu.ts",
     "payments:orphans": "npx tsx scripts/find-orphan-payments.ts",
     "test:print-queue": "npx tsx scripts/test-print-queue.ts",
     "print:stuck": "npx tsx scripts/print-stuck.ts",

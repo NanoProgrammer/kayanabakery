@@ -1,82 +1,38 @@
 /**
- * Sets up the cake menu: three subcategories under Cakes, and the options
- * each one's products need.
+ * Writes the cake menu to Sanity: the subcategories under Cakes, and the
+ * options each product is sold with.
  *
  *   npm run cakes:setup          show what it would do
  *   npm run cakes:setup:apply    do it
  *
- *   Tres Leches  — Size: 6", 8", 10"
- *   Gourmet      — Size: 6", 8"            (flan, tres leches)
- *   Clásicos     — Flavour: vanilla, chocolate, strawberry
- *                                          (chocoflan, pineapple upside down, bundt)
+ * The menu itself lives in lib/products/cake-menu.ts and is tested by
+ * `npm run test:cakes`. This file is only the part that talks to Sanity.
  *
- * It does NOT invent prices. Every choice is created at +$0, because a 10"
+ * It does NOT invent prices. A new choice is created at +$0, because a 10"
  * cake priced like a 6" is a loss on every order and only Karyana knows the
- * numbers. Set them in Studio afterwards: Product → Options → the choice →
- * "Price difference".
+ * numbers. Set them in Studio: Product → Options → the choice → "Price
+ * difference".
  *
- * Safe to run twice: categories are matched by slug and options by key, so a
- * second run updates rather than duplicates.
+ * It does not destroy them either. Products already in Studio carry price
+ * differences typed in by hand, so a choice that survives keeps its price and
+ * its sold-out flag; only the set of choices changes. Anything being removed
+ * is listed before it happens.
+ *
+ * Safe to run twice: categories are matched by slug and options by key.
  */
 import { config as loadEnv } from "dotenv";
 loadEnv();
 loadEnv({ path: ".env.local", override: true });
 
-type Choice = { label: string; labelEs: string };
+import {
+  SUBCATEGORIES,
+  optionsForProduct,
+  ruleForProduct,
+  mergeProductOptions,
+  type MergedOption,
+} from "../lib/products/cake-menu";
 
-const SUBCATEGORIES: {
-  slug: string;
-  name: string;
-  nameEs: string;
-  option: { name: string; nameEs: string; key: string; choices: Choice[] };
-}[] = [
-  {
-    slug: "tres-leches",
-    name: "Tres Leches",
-    nameEs: "Tres Leches",
-    option: {
-      name: "Size",
-      nameEs: "Tamaño",
-      key: "size",
-      choices: [
-        { label: '6 inch', labelEs: '6 pulgadas' },
-        { label: '8 inch', labelEs: '8 pulgadas' },
-        { label: '10 inch', labelEs: '10 pulgadas' },
-      ],
-    },
-  },
-  {
-    slug: "gourmet",
-    name: "Gourmet",
-    nameEs: "Gourmet",
-    option: {
-      name: "Size",
-      nameEs: "Tamaño",
-      key: "size",
-      choices: [
-        { label: '6 inch', labelEs: '6 pulgadas' },
-        { label: '8 inch', labelEs: '8 pulgadas' },
-      ],
-    },
-  },
-  {
-    slug: "clasicos",
-    name: "Clásicos",
-    nameEs: "Clásicos",
-    option: {
-      name: "Flavour",
-      nameEs: "Sabor",
-      key: "flavour",
-      choices: [
-        { label: "Vanilla", labelEs: "Vainilla" },
-        { label: "Chocolate", labelEs: "Chocolate" },
-        { label: "Strawberry", labelEs: "Fresa" },
-      ],
-    },
-  },
-];
-
-function optionDoc(o: (typeof SUBCATEGORIES)[number]["option"]) {
+function optionDoc(o: MergedOption) {
   return {
     _type: "productOption",
     _key: o.key,
@@ -89,9 +45,8 @@ function optionDoc(o: (typeof SUBCATEGORIES)[number]["option"]) {
       _key: `${o.key}-${i}`,
       label: c.label,
       labelEs: c.labelEs,
-      // Deliberately zero. See the note at the top of this file.
-      priceDelta: 0,
-      soldOut: false,
+      priceDelta: c.priceDelta,
+      soldOut: c.soldOut,
     })),
   };
 }
@@ -125,7 +80,7 @@ async function main() {
     if (existing) {
       const needsParent = existing.parent?._ref !== cakes._id;
       plan.push(
-        `  ${sub.name.padEnd(14)} exists${needsParent ? " — will be moved under Cakes" : " — already under Cakes"}`
+        `\n  ${sub.name}${needsParent ? " — will be moved under Cakes" : " — already under Cakes"}`
       );
       if (needsParent) {
         writes.push(() =>
@@ -136,12 +91,13 @@ async function main() {
         );
       }
     } else {
-      plan.push(`  ${sub.name.padEnd(14)} will be created under Cakes`);
+      plan.push(`\n  ${sub.name} — will be created under Cakes`);
       writes.push(() =>
         writeClient.create({
           _type: "category",
           name: sub.name,
           nameEs: sub.nameEs,
+          ...(sub.tagline ? { tagline: sub.tagline, taglineEs: sub.taglineEs } : {}),
           slug: { _type: "slug", current: sub.slug },
           parent: { _type: "reference", _ref: cakes._id },
           displayOrder: 10 + index,
@@ -149,32 +105,39 @@ async function main() {
       );
     }
 
-    // Products already filed under this subcategory get its option.
-    const products = await writeClient.fetch<{ _id: string; name: string; options?: any[] }[]>(
-      `*[_type == "product" && $slug in categories[]->slug.current]{ _id, name, options }`,
-      { slug: sub.slug }
-    );
-
-    for (const product of products) {
-      const already = (product.options ?? []).some(
-        (o: any) => (o?.key?.current ?? o?.key) === sub.option.key
-      );
-      plan.push(
-        `      ${product.name.padEnd(28)} ${already ? `already has ${sub.option.key}` : `+ ${sub.option.name}: ${sub.option.choices.map((c) => c.label).join(", ")}`}`
-      );
-      if (!already) {
-        writes.push(() =>
-          writeClient
-            .patch(product._id)
-            .setIfMissing({ options: [] })
-            .append("options", [optionDoc(sub.option)])
-            .commit()
-        );
-      }
-    }
+    const products = await writeClient.fetch<
+      { _id: string; name: string; options?: any[] }[]
+    >(`*[_type == "product" && $slug in categories[]->slug.current]{ _id, name, options }`, {
+      slug: sub.slug,
+    });
 
     if (!products.length) {
       plan.push(`      (no products filed under ${sub.name} yet)`);
+      continue;
+    }
+
+    for (const product of products) {
+      const desired = optionsForProduct(product.name, sub);
+      const rule = ruleForProduct(product.name);
+      const merged = mergeProductOptions(product.options, desired);
+
+      if (merged.unchanged) {
+        plan.push(`      ${product.name} — already correct`);
+        continue;
+      }
+
+      plan.push(
+        `      ${product.name}${rule ? `  (rule: ${rule.label})` : ""}` +
+          (desired.length ? "" : "  → sold one way only, no options")
+      );
+      for (const change of merged.changes) plan.push(`          ${change}`);
+
+      writes.push(() =>
+        writeClient
+          .patch(product._id)
+          .set({ options: merged.options.map(optionDoc) })
+          .commit()
+      );
     }
   }
 
@@ -195,9 +158,9 @@ async function main() {
 
   console.log(`\n${writes.length} change(s) written.`);
   console.log(
-    "\n  ⚠ Every size and flavour was created at +$0. Set the real price\n" +
+    "\n  ⚠ Any NEW size or flavour was created at +$0. Set the real price\n" +
       "    differences in Studio: Product → Options → the choice →\n" +
-      '    "Price difference". A 10" priced like a 6" loses money on every order.\n'
+      '    "Price difference". Prices already set were kept.\n'
   );
 }
 

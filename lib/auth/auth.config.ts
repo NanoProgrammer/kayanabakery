@@ -1,5 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
+const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60;
+
 // Edge-safe subset of the NextAuth config — no Prisma adapter, no
 // Credentials provider (which pulls in bcryptjs), so this can be used by
 // middleware (which runs on the Edge runtime) without bundling the full
@@ -12,7 +14,18 @@ export const authConfig: NextAuthConfig = {
   // hardcoded AUTH_URL env var would override this for whichever single
   // domain it names, breaking Google sign-in on the other one.
   trustHost: true,
-  session: { strategy: "jwt" },
+  // One month, stated rather than left to the library default, and the same
+  // number for the JWT and for the cookie that carries it — if the cookie
+  // outlives the token the customer is silently signed out, and if the token
+  // outlives the cookie the session dies when the browser closes.
+  // `updateAge` slides the month forward on any day the customer visits, so
+  // a regular is never signed out.
+  session: {
+    strategy: "jwt",
+    maxAge: THIRTY_DAYS_SECONDS,
+    updateAge: 24 * 60 * 60,
+  },
+  jwt: { maxAge: THIRTY_DAYS_SECONDS },
   pages: {
     signIn: "/login",
   },

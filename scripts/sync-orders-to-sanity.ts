@@ -1,6 +1,7 @@
 import { createClient } from "next-sanity";
 import { prisma } from "../lib/prisma";
 import { config as loadEnv } from "dotenv";
+import { orderDeliveryAddress, formatDeliveryAddress } from "../lib/orders/delivery-address";
 loadEnv();
 loadEnv({ path: ".env.local", override: true });
 
@@ -50,8 +51,8 @@ async function run() {
       fulfillmentType: o.fulfillmentType,
       total: o.total / 100,
       items,
-      deliveryAddress: o.address
-        ? `${o.address.street}, ${o.address.city} ${o.address.postalCode}`
+      deliveryAddress: orderDeliveryAddress(o as any)
+        ? formatDeliveryAddress(orderDeliveryAddress(o as any))
         : null,
       pickupDate: o.pickupDate
         ? o.pickupDate.toLocaleDateString("en-CA")

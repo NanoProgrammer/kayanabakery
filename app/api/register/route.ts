@@ -6,6 +6,7 @@ import * as field from "@/lib/validation/fields";
 import { syncUserRegistered } from "@/lib/brevo/sync";
 import { syncCustomerToSanity } from "@/lib/sanity/sync-customers";
 import { getServerLocale } from "@/lib/i18n/server";
+import { auth } from "@/lib/auth/auth";
 
 const schema = z.object({
   name: field.personName,
@@ -21,6 +22,24 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Creating an account requires not having one open. The sign-up page is
+  // already closed to a signed-in browser, but the page is only the door —
+  // the endpoint is what actually creates the account, and a second account
+  // made here is one the customer's orders, points and addresses get split
+  // across. 409 rather than 401: the request is understood and refused, and
+  // the form turns this into "sign out first" with a button.
+  const session = await auth();
+  if ((session?.user as any)?.id) {
+    return NextResponse.json(
+      {
+        error: "SIGNED_IN",
+        message:
+          "You are already signed in. Sign out before creating another account.",
+      },
+      { status: 409 }
+    );
+  }
+
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {

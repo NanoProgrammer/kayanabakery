@@ -23,6 +23,13 @@ import { MembershipGate } from "../membership/MembershipGate";
 import { AddressPicker, type AddressData, type SavedAddress } from "./AddressPicker";
 import { SquarePaymentForm } from "./SquarePaymentForm";
 import { interpretCheckoutResponse } from "@/lib/checkout/response";
+import {
+  chooseInitialAddress,
+  resolveOrderAddress,
+  addressPayload,
+  describeOrderAddress,
+  withSavedAddress,
+} from "@/lib/checkout/address-choice";
 import { OrderSummarySidebar } from "./OrderSummarySidebar";
 
 type UserCtx = {
@@ -59,12 +66,28 @@ export function CheckoutForm({
 
   const [fulfillment, setFulfillment] = useState<"PICKUP" | "DELIVERY">("PICKUP");
 
-  // Address
-  const [addresses] = useState(initialAddresses);
-  const [addressId, setAddressId] = useState<string | null>(
-    addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? null
+  // Address. Where the order goes is decided in one place —
+  // lib/checkout/address-choice.ts — because it used to be decided in three
+  // that disagreed, and a customer's orders went to the address he had moved
+  // out of.
+  const [addresses, setAddresses] = useState(initialAddresses);
+  const [addressId, setAddressId] = useState<string | null>(() =>
+    chooseInitialAddress(initialAddresses)
   );
   const [guestAddress, setGuestAddress] = useState<AddressData | null>(null);
+  const [addingAddress, setAddingAddress] = useState(false);
+
+  const chosenAddress = useMemo(
+    () =>
+      resolveOrderAddress({
+        addresses,
+        selectedId: addressId,
+        draft: guestAddress,
+        isAddingNew: addingAddress,
+      }),
+    [addresses, addressId, guestAddress, addingAddress]
+  );
+  const chosenAddressLabel = describeOrderAddress(chosenAddress);
 
   // Slots
   const [deliverySlotId, setDeliverySlotId] = useState<string | null>(null);
@@ -158,15 +181,17 @@ export function CheckoutForm({
   }, [user, fulfillment]);
 
   // SE Calgary
+  // Read off the address the order will actually carry, not off the
+  // pre-selected one — otherwise the free-delivery badge can describe a
+  // different address than the one being delivered to.
   const isSECustomer = useMemo(() => {
     if (fulfillment !== "DELIVERY") return false;
-    if (addressId) {
-      const a = addresses.find((x) => x.id === addressId);
-      return a?.isSE ?? false;
+    if (chosenAddress.kind === "saved") {
+      return (chosenAddress.address as SavedAddress).isSE ?? isSECalgary(chosenAddress.address.postalCode);
     }
-    if (guestAddress) return isSECalgary(guestAddress.postalCode);
+    if (chosenAddress.kind === "new") return isSECalgary(chosenAddress.address.postalCode);
     return false;
-  }, [fulfillment, addressId, addresses, guestAddress]);
+  }, [fulfillment, chosenAddress]);
 
   const maxLeadTime = items.reduce((max, it) => Math.max(max, it.leadTime ?? 0), 0);
 
@@ -195,9 +220,10 @@ export function CheckoutForm({
   const isMember = user ? tierMeets(user.tier, "ARTESANO") : false;
 
   // Validation
-  const hasDeliveryAddress =
-    !!addressId ||
-    !!(guestAddress?.street && guestAddress?.postalCode);
+  // Paying is allowed only once an address has actually resolved. The old
+  // check passed on a selected id alone, which is exactly the state that
+  // delivered to the wrong place.
+  const hasDeliveryAddress = chosenAddress.kind !== "none";
 
   const canPay =
     items.length > 0 &&
@@ -232,8 +258,8 @@ export function CheckoutForm({
       payload.pickupTime = pickupTime;
     } else {
       payload.deliverySlotId = deliverySlotId;
-      if (addressId) payload.addressId = addressId;
-      if (guestAddress && !addressId) payload.guestAddress = guestAddress;
+      // Exactly what the "Delivering to" line above the Pay button says.
+      Object.assign(payload, addressPayload(chosenAddress) ?? {});
     }
 
     if (!user) {
@@ -419,7 +445,30 @@ export function CheckoutForm({
                 guestAddress={guestAddress}
                 onGuestAddressChange={setGuestAddress}
                 isLoggedIn={!!user}
+                isAddingNew={addingAddress}
+                onAddingChange={setAddingAddress}
+                onAdded={(saved) => setAddresses((prev) => withSavedAddress(prev, saved) as typeof prev)}
+                onRemoved={(id) => {
+                  setAddresses((prev) => prev.filter((a) => a.id !== id));
+                  // Removing the one that was selected must not leave the
+                  // order pointing at an address that no longer exists: the
+                  // resolver would read that as "none" and block paying with
+                  // nothing explaining why. Fall back to whatever is left.
+                  setAddressId((current) =>
+                    current === id
+                      ? chooseInitialAddress(addresses.filter((a) => a.id !== id))
+                      : current
+                  );
+                }}
               />
+              {chosenAddressLabel && (
+                <p className="mt-3 rounded-xl bg-canela-light px-3 py-2 text-xs text-ink">
+                  <span className="font-bold uppercase tracking-widest text-canela-dark">
+                    {locale === "es" ? "Entregando a" : "Delivering to"}
+                  </span>{" "}
+                  {chosenAddressLabel}
+                </p>
+              )}
             </Section>
           )}
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -15,9 +15,11 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<{ message: string; taken: boolean } | null>(
-    null
-  );
+  const [error, setError] = useState<{
+    message: string;
+    taken: boolean;
+    signedIn: boolean;
+  } | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,9 +36,16 @@ export function RegisterForm() {
         // In the form, not a toast at the bottom of the page. The commonest
         // failure by far is an address that already has an account, and that
         // one needs a way forward rather than a message that fades.
+        // Two different 409s now: an address that already has an account,
+        // and a browser that is already signed in. They need opposite
+        // advice, so they must not share a branch.
+        const signedIn = data.error === "SIGNED_IN";
         setError({
-          message: data.error || "We couldn't create the account.",
-          taken: res.status === 409,
+          message:
+            data.message || (signedIn ? "" : data.error) ||
+            "We couldn't create the account.",
+          taken: res.status === 409 && !signedIn,
+          signedIn,
         });
         return;
       }
@@ -98,6 +107,19 @@ export function RegisterForm() {
           <p>{error.message}</p>
           {/* The commonest failure by far is an address that already has an
               account. That needs a way forward, not a message that fades. */}
+          {/* Already signed in: the only thing that unblocks them is
+              signing out, so that is the button they get. */}
+          {error.signedIn && (
+            <p className="mt-2">
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/register" })}
+                className="font-bold underline"
+              >
+                Sign out and create another account
+              </button>
+            </p>
+          )}
           {error.taken && (
             <p className="mt-2">
               <Link href="/login" className="font-bold underline">

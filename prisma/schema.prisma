@@ -179,6 +179,16 @@ model Order {
   addressId       String?
   address         Address?      @relation(fields: [addressId], references: [id])
 
+  // The address as it stood when the order was placed. The relation above is
+  // a live link: editing a saved address rewrote it on every past order that
+  // used it, and deleting one blanked it (optional relation, so SetNull), so
+  // the record of where a delivery actually went could change or vanish
+  // afterwards. That is also why customers could not be allowed to tidy up
+  // their old addresses. The copy is what receipts, slips and invoices read;
+  // the relation is kept for orders placed before it existed.
+  // Shape: { street, city, province, postalCode, buzzer, notes }
+  deliveryAddress Json?
+
   status          OrderStatus   @default(PENDING)
   paymentStatus   PaymentStatus @default(PENDING)
   paymentMethod   String?       // SQUARE | etc

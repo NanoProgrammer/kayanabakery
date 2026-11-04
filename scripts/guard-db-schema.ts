@@ -28,10 +28,13 @@ async function main() {
 
   const { Prisma, PrismaClient } = await import("@prisma/client");
   const { findSchemaDrift } = await import("../lib/db/schema-drift");
+  const { liveIdentity } = await import("../lib/db/identity");
   const prisma = new PrismaClient();
 
   let drift;
+  let identity = "(not reached)";
   try {
+    identity = await liveIdentity(prisma as never, process.env.DATABASE_URL);
     drift = await findSchemaDrift(prisma as never, Prisma.dmmf.datamodel);
   } catch (err: any) {
     console.warn(
@@ -43,18 +46,19 @@ async function main() {
   await prisma.$disconnect().catch(() => {});
 
   const { missingTables, missingColumns } = drift;
+  // Printed on success as well as on failure. When this guard failed on
+  // Vercel while `db:verify` passed locally, the only way to tell whether the
+  // two runs were even talking to the same database was to compare these two
+  // lines — so both have to exist.
   if (!missingTables.length && !missingColumns.length) {
-    console.log("[db-guard] The database has everything the code expects.");
+    console.log(`[db-guard] The database has everything the code expects.`);
+    console.log(`[db-guard] ${identity}`);
     return;
   }
 
-  const host = (process.env.DATABASE_URL ?? "")
-    .replace(/^.*@/, "")
-    .replace(/\/.*$/, "");
-
   console.error("\n────────────────────────────────────────────────────────");
   console.error("  BUILD STOPPED — the database is behind the code.");
-  console.error(`  Database: ${host}\n`);
+  console.error(`  Database: ${identity}\n`);
   if (missingTables.length) {
     console.error("  Missing tables:");
     for (const t of missingTables) console.error(`    ${t}`);
@@ -63,9 +67,28 @@ async function main() {
     console.error("  Missing columns:");
     for (const c of missingColumns) console.error(`    ${c}`);
   }
-  console.error("\n  Deploying this would break every write to those tables:");
-  console.error("  registration answers 500 and sign-in reports a wrong password.");
+  // Naming the consequence generically. An earlier version gave registration
+  // and sign-in as the example, which is only what happens when the missing
+  // column is on User or Membership — it reads as wrong when it is on Order.
+  const tables = [
+    ...new Set([...missingTables, ...missingColumns.map((c) => c.split(".")[0])]),
+  ];
+  console.error(
+    `\n  Prisma names every column when it writes, so deploying this would`
+  );
+  console.error(
+    `  fail every create and update on: ${tables.join(", ")}.`
+  );
   console.error("\n  Fix it with:  npm run db:push");
+  // The trap this guard walked into itself: a push can succeed against a
+  // database that is not the one being built against. The host alone does not
+  // tell them apart, which is why the line above names the database, the
+  // schema and the role as well.
+  console.error("  If that already passed, compare the line above against the");
+  console.error("  one `npm run db:verify` prints — same host is not the same");
+  console.error("  database. If they differ, run:");
+  console.error("    PowerShell:  $env:PROD_DATABASE_URL=\"<this build\u2019s DATABASE_URL>\"; npm run db:push");
+  console.error("    bash:        PROD_DATABASE_URL=\"<this build\u2019s DATABASE_URL>\" npm run db:push");
   console.error("────────────────────────────────────────────────────────\n");
 
   process.exit(1);

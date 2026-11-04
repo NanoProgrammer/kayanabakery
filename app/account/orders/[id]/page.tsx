@@ -4,6 +4,10 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
 import { Download, ArrowLeft } from "lucide-react";
 import { formatCents } from "@/lib/checkout/pricing";
+import {
+  orderDeliveryAddress,
+  formatDeliveryAddressLines,
+} from "@/lib/orders/delivery-address";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +31,7 @@ export default async function OrderDetailPage({
   if (!order) notFound();
 
   const items = (order.items as any[]) ?? [];
+  const deliveryAddress = orderDeliveryAddress(order as any);
 
   return (
     <div>
@@ -87,17 +92,18 @@ export default async function OrderDetailPage({
         </div>
       </div>
 
-      {order.address && (
+      {/* The address this order actually went to, from the copy kept on the
+          order — a customer who has since moved still sees where the old one
+          was delivered. */}
+      {deliveryAddress && (
         <section className="mt-8">
           <h2 className="font-display text-xl">Delivery address</h2>
           <div className="mt-3 rounded-2xl border border-canela/15 bg-cream p-5 text-sm">
-            <p>{order.address.street}</p>
-            <p>
-              {order.address.city}, {order.address.province} {order.address.postalCode}
-            </p>
-            {order.address.buzzer && <p>Buzzer: {order.address.buzzer}</p>}
-            {order.address.notes && (
-              <p className="mt-2 italic text-ink-soft">{order.address.notes}</p>
+            {formatDeliveryAddressLines({ ...deliveryAddress, notes: null }).map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+            {deliveryAddress.notes && (
+              <p className="mt-2 italic text-ink-soft">{deliveryAddress.notes}</p>
             )}
           </div>
         </section>

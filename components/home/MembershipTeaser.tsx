@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Crown, ArrowRight } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { CLUB_NAME } from "@/lib/membership/club-copy";
 
 export function MembershipTeaser() {
   const { locale } = useLocale();
@@ -32,8 +33,8 @@ export function MembershipTeaser() {
       price: "$30/mo",
       perks:
         locale === "es"
-          ? "6 panes gratis · 4x puntos"
-          : "6 free breads · 4x points",
+          ? "Prioridad en entregas · 4x puntos"
+          : "Delivery priority · 4x points",
       featured: true,
     },
     {
@@ -53,7 +54,7 @@ export function MembershipTeaser() {
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-gold">
               <Crown className="h-3 w-3" />
-              {locale === "es" ? "Membresías" : "Memberships"}
+              {CLUB_NAME}
             </div>
             <h2 className="section-title">
               {locale === "es" ? (
@@ -74,8 +75,8 @@ export function MembershipTeaser() {
             </h2>
             <p className="mt-4 max-w-md text-base text-ink-soft md:text-lg">
               {locale === "es"
-                ? "Ahorra en cada orden, gana puntos, y sé el primero en probar nuevos batches. Artesano es gratis el primer año."
-                : "Save on every order, earn points, and get first pick on new batches. Artesano is free for the first year."}
+                ? "No es una cuota: es una precompra. El 100% de lo que pagas vuelve a ti en puntos para gastar en lo que quieras, y de paso tienes prioridad y acceso a cosas que no están abiertas al público. Artesano es gratis el primer año."
+                : "It isn't a fee — it's a prepayment. 100% of what you pay comes back as points to spend on whatever you like, and you get priority and access to things that aren't open to the public. Artesano is free for the first year."}
             </p>
             <Link
               href="/memberships"

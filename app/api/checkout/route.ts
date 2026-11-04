@@ -24,6 +24,7 @@ import { bakeryDateString } from "@/lib/time/edmonton";
 export const maxDuration = 60;
 import { squareClient, SQUARE_LOCATION_ID as locationId } from "@/lib/square/client";
 import { computePricing } from "@/lib/checkout/pricing";
+import { snapshotAddress } from "@/lib/orders/delivery-address";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
 import { generateOrderNumber } from "@/lib/checkout/order-number";
 import { ambassadorPayoutCents } from "@/lib/membership/tiers";
@@ -570,6 +571,9 @@ paymentId = result.payment?.id ?? undefined;
         pickupTime: data.pickupTime ?? null,
         deliverySlotId: data.deliverySlotId ?? null,
         addressId: savedAddress?.id ?? null,
+        // A copy, not just the link. The saved address can be edited or
+        // deleted later; where this order went cannot change afterwards.
+        deliveryAddress: snapshotAddress(savedAddress) as any,
         items: items as any,
         subtotal: pricing.subtotalCents,
         couponId: coupon?.id ?? null,

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { OrdersTable } from "@/components/admin/OrdersTable";
+import { orderDeliveryAddress } from "@/lib/orders/delivery-address";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +31,13 @@ export default async function AdminOrdersPage({
         fulfillmentType: o.fulfillmentType,
         customerName: o.user?.name ?? o.guestName ?? "Guest",
         customerEmail: o.user?.email ?? o.guestEmail ?? "",
-        addressLine: o.address
-          ? `${o.address.street}, ${o.address.postalCode}`
-          : null,
+        // From the copy kept on the order, so the list keeps showing where a
+        // past delivery went even after the customer edits or deletes that
+        // saved address.
+        addressLine: (() => {
+          const d = orderDeliveryAddress(o as any);
+          return d ? [d.street, d.postalCode].filter(Boolean).join(", ") : null;
+        })(),
         slotLabel: o.deliverySlot
           ? o.deliverySlot.startTime.toISOString()
           : o.pickupDate

@@ -448,6 +448,18 @@ export function CheckoutForm({
                 isAddingNew={addingAddress}
                 onAddingChange={setAddingAddress}
                 onAdded={(saved) => setAddresses((prev) => withSavedAddress(prev, saved) as typeof prev)}
+                onRemoved={(id) => {
+                  setAddresses((prev) => prev.filter((a) => a.id !== id));
+                  // Removing the one that was selected must not leave the
+                  // order pointing at an address that no longer exists: the
+                  // resolver would read that as "none" and block paying with
+                  // nothing explaining why. Fall back to whatever is left.
+                  setAddressId((current) =>
+                    current === id
+                      ? chooseInitialAddress(addresses.filter((a) => a.id !== id))
+                      : current
+                  );
+                }}
               />
               {chosenAddressLabel && (
                 <p className="mt-3 rounded-xl bg-canela-light px-3 py-2 text-xs text-ink">

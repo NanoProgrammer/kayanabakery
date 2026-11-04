@@ -20,13 +20,25 @@ export type MenuOption = {
   choices: MenuChoice[];
 };
 
+/**
+ * How many people a cake feeds, shown on the button the way the customer
+ * actually decides — nobody knows what 8" means, everybody knows whether
+ * they are feeding twelve people.
+ */
+const SERVES: Record<number, string> = {
+  4: "4-6",
+  6: "8-12",
+  8: "12-20",
+  10: "20-30",
+};
+
 const SIZE = (...inches: number[]): MenuOption => ({
   key: "size",
   name: "Size",
   nameEs: "Tamaño",
   choices: inches.map((n) => ({
-    label: `${n} inch`,
-    labelEs: `${n} pulgadas`,
+    label: SERVES[n] ? `${n}" (Serves ${SERVES[n]})` : `${n}"`,
+    labelEs: SERVES[n] ? `${n}" (${SERVES[n]} porciones)` : `${n}"`,
   })),
 });
 
@@ -129,6 +141,22 @@ export const PRODUCT_RULES: ProductRule[] = [
   },
 ];
 
+/**
+ * What makes two choices "the same choice" when merging.
+ *
+ * Labels get rewritten — `6 inch` became `6" (Serves 8-12)` when the serving
+ * counts went on the buttons. Matching on the whole label would have treated
+ * that as deleting one size and adding another, losing the price difference
+ * Karyana had set on it. A size is identified by its number of inches
+ * instead, so renaming the label keeps the money attached to it.
+ */
+export function choiceIdentity(label: string): string {
+  const normalized = normalizeName(label);
+  const inches = /^(\d+)(?:\s*(?:inch|inches|in|"|''))?\b/.exec(label.trim());
+  if (inches) return `size:${inches[1]}`;
+  return normalized;
+}
+
 /** Case-, accent- and punctuation-insensitive, for matching product names. */
 export function normalizeName(name: string): string {
   return name
@@ -222,7 +250,7 @@ export function mergeProductOptions(
 
     const choices = want.choices.map((choice) => {
       const previous = hadChoices.find(
-        (c) => normalizeName(c?.label ?? "") === normalizeName(choice.label)
+        (c) => choiceIdentity(c?.label ?? "") === choiceIdentity(choice.label)
       );
       if (!previous) {
         changes.push(`+ ${want.name}: ${choice.label}`);
@@ -239,7 +267,7 @@ export function mergeProductOptions(
 
     for (const old of hadChoices) {
       const stillThere = want.choices.some(
-        (c) => normalizeName(c.label) === normalizeName(old?.label ?? "")
+        (c) => choiceIdentity(c.label) === choiceIdentity(old?.label ?? "")
       );
       if (!stillThere && old?.label) {
         changes.push(`- ${want.name}: ${old.label} (removed)`);

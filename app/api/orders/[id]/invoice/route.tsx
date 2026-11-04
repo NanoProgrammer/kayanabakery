@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { renderToStream } from "@react-pdf/renderer";
 import { InvoicePDF, type InvoiceData } from "@/lib/pdf/invoice-pdf";
 import { formatCents } from "@/lib/checkout/pricing";
+import { orderDeliveryAddress } from "@/lib/orders/delivery-address";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 
@@ -73,14 +74,15 @@ export async function GET(
     customerPhone: order.user?.phone ?? order.guestPhone ?? null,
     fulfillmentType: order.fulfillmentType as "PICKUP" | "DELIVERY",
     fulfillmentDetail,
-    address: order.address
-      ? {
-          street: order.address.street,
-          city: order.address.city,
-          province: order.address.province,
-          postalCode: order.address.postalCode,
-        }
-      : null,
+    // The copy kept on the order, so an invoice reprinted next year still
+    // names the address the order went to rather than wherever the customer
+    // lives by then.
+    address: (() => {
+      const d = orderDeliveryAddress(order as any);
+      return d
+        ? { street: d.street, city: d.city, province: d.province, postalCode: d.postalCode }
+        : null;
+    })(),
     items,
     subtotal: formatCents(order.subtotal, "en"),
     couponDiscount: order.couponDiscount

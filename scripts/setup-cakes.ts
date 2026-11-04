@@ -26,6 +26,7 @@ loadEnv({ path: ".env.local", override: true });
 
 import {
   SUBCATEGORIES,
+  TOPPER_CATEGORY,
   optionsForProduct,
   ruleForProduct,
   mergeProductOptions,
@@ -139,6 +140,29 @@ async function main() {
           .commit()
       );
     }
+  }
+
+  // Toppers are top level, not a fifth kind of cake: the Cakes page and the
+  // header submenu are meant to show four things to choose between.
+  const toppers = await writeClient.fetch<{ _id: string } | null>(
+    `*[_type == "category" && slug.current == $slug][0]{ _id }`,
+    { slug: TOPPER_CATEGORY.slug }
+  );
+  if (toppers) {
+    plan.push(`\n  ${TOPPER_CATEGORY.name} — already exists (top level)`);
+  } else {
+    plan.push(`\n  ${TOPPER_CATEGORY.name} — will be created at the top level`);
+    writes.push(() =>
+      writeClient.create({
+        _type: "category",
+        name: TOPPER_CATEGORY.name,
+        nameEs: TOPPER_CATEGORY.nameEs,
+        tagline: TOPPER_CATEGORY.tagline,
+        taglineEs: TOPPER_CATEGORY.taglineEs,
+        slug: { _type: "slug", current: TOPPER_CATEGORY.slug },
+        displayOrder: 40,
+      })
+    );
   }
 
   console.log(plan.join("\n"));

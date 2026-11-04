@@ -7,6 +7,7 @@ import { Crown, Check, Shield } from "lucide-react";
 import { TIERS } from "@/lib/membership/tiers";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { trackEvent } from "@/lib/analytics/gtag";
+import { autoReorderLabel } from "@/lib/membership/club-copy";
 
 type Props = {
   tier: "ARTESANO" | "SELECTO" | "LEGENDARIO";
@@ -115,10 +116,10 @@ export function SquareSubscriptionCheckout({ tier }: Props) {
             {([
               {
                 value: "WEEKLY_BOX" as const,
-                title: es ? "Caja cada semana" : "A box every week",
+                title: autoReorderLabel(locale),
                 body: es
-                  ? "Preparamos tu caja sin que hagas nada. Se paga con tus puntos, y solo cobramos a tu tarjeta lo que falte."
-                  : "We make up your box without you doing anything. It's paid from your points, and your card only covers what they don't.",
+                  ? "Cada semana preparamos tu caja sin que hagas nada. Se paga con tus puntos, y solo cobramos a tu tarjeta lo que falte."
+                  : "Every week we make up your box without you doing anything. It's paid from your points, and your card only covers what they don't.",
               },
               {
                 value: "POINTS" as const,

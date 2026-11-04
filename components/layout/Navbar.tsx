@@ -109,8 +109,13 @@ export function Navbar() {
           />
         </Link>
 
-        {/* Right: account + cart */}
+        {/* Right: language + account + cart.
+            The language switch used to live only inside the burger menu, so on
+            a phone a Spanish-speaking customer had to find it behind two taps
+            on a page already rendered in English. It stays in the bar itself,
+            compact enough not to crowd the logo. */}
         <div className="relative z-10 flex items-center gap-2">
+          <LanguageToggle className="scale-90 origin-right" />
           {session ? (
             <button
               onClick={() => setAccountOpen((o) => !o)}

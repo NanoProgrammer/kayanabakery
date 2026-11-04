@@ -8,6 +8,7 @@ import { TIERS } from "@/lib/membership/tiers";
 import { effectiveTier } from "@/lib/membership/access";
 import { Suspense } from "react";
 import { WelcomeBanner } from "@/components/account/WelcomeBanner";
+import { SessionNotice } from "@/components/account/SessionNotice";
 
 export default async function OverviewPage() {
   const session = await auth();
@@ -45,6 +46,12 @@ export default async function OverviewPage() {
       {/* Shown once, right after registering. */}
       <Suspense fallback={null}>
         <WelcomeBanner />
+      </Suspense>
+
+      {/* Shown when sign in or sign up was opened with a session already
+          open, explaining the redirect instead of leaving it silent. */}
+      <Suspense fallback={null}>
+        <SessionNotice />
       </Suspense>
 
       <div className="grid gap-4 sm:grid-cols-3">

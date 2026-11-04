@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, MapPin, Check } from "lucide-react";
+import { Plus, MapPin, Check, Trash2 } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { isSECalgary } from "@/lib/checkout/postal-codes";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,7 @@ export function AddressPicker({
   isAddingNew,
   onAddingChange,
   onAdded,
+  onRemoved,
 }: {
   addresses: SavedAddress[];
   selectedId: string | null;
@@ -46,6 +47,7 @@ export function AddressPicker({
   isAddingNew: boolean;
   onAddingChange: (open: boolean) => void;
   onAdded: (address: SavedAddress) => void;
+  onRemoved: (id: string) => void;
 }) {
   const { locale } = useLocale();
   const adding = isAddingNew;
@@ -74,6 +76,34 @@ export function AddressPicker({
         onChange={onGuestAddressChange}
       />
     );
+  }
+
+  // Old addresses pile up in this list and there was no way to clear one out
+  // from here, so a customer who had moved kept seeing the place they left
+  // every time they ordered. Past orders keep their own copy of the address
+  // they went to, so removing one here changes nothing about the bakery's
+  // records.
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  async function removeAddress(id: string) {
+    const addr = addresses.find((a) => a.id === id);
+    const confirmed = window.confirm(
+      locale === "es"
+        ? `¿Quitar ${addr?.street ?? "esta dirección"} de tus direcciones guardadas?`
+        : `Remove ${addr?.street ?? "this address"} from your saved addresses?`
+    );
+    if (!confirmed) return;
+    setRemoving(id);
+    try {
+      const res = await fetch(`/api/addresses/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      onRemoved(id);
+      toast.success(locale === "es" ? "Dirección eliminada" : "Address removed");
+    } catch {
+      toast.error(locale === "es" ? "No se pudo eliminar" : "Could not remove it");
+    } finally {
+      setRemoving(null);
+    }
   }
 
   async function saveAddress() {
@@ -116,10 +146,8 @@ export function AddressPicker({
       {addresses.map((a) => {
         const isSelected = selectedId === a.id;
         return (
-          <button
-            type="button"
+          <div
             key={a.id}
-            onClick={() => onSelect(a.id)}
             className={cn(
               "flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all",
               isSelected
@@ -127,25 +155,44 @@ export function AddressPicker({
                 : "border-canela/30 bg-cream hover:border-canela"
             )}
           >
-            <MapPin
-              className={cn(
-                "mt-0.5 h-4 w-4 shrink-0",
-                isSelected ? "text-canela-dark" : "text-ink-soft"
-              )}
-            />
-            <div className="flex-1">
-              <p className="font-medium">{a.street}</p>
-              <p className="text-sm text-ink-soft">
-                {a.city}, {a.province} {a.postalCode}
-              </p>
-              {a.isSE && (
-                <p className="mt-1 text-xs font-bold uppercase tracking-widest text-canela-dark">
-                  {locale === "es" ? "Calgary SE" : "SE Calgary"}
+            <button
+              type="button"
+              onClick={() => onSelect(a.id)}
+              className="flex flex-1 items-start gap-3 text-left"
+            >
+              <MapPin
+                className={cn(
+                  "mt-0.5 h-4 w-4 shrink-0",
+                  isSelected ? "text-canela-dark" : "text-ink-soft"
+                )}
+              />
+              <div className="flex-1">
+                <p className="font-medium">{a.street}</p>
+                <p className="text-sm text-ink-soft">
+                  {a.city}, {a.province} {a.postalCode}
                 </p>
-              )}
-            </div>
-            {isSelected && <Check className="h-4 w-4 text-canela-dark" />}
-          </button>
+                {a.isSE && (
+                  <p className="mt-1 text-xs font-bold uppercase tracking-widest text-canela-dark">
+                    {locale === "es" ? "Calgary SE" : "SE Calgary"}
+                  </p>
+                )}
+              </div>
+              {isSelected && <Check className="mt-0.5 h-4 w-4 shrink-0 text-canela-dark" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => removeAddress(a.id)}
+              disabled={removing === a.id}
+              aria-label={
+                locale === "es"
+                  ? `Quitar ${a.street}`
+                  : `Remove ${a.street}`
+              }
+              className="shrink-0 rounded-full p-1.5 text-ink-soft transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         );
       })}
 

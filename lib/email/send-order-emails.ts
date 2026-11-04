@@ -9,6 +9,11 @@ import { render } from "@react-email/render";
 import OrderConfirmation from "@/emails/OrderConfirmation";
 import OwnerNewOrder from "@/emails/OwnerNewOrder";
 import { formatCents } from "@/lib/checkout/pricing";
+import {
+  orderDeliveryAddress,
+  formatDeliveryAddress,
+  formatDeliveryAddressLines,
+} from "@/lib/orders/delivery-address";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 
@@ -73,9 +78,11 @@ export async function sendOrderEmails(orderId: string): Promise<void> {
       : "";
   }
 
-  const addressLine = order.address
-    ? `${order.address.street}, ${order.address.city}, ${order.address.province} ${order.address.postalCode}`
-    : null;
+  // The copy stored on the order, falling back to the saved address for
+  // orders placed before copies existed. A receipt must keep naming where the
+  // order went even after the customer edits or deletes that address.
+  const delivery = orderDeliveryAddress(order as any);
+  const addressLine = delivery ? formatDeliveryAddress(delivery) : null;
 
   const deliveryLineLabel =
     order.fulfillmentType === "PICKUP"
@@ -160,10 +167,10 @@ export async function sendOrderEmails(orderId: string): Promise<void> {
         customerPhone: order.guestPhone ?? (order.user as any)?.phone ?? null,
         fulfillmentLabel,
         fulfillmentDetail,
-        addressBlock: order.address
-          ? `${order.address.street}\n${order.address.city}, ${order.address.province} ${order.address.postalCode}${order.address.buzzer ? `\nBuzzer: ${order.address.buzzer}` : ""}`
+        addressBlock: delivery
+          ? formatDeliveryAddressLines({ ...delivery, notes: null }).join("\n")
           : null,
-        addressNotes: order.address?.notes ?? null,
+        addressNotes: delivery?.notes ?? null,
         items,
         subtotal: formatCents(order.subtotal, "en"),
         couponLine: order.couponDiscount

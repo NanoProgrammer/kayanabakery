@@ -71,8 +71,8 @@ export function MembershipPricingTable({
               label:
                 tier === "SELECTO" || tier === "LEGENDARIO"
                   ? locale === "es"
-                    ? "Pan incluido con pago mensual"
-                    : "Bread included with monthly payment"
+                    ? "Orden automatica de Pan"
+                    : "Bread Auto Reorder"
                   : locale === "es"
                   ? "Pan gratis con pago mensual"
                   : "Free bread with payment",
@@ -90,13 +90,17 @@ export function MembershipPricingTable({
                     },
                   ]
             ),
-            {
-              ok: data.weeklyOrderSkip,
-              label:
-                locale === "es"
-                  ? "Saltar orden semanal"
-                  : "Weekly order skip",
-            },
+            ...(
+              tier === "SELECTO" || tier === "LEGENDARIO"
+                ? []
+                : [{
+                    ok: data.weeklyOrderSkip,
+                    label:
+                      locale === "es"
+                        ? "Saltar orden semanal"
+                        : "Weekly order skip",
+                  }]
+            ),
             {
               ok: data.freeAdvanceSamples,
               label:

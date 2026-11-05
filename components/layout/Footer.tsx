@@ -10,7 +10,7 @@ export function Footer() {
   const shopLinks = [
     { href: "/shop", label: locale === "es" ? "Tienda" : "Shop" },
     { href: "/category/conchas", label: "Conchas" },
-    { href: "/category/cakes", label: locale === "es" ? "Pasteles" : "Cakes" },
+    { href: "/category/cakes", label: locale === "es" ? "Pasteles" : "Confectionery" },
     { href: "/category/churros", label: "Churros" },
     {
       href: "/category/traditional-mexican-bread",

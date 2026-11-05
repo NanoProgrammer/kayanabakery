@@ -26,7 +26,7 @@ export function Footer() {
     { href: "/about", label: locale === "es" ? "Nosotros" : "About us" },
     { href: "/blog", label: "Blog" },
     { href: "/events", label: locale === "es" ? "Eventos" : "Events" },
-    { href: "/memberships", label: locale === "es" ? "Membresías" : "Memberships" },
+    { href: "/memberships", label: "Karyana Club" },
     {
       href: "/refer-a-friend",
       label: locale === "es" ? "Refiere un amigo" : "Refer a friend",

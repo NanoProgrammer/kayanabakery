@@ -85,7 +85,7 @@ async function reserveDeliverySlot({
 }
 
 const schema = z.object({
-  paymentToken: z.string().min(1),
+  paymentToken: z.string().min(1).optional(),
   fulfillmentType: z.enum(["PICKUP", "DELIVERY"]),
   pickupDate: z.string().optional(),
   pickupTime: z.string().optional(),
@@ -428,6 +428,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: pricing.errors.join("; ") }, { status: 400 });
   }
 
+  if (pricing.totalCents > 0 && !data.paymentToken) {
+    return NextResponse.json({ error: "Payment card required" }, { status: 400 });
+  }
+
   // ============================================================
   // 10. Reserve delivery slot in Google Calendar
   // ============================================================
@@ -467,7 +471,7 @@ export async function POST(req: Request) {
   const idempotencyKey = data.clientReferenceId || randomUUID();
   let paymentId: string | undefined;
 
-  try {
+  if (pricing.totalCents > 0) try {
     const result = await squareClient.payments.create({
   sourceId: data.paymentToken,
   idempotencyKey,
@@ -564,7 +568,7 @@ paymentId = result.payment?.id ?? undefined;
         guestPhone: !userId ? (data.guestPhone ?? undefined) : undefined,
         status: "CONFIRMED",
         paymentStatus: "PAID",
-        paymentMethod: "SQUARE",
+        paymentMethod: pricing.totalCents === 0 ? "POINTS" : "SQUARE",
         squarePaymentId: paymentId,
         fulfillmentType: data.fulfillmentType,
         pickupDate: data.pickupDate ? new Date(data.pickupDate) : null,
@@ -598,10 +602,11 @@ paymentId = result.payment?.id ?? undefined;
 
     // Points redemption
     if (data.pointsToRedeem && data.pointsToRedeem > 0 && userId) {
-      await tx.user.update({
-        where: { id: userId },
+      const debited = await tx.user.updateMany({
+        where: { id: userId, pointsBalance: { gte: data.pointsToRedeem } },
         data: { pointsBalance: { decrement: data.pointsToRedeem } },
       });
+      if (debited.count !== 1) throw new Error("Not enough points to complete this order");
       await tx.pointsTransaction.create({
         data: {
           userId,
@@ -650,15 +655,6 @@ paymentId = result.payment?.id ?? undefined;
           payoutCents: ambassadorDelivery.payoutCents,
           status: "ASSIGNED",
         },
-      });
-    }
-
-    // Referral credit
-    if (userId && user?.referredById && !user.firstOrderCompleted) {
-      await tx.user.update({ where: { id: userId }, data: { firstOrderCompleted: true } });
-      await tx.user.update({
-        where: { id: user.referredById },
-        data: { referralCredit: { increment: 10 } },
       });
     }
 

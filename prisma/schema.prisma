@@ -48,6 +48,7 @@ model User {
   referralRewardCount Int @default(0)
   referralRewardLimit Int @default(10)
   referralVerifySentAt DateTime?
+  referralVerificationProcessedAt DateTime?
   referralRewardsGiven ReferralReward[] @relation("ReferralRewardReferrer")
   referralRewardReceived ReferralReward? @relation("ReferralRewardRecipient")
   referralRenewals ReferralRenewal[] @relation("ReferralRenewalMember")

@@ -26,14 +26,14 @@ export async function confirmVerifiedReferral(referredUserId: string): Promise<R
       return await prisma.$transaction(async (tx) => {
         const referred = await tx.user.findUnique({
           where: { id: referredUserId },
-          select: { id: true, emailVerified: true, referredById: true },
+          select: { id: true, referralVerificationProcessedAt: true, referredById: true },
         });
         if (!referred) return "missing" as const;
-        if (referred.emailVerified) return "already" as const;
+        if (referred.referralVerificationProcessedAt) return "already" as const;
 
         const verified = await tx.user.updateMany({
-          where: { id: referred.id, emailVerified: null },
-          data: { emailVerified: new Date() },
+          where: { id: referred.id, referralVerificationProcessedAt: null },
+          data: { emailVerified: new Date(), referralVerificationProcessedAt: new Date() },
         });
         if (verified.count !== 1) return "already" as const;
         if (!referred.referredById || referred.id === referred.referredById) {

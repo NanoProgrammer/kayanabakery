@@ -528,7 +528,13 @@ export function CheckoutForm({
                 </a>
               </div>
             )}
-            <SquarePaymentForm totalCents={pricing.totalCents} onTokenReady={handlePayment} disabled={!canPay} />
+            {pricing.totalCents === 0 ? (
+              <button type="button" disabled={!canPay} className="btn-primary w-full disabled:opacity-60" onClick={() => handlePayment("")}>
+                {locale === "es" ? "Confirmar pedido con mis puntos" : "Confirm order with my points"}
+              </button>
+            ) : (
+              <SquarePaymentForm totalCents={pricing.totalCents} onTokenReady={handlePayment} disabled={!canPay} />
+            )}
             {!canPay && pricing.errors.length === 0 && !needsMembership && paymentUnconfirmed === null && (
               <p className="mt-3 text-xs text-ink-soft">
                 {locale === "es"

@@ -440,13 +440,13 @@ enum MembershipStatus {
 model ReferralReward {
   id String @id @default(cuid())
   referrerId String
-  referredUserId String @unique
+  referredUserId String? @unique
   points Int
   tier MembershipTier
   awardedAt DateTime @default(now())
 
-  referrer User @relation("ReferralRewardReferrer", fields: [referrerId], references: [id])
-  referredUser User @relation("ReferralRewardRecipient", fields: [referredUserId], references: [id])
+  referrer User @relation("ReferralRewardReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser User? @relation("ReferralRewardRecipient", fields: [referredUserId], references: [id], onDelete: SetNull)
 
   @@index([referrerId, awardedAt])
 }
@@ -455,10 +455,10 @@ model ReferralReward {
 model ReferralRenewal {
   id String @id @default(cuid())
   userId String
-  approvedById String
+  approvedById String?
   approvedAt DateTime @default(now())
-  member User @relation("ReferralRenewalMember", fields: [userId], references: [id])
-  approvedBy User @relation("ReferralRenewalAdmin", fields: [approvedById], references: [id])
+  member User @relation("ReferralRenewalMember", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User? @relation("ReferralRenewalAdmin", fields: [approvedById], references: [id], onDelete: SetNull)
   @@index([userId, approvedAt])
 }
 

@@ -56,6 +56,7 @@ export function CheckoutForm({
   // back. It permanently disables Pay: a second click is a second real charge,
   // because the card is tokenized afresh and a new idempotency key goes with it.
   const [paymentUnconfirmed, setPaymentUnconfirmed] = useState<string | null>(null);
+  const [zeroSubmitting, setZeroSubmitting] = useState(false);
 
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clearCart);
@@ -529,7 +530,7 @@ export function CheckoutForm({
               </div>
             )}
             {pricing.totalCents === 0 ? (
-              <button type="button" disabled={!canPay} className="btn-primary w-full disabled:opacity-60" onClick={() => handlePayment("")}>
+              <button type="button" disabled={!canPay || zeroSubmitting} className="btn-primary w-full disabled:opacity-60" onClick={async () => { setZeroSubmitting(true); await handlePayment(""); setZeroSubmitting(false); }}>
                 {locale === "es" ? "Confirmar pedido con mis puntos" : "Confirm order with my points"}
               </button>
             ) : (

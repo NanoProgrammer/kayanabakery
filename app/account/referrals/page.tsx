@@ -29,7 +29,7 @@ export default async function ReferralsAccountPage() {
           id: true,
           name: true,
           createdAt: true,
-          emailVerified: true,
+          referralVerificationProcessedAt: true,
           referralRewardReceived: { select: { points: true } },
         },
         orderBy: { createdAt: "desc" },
@@ -118,7 +118,7 @@ export default async function ReferralsAccountPage() {
                 <span className="text-xs font-bold">
                   {person.referralRewardReceived
                     ? "+" + person.referralRewardReceived.points + " pts"
-                    : person.emailVerified ? "Sin recompensa" : "Pendiente de verificar"}
+                    : person.referralVerificationProcessedAt ? "Sin recompensa" : "Pendiente de verificar"}
                 </span>
               </li>
             ))}

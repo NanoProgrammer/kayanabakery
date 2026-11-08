@@ -55,7 +55,7 @@ export async function sendReferralVerificationEmail(input: {
     return false;
   }
   const token = referralVerificationToken(input.id, input.email);
-  const verifyUrl = APP_URL.replace(/\/$/, "") + "/api/referrals/verify?token=" + encodeURIComponent(token);
+  const verifyUrl = APP_URL.replace(/\/$/, "") + "/referral-verify?token=" + encodeURIComponent(token);
   const spanish = input.locale === "es";
   const message = spanish
     ? "Hola " + (input.name || "") + ",\n\nConfirma tu email para completar tu registro en Karyana Club. No necesitas hacer una compra.\n\n" + verifyUrl + "\n\nEste enlace vence en 48 horas. Si no solicitaste esta cuenta, ignora el mensaje."

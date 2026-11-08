@@ -471,9 +471,10 @@ export async function POST(req: Request) {
   const idempotencyKey = data.clientReferenceId || randomUUID();
   let paymentId: string | undefined;
 
-  if (pricing.totalCents > 0) try {
-    const result = await squareClient.payments.create({
-  sourceId: data.paymentToken,
+  if (pricing.totalCents > 0) {
+    try {
+      const result = await squareClient.payments.create({
+        sourceId: data.paymentToken!,
   idempotencyKey,
   amountMoney: {
     amount: BigInt(pricing.totalCents),
@@ -490,12 +491,13 @@ paymentId = result.payment?.id ?? undefined;
     if (!paymentId) {
       throw new Error("Square did not return payment id");
     }
-  } catch (err: any) {
+    } catch (err: any) {
     console.error("[checkout] Square error", err);
     return NextResponse.json(
       { error: err?.errors?.[0]?.detail ?? err?.message ?? "Payment failed" },
       { status: 402 }
     );
+    }
   }
 
   // ============================================================
@@ -674,6 +676,13 @@ paymentId = result.payment?.id ?? undefined;
   try {
     order = await buildOrder();
   } catch (err) {
+    if (pricing.totalCents === 0) {
+      console.error("[checkout] zero-dollar points order not saved", err);
+      return NextResponse.json(
+        { error: "We couldn't save your points order. Your card has not been charged." },
+        { status: 503 }
+      );
+    }
     // The card has been charged at this point. Whatever happens, the customer
     // must not be handed a blank 500 — that reads as "it failed", they pay
     // again, and the bakery owes a refund it does not know about. Say plainly

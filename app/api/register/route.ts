@@ -130,10 +130,10 @@ export async function POST(req: Request) {
       name: parsed.data.name,
       language: locale,
     });
-    await syncCustomerToSanity(user.id);
     if (referredById) {
       await sendReferralVerificationEmail({ id: user.id, email: user.email, name: user.name, locale });
     }
+    await syncCustomerToSanity(user.id);
   });
 
   return NextResponse.json({ ok: true, id: user.id });

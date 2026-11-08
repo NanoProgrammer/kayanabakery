@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
+import Script from "next/script";
 
 export function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
   const refCode = params.get("ref") || "";
+  const turnstileKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -25,11 +27,17 @@ export function RegisterForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    const turnstileToken = refCode ? (new FormData(e.currentTarget).get("cf-turnstile-response") as string | null) : null;
+    if (refCode && !turnstileToken) {
+      setError({ message: "Complete the security challenge / Completa la verificación de seguridad", taken: false, signedIn: false });
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, refCode }),
+        body: JSON.stringify({ name, email, password, refCode, turnstileToken }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -67,12 +75,14 @@ export function RegisterForm() {
     } catch (err: any) {
       toast.error(err.message || "Failed");
     } finally {
+      if (refCode) (window as Window & { turnstile?: { reset: () => void } }).turnstile?.reset();
       setLoading(false);
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {refCode && turnstileKey && <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />}
       <Field
         label="Full name"
         value={name}
@@ -99,8 +109,11 @@ export function RegisterForm() {
       />
       {refCode && (
         <p className="rounded-2xl bg-canela-light px-4 py-3 text-xs">
-          Referral code: <span className="font-bold">{refCode}</span> · You'll get $10 credit on your first order.
+          Referral code: <span className="font-bold">{refCode}</span> · The inviting member earns Karyana Points when you verify your email. No purchase required.
         </p>
+      )}
+      {refCode && turnstileKey && (
+        <div className="cf-turnstile" data-sitekey={turnstileKey} data-theme="auto" />
       )}
       {error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">

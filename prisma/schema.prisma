@@ -44,6 +44,14 @@ model User {
   referrals      User[]   @relation("Referrals")
   referralCredit Int      @default(0)
   firstOrderCompleted Boolean @default(false)
+  // Referral rewards are separate from legacy dollar credits.
+  referralRewardCount Int @default(0)
+  referralRewardLimit Int @default(10)
+  referralVerifySentAt DateTime?
+  referralRewardsGiven ReferralReward[] @relation("ReferralRewardReferrer")
+  referralRewardReceived ReferralReward? @relation("ReferralRewardRecipient")
+  referralRenewals ReferralRenewal[] @relation("ReferralRenewalMember")
+  referralRenewalsApproved ReferralRenewal[] @relation("ReferralRenewalAdmin")
 
   // Membership
   membership            Membership?
@@ -426,6 +434,32 @@ enum MembershipStatus {
 }
 
 // ==================== POINTS LEDGER ====================
+
+// A verified new club account can earn exactly ONE referral reward.
+model ReferralReward {
+  id String @id @default(cuid())
+  referrerId String
+  referredUserId String @unique
+  points Int
+  tier MembershipTier
+  awardedAt DateTime @default(now())
+
+  referrer User @relation("ReferralRewardReferrer", fields: [referrerId], references: [id])
+  referredUser User @relation("ReferralRewardRecipient", fields: [referredUserId], references: [id])
+
+  @@index([referrerId, awardedAt])
+}
+
+// A new block of ten is granted only after a personal meeting/admin approval.
+model ReferralRenewal {
+  id String @id @default(cuid())
+  userId String
+  approvedById String
+  approvedAt DateTime @default(now())
+  member User @relation("ReferralRenewalMember", fields: [userId], references: [id])
+  approvedBy User @relation("ReferralRenewalAdmin", fields: [approvedById], references: [id])
+  @@index([userId, approvedAt])
+}
 
 model PointsTransaction {
   id      String                @id @default(cuid())

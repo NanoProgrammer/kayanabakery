@@ -10,9 +10,9 @@ export async function POST() {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, preferredLang: true, referredById: true, emailVerified: true },
+    select: { id: true, email: true, name: true, preferredLang: true, referredById: true, referralVerificationProcessedAt: true },
   });
-  if (!user?.referredById || user.emailVerified) {
+  if (!user?.referredById || user.referralVerificationProcessedAt) {
     return NextResponse.json({ error: "No pending verification" }, { status: 400 });
   }
 
@@ -21,7 +21,7 @@ export async function POST() {
   const changed = await prisma.user.updateMany({
     where: {
       id: user.id,
-      emailVerified: null,
+      referralVerificationProcessedAt: null,
       OR: [
         { referralVerifySentAt: null },
         { referralVerifySentAt: { lt: new Date(now.getTime() - 5 * 60 * 1000) } },

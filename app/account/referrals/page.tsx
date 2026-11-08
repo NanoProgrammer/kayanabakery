@@ -44,7 +44,7 @@ export default async function ReferralsAccountPage() {
   const progress = Math.round(usedInBlock * 10);
   const appointment = "mailto:hello@karyanabakery.ca?subject=" +
     encodeURIComponent("Karyana Club — Cita por 10 referidos") +
-    "&body=" + encodeURIComponent("Hola Karyana Bakery,\n\nYa completé mis 10 referidos de este bloque y me gustaría solicitar una cita personal para poder renovar otros 10 referidos.\n\nMi correo de cuenta es: " + (session.user?.email || ""));
+    "&body=" + encodeURIComponent("Hola Karyana Bakery,\n\nYa completé mis 10 referidos de este bloque y me gustaría solicitar una cita personal para poder renovar otros 10 referidos.\n\nMi correo de cuenta es: " + (session?.user?.email || ""));
 
   return (
     <div>

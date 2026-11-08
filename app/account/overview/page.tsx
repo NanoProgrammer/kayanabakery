@@ -55,7 +55,7 @@ export default async function OverviewPage() {
         <SessionNotice />
       </Suspense>
 
-      {user.referredById && !user.emailVerified && <ReferralVerificationReminder />}
+      {user.referredById && !user.referralVerificationProcessedAt && <ReferralVerificationReminder />}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat

@@ -90,7 +90,11 @@ check(
   optionsForProduct("Pineapple Upside Down Cake", sub("clasicos")),
   []
 );
-check("the bundt has none either — it is 4 inch only", optionsForProduct("Bundt Cake", sub("clasicos")), []);
+// Spelled "blum cake" in chat; her lead-time table says Bloom. Matching on
+// "bundt" found nothing at all, so this product kept the subcategory's three
+// flavours instead of being sold one way.
+check("the bloom cake has none either — it is 4 inch only", optionsForProduct("Bloom Cake", sub("clasicos")), []);
+check("...however it is capitalised", optionsForProduct("BLOOM CAKE", sub("clasicos")), []);
 check(
   "a clásico with no rule falls back to the three flavours",
   labels(optionsForProduct("Carrot Cake", sub("clasicos")), "flavour"),
@@ -122,6 +126,7 @@ check("...with or without", ruleForProduct("Chocoflan")?.label, "Chocoflán");
 check("case does not matter", ruleForProduct("CHOCOFLAN")?.label, "Chocoflán");
 check("extra words do not matter", ruleForProduct("Mini Chocoflan Cake")?.label, "Chocoflán");
 check("punctuation does not matter", ruleForProduct("Pineapple Upside-Down")?.label, "Pineapple Upside Down");
+check("the bloom cake is found by name", ruleForProduct("Bloom Cake")?.label, "Bloom Cake");
 check("an unrelated cake matches nothing", ruleForProduct("Tres Leches Fresa"), null);
 check("normalizing strips accents and punctuation", normalizeName("Piña — Upside-Down!"), "pina upside down");
 

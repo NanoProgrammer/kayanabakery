@@ -9,7 +9,7 @@ export function ReferralShare({ code }: { code: string }) {
   const { locale } = useLocale();
   const [copied, setCopied] = useState(false);
 
-  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/?ref=${code}`;
+  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${encodeURIComponent(code)}`;
 
   async function copy() {
     try {
@@ -29,8 +29,8 @@ export function ReferralShare({ code }: { code: string }) {
           title: "Karyana Bakery",
           text:
             locale === "es"
-              ? `Get $10 off at Karyana Bakery — usa mi código: ${code}`
-              : `Get $10 off at Karyana Bakery — use my code: ${code}`,
+              ? `Únete gratis a Karyana Club con mi enlace: ${code}`
+              : `Join Karyana Club for free using my link: ${code}`,
           url,
         });
       } catch {}

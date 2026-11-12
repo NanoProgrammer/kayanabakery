@@ -8,6 +8,7 @@ import { TIERS } from "@/lib/membership/tiers";
 import { effectiveTier } from "@/lib/membership/access";
 import { Suspense } from "react";
 import { WelcomeBanner } from "@/components/account/WelcomeBanner";
+import { ReferralVerificationReminder } from "@/components/account/ReferralVerificationReminder";
 import { SessionNotice } from "@/components/account/SessionNotice";
 
 export default async function OverviewPage() {
@@ -53,6 +54,8 @@ export default async function OverviewPage() {
       <Suspense fallback={null}>
         <SessionNotice />
       </Suspense>
+
+      {user.referredById && !user.referralVerificationProcessedAt && <ReferralVerificationReminder />}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat

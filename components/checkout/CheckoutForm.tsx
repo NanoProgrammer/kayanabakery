@@ -31,6 +31,17 @@ import {
   withSavedAddress,
 } from "@/lib/checkout/address-choice";
 import { OrderSummarySidebar } from "./OrderSummarySidebar";
+import {
+  CHECKOUT_STEPS,
+  canJumpTo,
+  canAdvance,
+  firstIncompleteStep,
+  stepComplete,
+  stepTitle,
+  whatIsMissing,
+  type CheckoutStep,
+  type StepState,
+} from "@/lib/checkout/steps";
 
 type UserCtx = {
   id: string;
@@ -77,6 +88,7 @@ export function CheckoutForm({
   );
   const [guestAddress, setGuestAddress] = useState<AddressData | null>(null);
   const [addingAddress, setAddingAddress] = useState(false);
+  const [step, setStep] = useState<CheckoutStep>(1);
 
   const chosenAddress = useMemo(
     () =>
@@ -325,8 +337,25 @@ export function CheckoutForm({
 
   if (items.length === 0) return null;
 
-  let sectionNum = 0;
-  const nextNum = () => ++sectionNum;
+  // Three steps instead of one long column. The rules for whether a step is
+  // finished live in lib/checkout/steps.ts and are the same ones the Pay
+  // button uses — a step the customer is waved through followed by a Pay
+  // button that refuses is the same dead end as before.
+  const stepState: StepState = {
+    isSignedIn: !!user,
+    guestName,
+    guestEmail,
+    guestPhone,
+    needsAccountPhone,
+    accountPhone,
+    fulfillment,
+    pickupDate,
+    pickupTime,
+    deliverySlotId,
+    hasDeliveryAddress,
+  };
+  const missing = whatIsMissing(step, stepState, locale);
+
 
   return (
     <div className="container-bakery py-8 md:py-12">
@@ -353,9 +382,28 @@ export function CheckoutForm({
       <div className={cn("grid gap-10 lg:grid-cols-[1fr_400px]", needsMembership && "pointer-events-none opacity-50")}>
         {/* Left: form */}
         <div className="space-y-8">
-          {/* Guest contact */}
+          <Stepper
+            current={step}
+            state={stepState}
+            locale={locale}
+            onJump={(target: CheckoutStep) => setStep(target)}
+          />
+
+          {/* ── Step 1: who the order is for ───────────────────── */}
+          {step === 1 && (
+          <>
+          {/* A signed-in customer with a phone on file has nothing to fill
+              in here, so the step says who they are rather than sitting
+              empty and looking broken. */}
+          {user && !needsAccountPhone && (
+            <Section num={1} title={locale === "es" ? "Tus datos" : "Your details"}>
+              <p className="text-sm">{user.name}</p>
+              <p className="text-sm text-ink-soft">{user.email}</p>
+            </Section>
+          )}
+
           {!user && (
-            <Section num={nextNum()} title={locale === "es" ? "Tus datos" : "Your details"}>
+            <Section num={1} title={locale === "es" ? "Tus datos" : "Your details"}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input label={locale === "es" ? "Nombre" : "Name"} value={guestName} onChange={setGuestName} required />
                 <Input label="Email" type="email" value={guestEmail} onChange={setGuestEmail} required />
@@ -372,7 +420,7 @@ export function CheckoutForm({
 
           {/* Phone for logged-in users with none on file — required for delivery contact */}
           {needsAccountPhone && (
-            <Section num={nextNum()} title={locale === "es" ? "Tu teléfono" : "Your phone"}>
+            <Section num={2} title={locale === "es" ? "Tu teléfono" : "Your phone"}>
               <Input
                 label={locale === "es" ? "Teléfono" : "Phone"}
                 type="tel"
@@ -387,9 +435,13 @@ export function CheckoutForm({
               </p>
             </Section>
           )}
+          </>
+          )}
 
-          {/* Fulfillment toggle */}
-          <Section num={nextNum()} title={locale === "es" ? "Recolección o envío" : "Pickup or delivery"}>
+          {/* ── Step 2: when and where ─────────────────────────── */}
+          {step === 2 && (
+          <>
+          <Section num={1} title={locale === "es" ? "Recolección o envío" : "Pickup or delivery"}>
             <div className="grid gap-3 sm:grid-cols-2">
               <FulfillmentTile
                 active={fulfillment === "PICKUP"}
@@ -418,7 +470,7 @@ export function CheckoutForm({
 
           {/* Slot picker */}
           <Section
-            num={nextNum()}
+            num={2}
             title={
               fulfillment === "PICKUP"
                 ? locale === "es" ? "¿Cuándo recoges?" : "When to pick up?"
@@ -445,7 +497,7 @@ export function CheckoutForm({
 
           {/* Address — delivery only */}
           {fulfillment === "DELIVERY" && (
-            <Section num={nextNum()} title={locale === "es" ? "Dirección" : "Address"}>
+            <Section num={3} title={locale === "es" ? "Dirección" : "Address"}>
               <AddressPicker
                 addresses={addresses}
                 selectedId={addressId}
@@ -479,9 +531,13 @@ export function CheckoutForm({
               )}
             </Section>
           )}
+          </>
+          )}
 
-          {/* Discounts */}
-          <Section num={nextNum()} title={locale === "es" ? "Descuentos" : "Discounts"}>
+          {/* ── Step 3: discounts, tip and the card ────────────── */}
+          {step === 3 && (
+          <>
+          <Section num={1} title={locale === "es" ? "Descuentos" : "Discounts"}>
             <div className="space-y-4">
               <CouponInput
                 applied={coupon}
@@ -500,13 +556,12 @@ export function CheckoutForm({
             </div>
           </Section>
 
-          {/* Tip */}
-          <Section num={nextNum()} title={locale === "es" ? "Propina" : "Tip"}>
+          <Section num={2} title={locale === "es" ? "Propina" : "Tip"}>
             <TipInput subtotalCents={pricing.subtotalCents} tipCents={tipCents} onChange={setTipCents} />
           </Section>
 
           {/* Payment */}
-          <Section num={nextNum()} title={locale === "es" ? "Pago" : "Payment"}>
+          <Section num={3} title={locale === "es" ? "Pago" : "Payment"}>
             {/* Stays on screen: the toast fades, and a Pay button that is dark
                 for no visible reason is exactly what makes someone reload and
                 try again. */}
@@ -543,12 +598,32 @@ export function CheckoutForm({
             ) : (
               <SquarePaymentForm totalCents={pricing.totalCents} onTokenReady={handlePayment} disabled={!canPay} />
             )}
+            {/* Not "complete the steps above": the steps are no longer
+                above, and "something is missing somewhere" is what made the
+                old form a hunt. It names the step and takes them to it. */}
             {!canPay && pricing.errors.length === 0 && !needsMembership && paymentUnconfirmed === null && (
-              <p className="mt-3 text-xs text-ink-soft">
-                {locale === "es"
-                  ? "Completa los pasos anteriores para continuar."
-                  : "Complete the steps above to continue."}
-              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = firstIncompleteStep(stepState);
+                  if (target) setStep(target);
+                }}
+                className="mt-3 text-xs text-ink-soft underline"
+              >
+                {(() => {
+                  const target = firstIncompleteStep(stepState);
+                  if (!target) {
+                    return locale === "es"
+                      ? "Revisa los datos de tu pago."
+                      : "Check your payment details.";
+                  }
+                  const what = whatIsMissing(target, stepState, locale);
+                  const name = stepTitle(target, locale);
+                  return locale === "es"
+                    ? `${what ?? "Falta algo"} — ir a "${name}"`
+                    : `${what ?? "Something is missing"} — go to "${name}"`;
+                })()}
+              </button>
             )}
             {pricing.errors.length > 0 && (
               <div className="mt-3 rounded-2xl bg-red-50 p-3 text-xs text-red-700">
@@ -560,6 +635,37 @@ export function CheckoutForm({
               </div>
             )}
           </Section>
+          </>
+          )}
+
+          {/* Back and Continue. The card's own button is the one that pays,
+              so step 3 has no Continue of its own. */}
+          <div className="flex items-center gap-3">
+            {step > 1 && (
+              <button
+                type="button"
+                onClick={() => setStep((s) => (s - 1) as CheckoutStep)}
+                className="rounded-full border border-canela/30 px-5 py-2.5 text-sm font-medium"
+              >
+                ← {locale === "es" ? "Atrás" : "Back"}
+              </button>
+            )}
+            {step < 3 && (
+              <div className="flex-1">
+                <button
+                  type="button"
+                  disabled={!canAdvance(step, stepState)}
+                  onClick={() => setStep((s) => (s + 1) as CheckoutStep)}
+                  className="btn-primary w-full disabled:opacity-50"
+                >
+                  {locale === "es" ? "Continuar" : "Continue"}
+                </button>
+                {missing && (
+                  <p className="mt-2 text-center text-xs text-ink-soft">{missing}</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right: summary */}
@@ -627,5 +733,66 @@ function Input({
         className="mt-1 w-full rounded-full border border-canela/30 bg-cream px-4 py-2.5 text-sm focus:border-canela-dark focus:outline-none"
       />
     </div>
+  );
+}
+
+/**
+ * The three steps across the top, so the customer can see where they are and
+ * how much is left. A step that is finished is clickable; one that is not
+ * cannot be jumped to, or the numbers become a way round the checks the Pay
+ * button will apply anyway.
+ */
+function Stepper({
+  current,
+  state,
+  locale,
+  onJump,
+}: {
+  current: CheckoutStep;
+  state: StepState;
+  locale: string;
+  onJump: (target: CheckoutStep) => void;
+}) {
+  return (
+    <ol className="flex items-center gap-2">
+      {CHECKOUT_STEPS.map((s, i) => {
+        const isCurrent = s === current;
+        const done = s < current && stepComplete(s, state);
+        const reachable = canJumpTo(s, current, state);
+        return (
+          <li key={s} className="flex flex-1 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => reachable && onJump(s)}
+              disabled={!reachable}
+              aria-current={isCurrent ? "step" : undefined}
+              className={cn(
+                "flex flex-1 items-center gap-2 rounded-full border px-3 py-2 text-left text-xs transition",
+                isCurrent
+                  ? "border-canela-dark bg-canela-light font-bold"
+                  : done
+                  ? "border-canela/30 bg-cream"
+                  : "border-canela/20 bg-cream/50 text-ink-soft",
+                reachable && !isCurrent && "hover:border-canela",
+                !reachable && "cursor-not-allowed"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                  isCurrent || done ? "bg-canela text-ink" : "bg-canela/20 text-ink-soft"
+                )}
+              >
+                {done ? "✓" : s}
+              </span>
+              <span className="truncate">{stepTitle(s, locale)}</span>
+            </button>
+            {i < CHECKOUT_STEPS.length - 1 && (
+              <span className="hidden h-px w-3 bg-canela/30 sm:block" />
+            )}
+          </li>
+        );
+      })}
+    </ol>
   );
 }

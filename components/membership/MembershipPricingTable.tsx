@@ -6,7 +6,6 @@ import { TIERS, type MembershipTier } from "@/lib/membership/tiers";
 import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 import type { MembershipPlanCMS } from "@/types";
-import { autoReorderLabel } from "@/lib/membership/club-copy";
 
 const TIER_ORDER: MembershipTier[] = [
   "BASICO",
@@ -75,12 +74,12 @@ export function MembershipPricingTable({
               // is then spent on something.
               ok: data.includedBreadWithPayment,
               label:
-                locale === "es"
-                  ? `${autoReorderLabel(locale)} — pagado con tus puntos`
-                  : `${autoReorderLabel(locale)} — paid from your points`,
+                // Same label on every tier (client request, PRs #93–#96);
+                // tiers without it show it crossed out via `ok`.
+                locale === "es" ? "Orden automatica de pan" : "Bread Auto Reorder",
             },
             ...(
-              tier === "SELECTO" || tier === "LEGENDARIO"
+              tier === "BASICO" || tier === "ARTESANO" || tier === "SELECTO" || tier === "LEGENDARIO" || tier === "EMBAJADOR"
                 ? []
                 : [
                     {
@@ -92,13 +91,17 @@ export function MembershipPricingTable({
                     },
                   ]
             ),
-            {
-              ok: data.weeklyOrderSkip,
-              label:
-                locale === "es"
-                  ? "Saltar orden semanal"
-                  : "Weekly order skip",
-            },
+            ...(
+              tier === "BASICO" || tier === "ARTESANO" || tier === "SELECTO" || tier === "LEGENDARIO" || tier === "EMBAJADOR"
+                ? []
+                : [{
+                    ok: data.weeklyOrderSkip,
+                    label:
+                      locale === "es"
+                        ? "Saltar orden semanal"
+                        : "Weekly order skip",
+                  }]
+            ),
             {
               ok: data.freeAdvanceSamples,
               label:

@@ -7,6 +7,7 @@ import { syncUserRegistered } from "@/lib/brevo/sync";
 import { syncCustomerToSanity } from "@/lib/sanity/sync-customers";
 import { getServerLocale } from "@/lib/i18n/server";
 import { auth } from "@/lib/auth/auth";
+import { sendReferralVerificationEmail } from "@/lib/referrals/verification";
 
 const schema = z.object({
   name: field.personName,
@@ -15,6 +16,7 @@ const schema = z.object({
   // business, and rules about its shape make it weaker, not stronger.
   password: z.string().min(8, "Use at least 8 characters").max(200),
   // The form sends an empty string when there is no referral.
+  turnstileToken: z.string().max(2048).optional(),
   refCode: z.preprocess(
     (value) => typeof value === "string" && field.cleanText(value) === "" ? undefined : value,
     field.code.optional()
@@ -46,7 +48,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
 
-  const { name, email, password, refCode } = parsed.data;
+  const { name, email, password, refCode, turnstileToken } = parsed.data;
+
+  // Anti-bot verification is required for every rewarded referral signup.
+  if (refCode) {
+    const secret = process.env.TURNSTILE_SECRET_KEY;
+    if (!secret || !turnstileToken) {
+      return NextResponse.json({ error: "Complete the human verification challenge" }, { status: 503 });
+    }
+    let result: { success?: boolean; hostname?: string };
+    try {
+      const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret, response: turnstileToken }),
+        signal: AbortSignal.timeout(10000),
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Turnstile unavailable");
+      result = await response.json();
+    } catch {
+      return NextResponse.json({ error: "Security verification unavailable" }, { status: 503 });
+    }
+    const hosts = ["karyanabakery.ca", "www.karyanabakery.ca", "karyanabakery.com", "www.karyanabakery.com"];
+    if (!result.success || !result.hostname || !hosts.includes(result.hostname)) {
+      return NextResponse.json({ error: "Human verification failed" }, { status: 403 });
+    }
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -58,10 +86,14 @@ export async function POST(req: Request) {
 
   let referredById: string | undefined;
   if (refCode) {
+    // Stored cuid() referral codes are lower-case; shared validator uppercases.
     const referrer = await prisma.user.findUnique({
-      where: { referralCode: refCode },
+      where: { referralCode: refCode.toLowerCase() },
+      select: { id: true, referralRewardCount: true, referralRewardLimit: true },
     });
-    if (referrer) referredById = referrer.id;
+    if (!referrer) return NextResponse.json({ error: "Invalid referral code" }, { status: 400 });
+    // Invites can continue while paused, but only an available block earns points.
+    if (referrer.referralRewardCount < referrer.referralRewardLimit) referredById = referrer.id;
   }
 
   const hashed = await bcrypt.hash(password, 10);
@@ -73,6 +105,7 @@ export async function POST(req: Request) {
       email,
       password: hashed,
       referredById,
+      referralVerifySentAt: referredById ? new Date() : undefined,
       role: "CUSTOMER",
       preferredLang: locale,
       // Auto-create Basico membership
@@ -97,6 +130,9 @@ export async function POST(req: Request) {
       name: parsed.data.name,
       language: locale,
     });
+    if (referredById) {
+      await sendReferralVerificationEmail({ id: user.id, email: user.email, name: user.name, locale });
+    }
     await syncCustomerToSanity(user.id);
   });
 

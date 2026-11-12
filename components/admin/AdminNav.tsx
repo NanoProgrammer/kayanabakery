@@ -22,6 +22,7 @@ export function AdminNav() {
     { href: "/admin/memberships", icon: Crown, label: "Memberships" },
     { href: "/admin/members", icon: Users, label: "Customers" },
     { href: "/admin/credits", icon: Coins, label: "Credit Policy" },
+    { href: "/admin/referrals", icon: Users, label: "Referral renewals" },
   ];
 
   return (

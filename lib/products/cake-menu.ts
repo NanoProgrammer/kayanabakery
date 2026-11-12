@@ -68,8 +68,9 @@ export const SUBCATEGORIES: MenuSubcategory[] = [
     slug: "tres-leches",
     name: "Tres Leches",
     nameEs: "Tres Leches",
-    // Three sizes, and the flavours are set per product below, because the
-    // seven of them have not been named yet.
+    // Three sizes. The flavours are separate products, not an option: each
+    // one has its own preparation time in Karyana's table (see
+    // lib/products/cake-lead-times.ts), and an option cannot carry that.
     defaultOptions: [SIZE(6, 8, 10)],
   },
   {
@@ -150,10 +151,12 @@ export const PRODUCT_RULES: ProductRule[] = [
     options: [],
   },
   {
-    // 4 inch only. A single choice is not a choice, so it is not offered as
-    // one; the size belongs in the product's name and description.
-    match: ["bundt"],
-    label: "Bundt Cake",
+    // Bloom Cake, 4 inch only. Written "blum cake" in chat and read here as
+    // "bundt", which matched nothing — Karyana's own lead-time table spells
+    // it Bloom. A single size is not a choice, so none is offered; the size
+    // belongs in the product's name and description.
+    match: ["bloom"],
+    label: "Bloom Cake",
     options: [],
   },
 ];

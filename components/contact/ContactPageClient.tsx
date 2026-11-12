@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Script from "next/script";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { toast } from "sonner";
@@ -14,9 +15,18 @@ export function ContactPageClient({
 }) {
   const { locale } = useLocale();
   const [submitting, setSubmitting] = useState(false);
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const resetTurnstile = () => {
+    const turnstile = (window as Window & { turnstile?: { reset: () => void } }).turnstile;
+    turnstile?.reset();
+  };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!siteKey) {
+      toast.error(locale === "es" ? "Formulario temporalmente no disponible" : "Contact form temporarily unavailable");
+      return;
+    }
     setSubmitting(true);
     const fd = new FormData(e.currentTarget);
     const payload = {
@@ -24,7 +34,13 @@ export function ContactPageClient({
       email: fd.get("email"),
       subject: fd.get("subject"),
       message: fd.get("message"),
+      turnstileToken: fd.get("cf-turnstile-response"),
     };
+    if (!payload.turnstileToken) {
+      toast.error(locale === "es" ? "Completa la verificación de seguridad" : "Complete the security check");
+      setSubmitting(false);
+      return;
+    }
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -37,12 +53,19 @@ export function ContactPageClient({
     } catch {
       toast.error(locale === "es" ? "Error al enviar" : "Failed to send");
     } finally {
+      resetTurnstile();
       setSubmitting(false);
     }
   }
 
   return (
     <div className="container-bakery py-16 md:py-20">
+      {siteKey && (
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+          strategy="afterInteractive"
+        />
+      )}
       <div className="grid gap-12 md:grid-cols-2">
         <div>
           <span className="eyebrow">
@@ -107,9 +130,12 @@ export function ContactPageClient({
                 className="mt-2 w-full rounded-2xl border border-canela/30 bg-cream px-4 py-3 text-sm focus:border-canela-dark focus:outline-none"
               />
             </div>
+            {siteKey && (
+              <div className="cf-turnstile" data-sitekey={siteKey} data-theme="auto" />
+            )}
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !siteKey}
               className="btn-primary w-full disabled:opacity-60"
             >
               <Send className="h-4 w-4" />

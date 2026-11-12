@@ -10,7 +10,7 @@ export function Footer() {
   const shopLinks = [
     { href: "/shop", label: locale === "es" ? "Tienda" : "Shop" },
     { href: "/category/conchas", label: "Conchas" },
-    { href: "/category/cakes", label: locale === "es" ? "Pasteles" : "Cakes" },
+    { href: "/category/cakes", label: locale === "es" ? "Pasteles" : "Confectionery" },
     { href: "/category/churros", label: "Churros" },
     {
       href: "/category/traditional-mexican-bread",
@@ -26,7 +26,7 @@ export function Footer() {
     { href: "/about", label: locale === "es" ? "Nosotros" : "About us" },
     { href: "/blog", label: "Blog" },
     { href: "/events", label: locale === "es" ? "Eventos" : "Events" },
-    { href: "/memberships", label: locale === "es" ? "Membresías" : "Memberships" },
+    { href: "/memberships", label: "Karyana Club" },
     {
       href: "/refer-a-friend",
       label: locale === "es" ? "Refiere un amigo" : "Refer a friend",

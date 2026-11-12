@@ -17,6 +17,12 @@ export type CategoryItem = {
   children?: CategoryItem[];
 };
 
+/** Keep the category URL/CMS name unchanged; this is only a menu label. */
+function categoryDisplayName(cat: CategoryItem, locale: string): string {
+  if (cat.slug === "cakes" && locale !== "es") return "Confectionery";
+  return locale === "es" && cat.titleEs ? cat.titleEs : cat.title;
+}
+
 export function CategoryDropdown({
   categories: initialCategories,
   mobile = false,
@@ -84,10 +90,7 @@ export function CategoryDropdown({
       </Link>
 
       {categories.map((cat) => {
-        const name =
-          locale === "es" && cat.titleEs
-            ? cat.titleEs
-            : cat.title;
+        const name = categoryDisplayName(cat, locale);
 
         return (
           <div key={cat._id}>
@@ -138,8 +141,7 @@ export function CategoryDropdown({
 
         <div className="max-h-[60vh] overflow-y-auto py-1">
           {categories.map((cat) => {
-            const name =
-              locale === "es" && cat.titleEs ? cat.titleEs : cat.title;
+            const name = categoryDisplayName(cat, locale);
             const hasChildren = !!cat.children?.length;
 
             return (
@@ -192,7 +194,7 @@ export function CategoryDropdown({
           className="ml-2 w-60 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl"
         >
           <p className="border-b border-canela/10 px-4 py-3 text-xs font-bold uppercase tracking-widest text-canela-dark">
-            {locale === "es" && submenu.titleEs ? submenu.titleEs : submenu.title}
+            {categoryDisplayName(submenu, locale)}
           </p>
           {submenu.children!.map((child) => (
             <Link

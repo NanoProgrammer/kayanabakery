@@ -85,7 +85,7 @@ async function reserveDeliverySlot({
 }
 
 const schema = z.object({
-  paymentToken: z.string().min(1),
+  paymentToken: z.string().min(1).optional(),
   fulfillmentType: z.enum(["PICKUP", "DELIVERY"]),
   pickupDate: z.string().optional(),
   pickupTime: z.string().optional(),
@@ -428,6 +428,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: pricing.errors.join("; ") }, { status: 400 });
   }
 
+  if (pricing.totalCents > 0 && !data.paymentToken) {
+    return NextResponse.json({ error: "Payment card required" }, { status: 400 });
+  }
+
   // ============================================================
   // 10. Reserve delivery slot in Google Calendar
   // ============================================================
@@ -467,9 +471,10 @@ export async function POST(req: Request) {
   const idempotencyKey = data.clientReferenceId || randomUUID();
   let paymentId: string | undefined;
 
-  try {
-    const result = await squareClient.payments.create({
-  sourceId: data.paymentToken,
+  if (pricing.totalCents > 0) {
+    try {
+      const result = await squareClient.payments.create({
+        sourceId: data.paymentToken!,
   idempotencyKey,
   amountMoney: {
     amount: BigInt(pricing.totalCents),
@@ -486,12 +491,13 @@ paymentId = result.payment?.id ?? undefined;
     if (!paymentId) {
       throw new Error("Square did not return payment id");
     }
-  } catch (err: any) {
+    } catch (err: any) {
     console.error("[checkout] Square error", err);
     return NextResponse.json(
       { error: err?.errors?.[0]?.detail ?? err?.message ?? "Payment failed" },
       { status: 402 }
     );
+    }
   }
 
   // ============================================================
@@ -564,7 +570,7 @@ paymentId = result.payment?.id ?? undefined;
         guestPhone: !userId ? (data.guestPhone ?? undefined) : undefined,
         status: "CONFIRMED",
         paymentStatus: "PAID",
-        paymentMethod: "SQUARE",
+        paymentMethod: pricing.totalCents === 0 ? "POINTS" : "SQUARE",
         squarePaymentId: paymentId,
         fulfillmentType: data.fulfillmentType,
         pickupDate: data.pickupDate ? new Date(data.pickupDate) : null,
@@ -598,10 +604,11 @@ paymentId = result.payment?.id ?? undefined;
 
     // Points redemption
     if (data.pointsToRedeem && data.pointsToRedeem > 0 && userId) {
-      await tx.user.update({
-        where: { id: userId },
+      const debited = await tx.user.updateMany({
+        where: { id: userId, pointsBalance: { gte: data.pointsToRedeem } },
         data: { pointsBalance: { decrement: data.pointsToRedeem } },
       });
+      if (debited.count !== 1) throw new Error("Not enough points to complete this order");
       await tx.pointsTransaction.create({
         data: {
           userId,
@@ -653,15 +660,6 @@ paymentId = result.payment?.id ?? undefined;
       });
     }
 
-    // Referral credit
-    if (userId && user?.referredById && !user.firstOrderCompleted) {
-      await tx.user.update({ where: { id: userId }, data: { firstOrderCompleted: true } });
-      await tx.user.update({
-        where: { id: user.referredById },
-        data: { referralCredit: { increment: 10 } },
-      });
-    }
-
     return created;
   },
   {
@@ -678,6 +676,13 @@ paymentId = result.payment?.id ?? undefined;
   try {
     order = await buildOrder();
   } catch (err) {
+    if (pricing.totalCents === 0) {
+      console.error("[checkout] zero-dollar points order not saved", err);
+      return NextResponse.json(
+        { error: "We couldn't save your points order. Your card has not been charged." },
+        { status: 503 }
+      );
+    }
     // The card has been charged at this point. Whatever happens, the customer
     // must not be handed a blank 500 — that reads as "it failed", they pay
     // again, and the bakery owes a refund it does not know about. Say plainly

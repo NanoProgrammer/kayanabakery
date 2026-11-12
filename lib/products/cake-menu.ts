@@ -21,25 +21,18 @@ export type MenuOption = {
 };
 
 /**
- * How many people a cake feeds, shown on the button the way the customer
- * actually decides — nobody knows what 8" means, everybody knows whether
- * they are feeding twelve people.
+ * Size buttons stay plain — `6"`, `8"`, `10"` — matching the labels already
+ * in Studio. The serving count is NOT baked in: it lives in
+ * lib/products/servings.ts and is shown from whichever size is selected, on
+ * the product page and again at the checkout. A count inside a label cannot
+ * change when the customer changes their mind, which is exactly what the
+ * page needed to do.
  */
-const SERVES: Record<number, string> = {
-  4: "4-6",
-  6: "8-12",
-  8: "12-20",
-  10: "20-30",
-};
-
 const SIZE = (...inches: number[]): MenuOption => ({
   key: "size",
   name: "Size",
   nameEs: "Tamaño",
-  choices: inches.map((n) => ({
-    label: SERVES[n] ? `${n}" (Serves ${SERVES[n]})` : `${n}"`,
-    labelEs: SERVES[n] ? `${n}" (${SERVES[n]} porciones)` : `${n}"`,
-  })),
+  choices: inches.map((n) => ({ label: `${n}"`, labelEs: `${n}"` })),
 });
 
 const FLAVOURS = (...pairs: [string, string][]): MenuOption => ({

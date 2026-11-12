@@ -75,6 +75,10 @@ export async function POST(req: Request) {
         discountType: coupon.discountType,
         discountValue,
         minOrderCents,
+        // Sent to the browser so the total it shows matches the one the
+        // server charges. Without it a cakes-only coupon looked like it
+        // discounted the whole cart right up to the moment of paying.
+        appliesTo: coupon.appliesTo ?? null,
         description: coupon.labelEn ?? null,
       },
     });

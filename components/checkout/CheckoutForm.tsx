@@ -110,6 +110,7 @@ export function CheckoutForm({
   const [coupon, setCoupon] = useState<{
     code: string;
     discountType: "PERCENT" | "FIXED";
+    appliesTo?: string | null;
     discountValue: number;
     description?: string;
   } | null>(null);
@@ -143,6 +144,7 @@ export function CheckoutForm({
             setCoupon({
               code: data.coupon.code,
               discountType: data.coupon.discountType,
+              appliesTo: data.coupon.appliesTo ?? null,
               discountValue: data.coupon.discountValue,
               description: data.coupon.description,
             });
@@ -210,7 +212,12 @@ export function CheckoutForm({
       hasUsedFirstFreeDelivery: user?.hasUsedFirstFreeDelivery ?? false,
       isGuest: !user,
       coupon: coupon
-        ? { code: coupon.code, discountType: coupon.discountType, discountValue: coupon.discountValue }
+        ? {
+            code: coupon.code,
+            discountType: coupon.discountType,
+            discountValue: coupon.discountValue,
+            appliesTo: coupon.appliesTo ?? null,
+          }
         : null,
       pointsToRedeem,
       tipCents,

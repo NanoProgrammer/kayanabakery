@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type AppliedCoupon = {
   code: string;
   discountType: "PERCENT" | "FIXED";
+  appliesTo?: string | null;
   discountValue: number;
   description?: string;
 };
@@ -46,6 +47,7 @@ export function CouponInput({
       onApply({
         code: data.coupon.code,
         discountType: data.coupon.discountType,
+        appliesTo: data.coupon.appliesTo ?? null,
         discountValue: data.coupon.discountValue,
         description: data.coupon.description,
       });

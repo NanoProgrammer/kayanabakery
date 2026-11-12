@@ -13,8 +13,8 @@ export function MembershipFAQ() {
     locale === "es"
       ? [
           {
-            q: "¿Qué es Karyana 1% Club?",
-            a: "Nuestra meta no es venderle a todo el mundo. Es ganarnos la lealtad del 1%.\n\nNo queremos ser la panadería de todos. Queremos ser tu panadería.\n\nKaryana 1% Club representa nuestro sueño de ganarnos la lealtad de tan solo el 1% de cada ciudad de la que Karyana llegue a formar parte. No queremos lograrlo siendo la panadería más grande, sino convirtiéndonos en una panadería a la que quieras volver.\n\nPorque para nosotros, ese 1% no es un número. Son personas. Son familias. Es nuestra comunidad.\n\nUna familia a la vez. Una comunidad a la vez. Un recuerdo a la vez.",
+            q: "¿Qué es el Karyana Club?",
+            a: "Es una precompra de productos y servicios futuros, no una cuota de membresía.\n\nEl 100% de lo que pagas vuelve a ti en puntos (1 punto = 1 centavo, 100 puntos = $1 CAD). Nada se queda en el camino. Esos puntos los gastas en lo que tú quieras: pan, pasteles, café, lo que sea, cuando tú quieras.\n\nAdemás, mientras seas miembro tienes prioridad en entregas y acceso a productos y servicios que no están abiertos al público.\n\nDicho simple: no estás pagando una membresía, estás pagando por adelantado lo que ya ibas a comprar.",
           },
           {
             q: "¿Cómo se cobran las membresías?",
@@ -39,8 +39,8 @@ export function MembershipFAQ() {
         ]
       : [
           {
-            q: "What is the Karyana 1% Club?",
-            a: "Our goal isn't to sell to everyone. It's to earn the loyalty of 1%.\n\nWe don't want to be everyone's bakery. We want to be your bakery.\n\nThe Karyana 1% Club represents our dream of earning the loyalty of just 1% of every city Karyana becomes part of. We don't want to do it by being the biggest bakery, but by becoming a bakery worth coming back to.\n\nBecause to us, that 1% isn't a number. It's people. It's families. It's our community.\n\nOne family at a time. One community at a time. One memory at a time.",
+            q: "What is the Karyana Club?",
+            a: "It's a prepayment for future products and services, not a membership fee.\n\n100% of what you pay comes back to you as points (1 point = 1 cent, 100 points = $1 CAD). Nothing is held back. You spend those points on whatever you like — bread, cakes, coffee, anything — whenever you like.\n\nOn top of that, while you're a member you get priority on deliveries and access to products and services that aren't open to the public.\n\nPut simply: you're not paying for a membership, you're paying in advance for what you were going to buy anyway.",
           },
           {
             q: "How are memberships billed?",

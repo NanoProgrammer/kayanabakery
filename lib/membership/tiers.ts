@@ -44,9 +44,6 @@ export interface TierBenefits {
   // Birthday
   birthdayPoints: number;
 
-  // Free new bread quota
-  freeNewBreadPerMonth: number;
-  freeNewBreadOnlyFirstOrder: boolean;
 
   // Coupons / promos
   autoMonthlyPromos: boolean;
@@ -85,8 +82,6 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
 
     birthdayPoints: 0,
 
-    freeNewBreadPerMonth: 0,
-    freeNewBreadOnlyFirstOrder: true,
 
     autoMonthlyPromos: false,
     partnerDiscounts: false,
@@ -121,8 +116,6 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
 
     birthdayPoints: 500,
 
-    freeNewBreadPerMonth: 1,
-    freeNewBreadOnlyFirstOrder: false,
 
     autoMonthlyPromos: true,
     partnerDiscounts: true,
@@ -157,8 +150,6 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
 
     birthdayPoints: 500,
 
-    freeNewBreadPerMonth: 2,
-    freeNewBreadOnlyFirstOrder: false,
 
     autoMonthlyPromos: true,
     partnerDiscounts: true,
@@ -193,8 +184,6 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
 
     birthdayPoints: 500,
 
-    freeNewBreadPerMonth: 4,
-    freeNewBreadOnlyFirstOrder: false,
 
     autoMonthlyPromos: true,
     partnerDiscounts: true,
@@ -229,8 +218,6 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
 
     birthdayPoints: 500,
 
-    freeNewBreadPerMonth: 4,
-    freeNewBreadOnlyFirstOrder: false,
 
     autoMonthlyPromos: true,
     partnerDiscounts: true,

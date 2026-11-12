@@ -67,19 +67,16 @@ export function MembershipPricingTable({
 
           const benefits: { ok: boolean; label: string }[] = [
             {
+              // Not "free bread with your payment". The weekly box is paid
+              // for out of the points the payment became — saying it is free
+              // contradicts the one thing this page now has to be clear
+              // about, which is that every dollar comes back as points and
+              // is then spent on something.
               ok: data.includedBreadWithPayment,
               label:
-                (tier === "BASICO" || tier === "ARTESANO" || tier === "EMBAJADOR")
-                  ? locale === "es"
-                    ? "Orden automatica de pan"
-                    : "Bread Auto Reorder"
-                  : tier === "SELECTO" || tier === "LEGENDARIO"
-                  ? locale === "es"
-                    ? "Orden automatica de Pan"
-                    : "Bread Auto Reorder"
-                  : locale === "es"
-                  ? "Pan gratis con pago mensual"
-                  : "Free bread with payment",
+                // Same label on every tier (client request, PRs #93–#96);
+                // tiers without it show it crossed out via `ok`.
+                locale === "es" ? "Orden automatica de pan" : "Bread Auto Reorder",
             },
             ...(
               tier === "BASICO" || tier === "ARTESANO" || tier === "SELECTO" || tier === "LEGENDARIO" || tier === "EMBAJADOR"
@@ -158,29 +155,10 @@ export function MembershipPricingTable({
                   ? "500 Pts de cumpleaños"
                   : "500 Birthday points",
             },
-            {
-              ok: data.freeNewBreadPerMonth > 0,
-              label:
-                data.freeNewBreadPerMonth > 0
-                  ? data.freeNewBreadOnlyFirstOrder
-                    ? locale === "es"
-                      ? "1 pan nuevo en 1ra orden"
-                      : "1 new bread on first order"
-                    : tier === "SELECTO"
-                    ? locale === "es"
-                      ? "Agrega 2 panes nuevos al mes GRATIS"
-                      : "Add 2 new breads per month FREE"
-                    : tier === "LEGENDARIO"
-                    ? locale === "es"
-                      ? "Agrega 4 panes al mes GRATIS"
-                      : "Add 4 breads per month FREE"
-                    : locale === "es"
-                    ? `${data.freeNewBreadPerMonth} pan nuevo/mes`
-                    : `${data.freeNewBreadPerMonth} new bread/mo`
-                  : locale === "es"
-                  ? "Pan nuevo gratis"
-                  : "Free new bread",
-            },
+            // The monthly free-bread perk was removed from every tier: the
+            // Club is a prepayment that becomes points, not a bread
+            // subscription, and listing a free loaf alongside that muddled
+            // what people were actually buying.
             {
               ok: data.autoMonthlyPromos,
               label:

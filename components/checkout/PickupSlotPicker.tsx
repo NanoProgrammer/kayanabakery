@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Calendar, Clock, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
-import { isClosedDate } from "@/lib/checkout/closures";
+import { isClosedDate, closedDateLabel } from "@/lib/checkout/closures";
 
 type PickupDay = {
   date: string;
@@ -58,7 +58,7 @@ function generatePickupDays(minLeadHours: number, locale = "en"): PickupDay[] {
       closed,
       dayLabel,
       windowLabel: closed
-        ? locale === "es" ? "Cerrado por el día" : "Closed for the day"
+        ? closedDateLabel(dateStr, locale)
         : `${fmt(startH)} – ${fmt(endH)}`,
     });
   }

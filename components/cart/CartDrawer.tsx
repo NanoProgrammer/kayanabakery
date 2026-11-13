@@ -8,6 +8,7 @@ import { useCartStore } from "@/lib/store/cart-store";
 import { cartLineId } from "@/lib/products/options";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { formatPrice, cn } from "@/lib/utils";
+import { servingsForOptions, describeServings } from "@/lib/products/servings";
 
 export function CartDrawer() {
   const items = useCartStore((s) => s.items);
@@ -98,6 +99,11 @@ export function CartDrawer() {
                             </p>
                             {/* The size and flavour chosen. Without it, two
                                 lines of the same cake look identical. */}
+                            {describeServings(servingsForOptions(item.options), locale) && (
+                              <p className="text-xs text-ink-soft">
+                                {describeServings(servingsForOptions(item.options), locale)}
+                              </p>
+                            )}
                             {item.optionsLabel && (
                               <p className="mt-0.5 text-xs text-ink-soft">
                                 {item.optionsLabel}

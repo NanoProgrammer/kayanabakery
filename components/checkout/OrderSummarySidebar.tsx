@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
 import { type PricingBreakdown, formatCents } from "@/lib/checkout/pricing";
 import { useCartStore } from "@/lib/store/cart-store";
+import { servingsForOptions, describeServings } from "@/lib/products/servings";
 
 export function OrderSummarySidebar({
   pricing,
@@ -23,6 +24,8 @@ export function OrderSummarySidebar({
       <ul className="mt-4 space-y-3 border-b border-canela/15 pb-4">
         {items.map((it) => {
           const name = pickI18n(it as any, "name", locale) || it.name;
+          // The last place to notice the cake is too small for the party.
+          const servings = describeServings(servingsForOptions(it.options), locale);
           return (
             <li key={it.productId} className="flex items-center gap-3 text-sm">
               {it.image && (
@@ -32,7 +35,13 @@ export function OrderSummarySidebar({
               )}
               <div className="flex-1">
                 <p className="line-clamp-1 font-medium">{name}</p>
-                <p className="text-xs text-ink-soft">×{it.quantity}</p>
+                {it.optionsLabel && (
+                  <p className="text-xs text-ink-soft">{it.optionsLabel}</p>
+                )}
+                <p className="text-xs text-ink-soft">
+                  ×{it.quantity}
+                  {servings ? ` · ${servings}` : ""}
+                </p>
               </div>
               <p className="font-bold">{formatCents(it.price * 100 * it.quantity, locale)}</p>
             </li>

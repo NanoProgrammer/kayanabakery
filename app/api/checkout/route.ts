@@ -175,11 +175,13 @@ export async function POST(req: Request) {
       membersOnly?: boolean;
       isOffSeason?: boolean;
       leadTime?: number;
+      categorySlugs?: string[];
       options?: ProductOption[];
     }>
   >({
     query: `*[_type == "product" && _id in $ids]{
       _id, name, "slug": slug.current, price, inStock, membersOnly, isOffSeason, leadTime,
+      "categorySlugs": categories[]->slug.current,
       options[]{ name, nameEs, key, required, choices[]{ label, labelEs, priceDelta, soldOut } }
     }`,
     params: { ids: productIds },
@@ -247,6 +249,7 @@ export async function POST(req: Request) {
     slug: string;
     price: number;
     quantity: number;
+    categorySlugs?: string[];
     options?: Record<string, string>;
     optionsLabel?: string;
   }[] = [];
@@ -265,6 +268,9 @@ export async function POST(req: Request) {
       slug: p.slug,
       price: p.price * 100 + resolved.priceDeltaCents,
       quantity: it.quantity,
+      // Read from the catalog, never from the browser: a coupon limited to
+      // one category is only as safe as where its category comes from.
+      categorySlugs: p.categorySlugs ?? [],
       ...(resolved.choices.length
         ? {
             options: Object.fromEntries(resolved.choices.map((c) => [c.key, c.label])),
@@ -334,7 +340,7 @@ export async function POST(req: Request) {
       `*[_type == "coupon" && code == $code][0]{
         code, discountType, discountValue,
         minOrderDollars, maxUses, perUserLimit,
-        startsAt, expiresAt, active, membershipOnly
+        startsAt, expiresAt, active, membershipOnly, appliesTo
       }`,
       { code: data.couponCode.toUpperCase() }
     );
@@ -417,6 +423,9 @@ export async function POST(req: Request) {
           discountType: coupon.discountType,
           discountValue: coupon.discountValue,
           minOrderCents: coupon.minOrderCents ?? undefined,
+          // Without this a coupon limited to one category discounts the
+          // whole order — which for a 100% one is the entire cart.
+          appliesTo: coupon.appliesTo ?? null,
         }
       : null,
     pointsToRedeem: data.pointsToRedeem ?? 0,

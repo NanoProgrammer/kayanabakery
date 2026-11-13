@@ -12,7 +12,15 @@ import { TIERS, pointsToCents, type MembershipTier } from "@/lib/membership/tier
 export type FulfillmentType = "PICKUP" | "DELIVERY";
 
 export type PricingInput = {
-  items: { price: number; quantity: number; productId: string }[];
+  items: {
+    price: number;
+    quantity: number;
+    productId: string;
+    slug?: string;
+    /** The category slugs this product is filed under, for a coupon that
+     *  only applies to some of them. */
+    categorySlugs?: string[];
+  }[];
   fulfillmentType: FulfillmentType;
   tier: MembershipTier;
   isSouthEastCalgary: boolean;
@@ -23,6 +31,11 @@ export type PricingInput = {
     discountType: "PERCENT" | "FIXED" | "FREE_SHIPPING";
     discountValue: number;
     minOrderCents?: number;
+    /** What the coupon is limited to: "ALL", "CATEGORY:slug" or
+     *  "PRODUCT:slug", as Studio describes the field. Stored on every coupon
+     *  and, until now, never enforced — a "cakes only" coupon took its
+     *  percentage off the whole order, so a 100% one gave away the cart. */
+    appliesTo?: string | null;
   } | null;
   pointsToRedeem?: number;
   tipCents?: number;
@@ -56,6 +69,34 @@ export type PricingBreakdown = {
 const DEFAULT_DELIVERY_FEE = 700;
 const DEFAULT_GST = 0.05;
 
+/**
+ * Whether a coupon limited to something covers this line.
+ *
+ * Studio describes the field as "ALL or CATEGORY:slug or PRODUCT:slug". A
+ * bare value with no prefix is read as a category, which is what someone
+ * typing "cakes" into that box means.
+ */
+export function couponCovers(
+  appliesTo: string | null | undefined,
+  item: { productId: string; slug?: string; categorySlugs?: string[] }
+): boolean {
+  const scope = (appliesTo ?? "").trim();
+  if (!scope || scope.toUpperCase() === "ALL") return true;
+
+  const [rawPrefix, ...rest] = scope.split(":");
+  const value = (rest.length ? rest.join(":") : rawPrefix).trim().toLowerCase();
+  const prefix = rest.length ? rawPrefix.trim().toUpperCase() : "CATEGORY";
+  if (!value) return false;
+
+  if (prefix === "PRODUCT") {
+    return (item.slug ?? "").toLowerCase() === value || item.productId.toLowerCase() === value;
+  }
+  if (prefix === "CATEGORY") {
+    return (item.categorySlugs ?? []).some((s) => s.toLowerCase() === value);
+  }
+  return false;
+}
+
 export function computePricing(input: PricingInput): PricingBreakdown {
   const errors: string[] = [];
   const baseDelivery = input.baseDeliveryFeeCents ?? DEFAULT_DELIVERY_FEE;
@@ -75,6 +116,17 @@ export function computePricing(input: PricingInput): PricingBreakdown {
   let couponDiscountCents = 0;
   let couponIsFreeShipping = false;
 
+  // What the coupon is allowed to discount. The minimum-order check still
+  // looks at the real subtotal, because "spend $30" means the order, not the
+  // part the coupon can touch.
+  //
+  // An unrecognised scope matches nothing rather than everything. Failing
+  // open here would mean a typo in Studio turns a cake coupon into one for
+  // the whole cart, and the free-cake referral reward is 100% off.
+  const eligibleSubtotalCents = input.items
+    .filter((item) => couponCovers(input.coupon?.appliesTo, item))
+    .reduce((sum, i) => sum + i.price * i.quantity, 0);
+
   if (input.coupon) {
     if (input.coupon.discountType === "FREE_SHIPPING") {
       couponIsFreeShipping = true;
@@ -87,10 +139,10 @@ export function computePricing(input: PricingInput): PricingBreakdown {
       );
     } else if (input.coupon.discountType === "PERCENT") {
       couponDiscountCents = Math.floor(
-        (subtotalCents * Math.min(100, input.coupon.discountValue)) / 100
+        (eligibleSubtotalCents * Math.min(100, input.coupon.discountValue)) / 100
       );
     } else {
-      couponDiscountCents = Math.min(input.coupon.discountValue, subtotalCents);
+      couponDiscountCents = Math.min(input.coupon.discountValue, eligibleSubtotalCents);
     }
   }
 

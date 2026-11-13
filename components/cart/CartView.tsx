@@ -7,6 +7,7 @@ import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
 import { useCartStore } from "@/lib/store/cart-store";
 import { cartLineId } from "@/lib/products/options";
 import { formatPrice, cn } from "@/lib/utils";
+import { servingsForOptions, describeServings } from "@/lib/products/servings";
 
 export function CartView() {
   const { t, locale } = useLocale();
@@ -78,6 +79,11 @@ export function CartView() {
                   >
                     {name}
                   </Link>
+                  {describeServings(servingsForOptions(it.options), locale) && (
+                    <p className="text-xs text-ink-soft">
+                      {describeServings(servingsForOptions(it.options), locale)}
+                    </p>
+                  )}
                   {it.optionsLabel && (
                     <p className="text-xs text-ink-soft">{it.optionsLabel}</p>
                   )}

@@ -59,20 +59,10 @@ check(
 console.log("\n  sizes");
 // Shown the way the customer decides: nobody knows what 8" means, everybody
 // knows whether they are feeding twelve people.
-check("tres leches comes in three sizes, with servings", labels(sub("tres-leches").defaultOptions, "size"), [
-  '6" (Serves 8-12)',
-  '8" (Serves 12-20)',
-  '10" (Serves 20-30)',
-]);
-check("gourmet comes in two", labels(sub("gourmet").defaultOptions, "size"), [
-  '6" (Serves 8-12)',
-  '8" (Serves 12-20)',
-]);
-check(
-  "the Spanish label says porciones",
-  sub("gourmet").defaultOptions[0].choices[0].labelEs,
-  '6" (8-12 porciones)'
-);
+check("tres leches comes in three sizes", labels(sub("tres-leches").defaultOptions, "size"), ['6"', '8"', '10"']);
+check("gourmet comes in two", labels(sub("gourmet").defaultOptions, "size"), ['6"', '8"']);
+// The serving count is NOT in the label: it has to change with the choice.
+check("no serving count is baked into the label", /serves|porciones/i.test(labels(sub("gourmet").defaultOptions, "size")!.join(" ")), false);
 
 console.log("\n  the clásicos, each sold its own way");
 check(
@@ -83,7 +73,7 @@ check(
 check(
   "...and does not come in 10 inch",
   labels(optionsForProduct("Chocoflán", sub("clasicos")), "size"),
-  ['6" (Serves 8-12)', '8" (Serves 12-20)']
+  ['6"', '8"']
 );
 check(
   "pineapple upside down has no choices at all",
@@ -105,7 +95,7 @@ console.log("\n  gourmet");
 check(
   "the flan tres leches is 6 and 8 inch",
   labels(optionsForProduct("Flan Tres Leches", sub("gourmet")), "size"),
-  ['6" (Serves 8-12)', '8" (Serves 12-20)']
+  ['6"', '8"']
 );
 check(
   "...and has no flavour choice",
@@ -117,7 +107,7 @@ check(
 check(
   "a plain tres leches is untouched by it",
   labels(optionsForProduct("Tres Leches", sub("tres-leches")), "size"),
-  ['6" (Serves 8-12)', '8" (Serves 12-20)', '10" (Serves 20-30)']
+  ['6"', '8"', '10"']
 );
 
 console.log("\n  matching the names Studio actually holds");
@@ -149,10 +139,7 @@ const size = merged.options.find((o) => o.key === "size")!;
 // plus an add and drop the $15.
 check("the 8 inch keeps its $15 through the rename", size.choices.find((c) => c.label.startsWith('8"'))?.priceDelta, 1500);
 check("the 6 inch keeps its zero", size.choices.find((c) => c.label.startsWith('6"'))?.priceDelta, 0);
-check("the 10 inch is gone, as asked", size.choices.map((c) => c.label), [
-  '6" (Serves 8-12)',
-  '8" (Serves 12-20)',
-]);
+check("the 10 inch is gone, as asked", size.choices.map((c) => c.label), ['6"', '8"']);
 check(
   "and removing it is reported, not done quietly",
   merged.changes.some((c) => c.includes("10 inch") && c.includes("removed")),
@@ -162,9 +149,9 @@ check(
   "a sold-out flag survives too",
   mergeProductOptions(
     [{ key: "size", name: "Size", choices: [{ label: "6 inch", priceDelta: 500, soldOut: true }] }],
-    [{ key: "size", name: "Size", nameEs: "Tamaño", choices: [{ label: '6" (Serves 8-12)', labelEs: '6" (8-12 porciones)' }] }]
+    [{ key: "size", name: "Size", nameEs: "Tamaño", choices: [{ label: '6"', labelEs: '6"' }] }]
   ).options[0].choices[0],
-  { label: '6" (Serves 8-12)', labelEs: '6" (8-12 porciones)', priceDelta: 500, soldOut: true }
+  { label: '6"', labelEs: '6"', priceDelta: 500, soldOut: true }
 );
 
 console.log("\n  a size is the same size however it is written");
@@ -208,8 +195,8 @@ check(
 check(
   "nothing to do is recognised as nothing to do",
   mergeProductOptions(
-    [{ key: "size", name: "Size", choices: [{ label: '6" (Serves 8-12)', priceDelta: 0, soldOut: false }] }],
-    [{ key: "size", name: "Size", nameEs: "Tamaño", choices: [{ label: '6" (Serves 8-12)', labelEs: '6" (8-12 porciones)' }] }]
+    [{ key: "size", name: "Size", choices: [{ label: '6"', priceDelta: 0, soldOut: false }] }],
+    [{ key: "size", name: "Size", nameEs: "Tamaño", choices: [{ label: '6"', labelEs: '6"' }] }]
   ).unchanged,
   true
 );

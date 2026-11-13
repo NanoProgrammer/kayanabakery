@@ -249,9 +249,15 @@ export default async function CategoryPage({
         </section>
       )}
 
+      {/* Products, but NOT when this category has subcategories.
+          Cakes is a menu, not a shelf: it should show Tres Leches, Gourmet,
+          Clásicos and Gelatinas y Flanes to choose between. It was showing
+          every cake underneath them as well — toppers included, since those
+          are filed under Cakes too — so the four cards were buried and the
+          page read as one undifferentiated grid. */}
       <section className="container-bakery py-16 md:py-20">
-        {!category.products?.length ? (
-          category.children?.length ? null : (
+        {category.children?.length ? null : !category.products?.length ? (
+          (
             <div className="py-12 text-center">
               <p className="text-ink/60">
                 {locale === "es"

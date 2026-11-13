@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Plus, Minus, ShoppingBag, Crown, Lock } from "lucide-react";
+import { Plus, Minus, ShoppingBag, Crown, Lock, Users } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { PortableText } from "@portabletext/react";
 import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
+import { servingsForOptions, describeServings } from "@/lib/products/servings";
 import { useCartStore } from "@/lib/store/cart-store";
 import { urlFor } from "@/sanity/lib/image";
 import { ProductOptions } from "./ProductOptions";
@@ -44,6 +45,10 @@ export function ProductDetail({ product }: { product: Product }) {
     }
     return start;
   });
+
+  // Recomputed on every change of choice, not stored: the chosen size is
+  // the only input, so a second copy of this could only go stale.
+  const servings = servingsForOptions(selection);
 
   const resolved = resolveOptions(options, selection, product.name);
   const optionsDelta = resolved.ok ? resolved.priceDeltaCents / 100 : 0;
@@ -254,6 +259,18 @@ export function ProductDetail({ product }: { product: Product }) {
               })
             }
           />
+
+          {/* How many people the CHOSEN size feeds. The line above this one
+              comes from the product text in Studio and is fixed — it read
+              "Serves approximately 8–18 people" whichever button was
+              pressed, which is the whole range rather than an answer. This
+              one follows the selection. */}
+          {servings && (
+            <p className="mt-3 flex items-center gap-2 text-sm font-medium text-ink">
+              <Users className="h-4 w-4 text-canela-dark" />
+              {describeServings(servings, locale)}
+            </p>
+          )}
 
           {!!product.leadTime && product.leadTime > 0 && (
             <p className="mt-3 rounded-2xl border border-canela/20 bg-canela-light px-4 py-3 text-xs text-ink">

@@ -5,7 +5,7 @@ import { Clock, ChevronLeft, ChevronRight, Check, Truck, Zap } from "lucide-reac
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 import type { MembershipTier } from "@/lib/membership/tiers";
-import { CLOSED_DATES, isClosedDate } from "@/lib/checkout/closures";
+import { CLOSED_DATES, isClosedDate, closedDateLabel } from "@/lib/checkout/closures";
 
 type SlotFromAPI = {
   id: string;
@@ -181,7 +181,7 @@ export function DeliverySlotPicker({
 
               {closed ? (
                 <p className="rounded-xl border border-canela/15 p-3 text-sm font-medium text-ink-soft">
-                  {locale === "es" ? "Cerrado por el día" : "Closed for the day"}
+                  {closedDateLabel(date, locale)}
                 </p>
               ) : (
               <div className="grid gap-2 sm:grid-cols-2">

@@ -46,17 +46,26 @@ export const BONUS_KLC_CAP_PER_YEAR = 6;
 export const ROLLING_WINDOW_DAYS = 365;
 
 /**
- * The four product families, as the addendum names them.
+ * The four product families, as the addendum names them, mapped to the
+ * category slugs the shop actually uses.
  *
- * The category slugs are a FIRST MAPPING and need confirming against the
- * catalog — the addendum says so explicitly. A product in no family earns no
- * exploration credit rather than being guessed into one.
+ * Read off karyanabakery.ca on 17 Nov 2026, where the shop's categories are:
+ * conchas, cakes (shown as "Confectionery"), churros,
+ * traditional-mexican-bread and boxes.
+ *
+ * STILL OPEN: "boxes" is a mixed bundle that can contain items from several
+ * families, so it is deliberately in none. Counting a box as one family
+ * would credit whichever family we picked; counting it as all four would
+ * hand a member 4 KLC for one purchase. Karyana has to decide.
+ *
+ * A product in no family earns no exploration credit, rather than being
+ * guessed into one.
  */
 export const PRODUCT_FAMILIES = {
   CONCHAS_PAN_DULCE: ["conchas", "pan-dulce"],
-  PAN_TRADICIONAL: ["pan", "pan-tradicional", "temporada", "seasonal"],
-  PASTELES: ["cakes", "tres-leches", "gourmet", "clasicos", "celebraciones"],
-  POSTRES: ["postres", "gelatinas-y-flanes", "especialidades", "desserts"],
+  PAN_TRADICIONAL: ["traditional-mexican-bread", "pan-tradicional", "temporada", "seasonal"],
+  PASTELES: ["cakes", "tres-leches", "gourmet", "clasicos", "gelatinas-y-flanes", "celebraciones"],
+  POSTRES: ["churros", "postres", "especialidades", "desserts"],
 } as const;
 
 export type ProductFamily = keyof typeof PRODUCT_FAMILIES;

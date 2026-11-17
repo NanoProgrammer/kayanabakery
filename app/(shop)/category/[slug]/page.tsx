@@ -17,7 +17,7 @@ import { cookies } from "next/headers";
 import type { Category, Product } from "@/types";
 import {
   familyBySlug,
-  familyForProductName,
+  familyForProduct,
   groupIntoFamilies,
   unfiled,
 } from "@/lib/products/cake-families";
@@ -139,7 +139,7 @@ export default async function CategoryPage({
     }).catch(() => null);
 
     const mine = (cakes?.products ?? []).filter(
-      (p: any) => familyForProductName(p.name)?.slug === builtInFamily.slug
+      (p: any) => familyForProduct(p)?.slug === builtInFamily.slug
     );
 
     if (mine.length) {

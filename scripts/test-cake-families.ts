@@ -108,5 +108,80 @@ check(
 check("an empty catalog splits into four empty families", groupIntoFamilies([]).length, 4);
 check("...with nothing left over", unfiled([]), []);
 
+/* ------------------------------------------------------------------ */
+/* The real catalog, by slug                                           */
+/* ------------------------------------------------------------------ */
+import { familyForProduct, PRODUCT_FAMILY_BY_SLUG } from "../lib/products/cake-families";
+
+const bySlug = (slug: string, name = "") => familyForProduct({ slug, name })?.slug ?? null;
+
+console.log("\nThe catalog as it stands, by slug\n");
+
+console.log("  tres leches — the eight flavours");
+for (const slug of [
+  "classic-3-leches",
+  "tres-leches-tiramisu",
+  "3-leches-mango",
+  "pistachio-raspberry-tres-leches-cake",
+  "piña-colada",
+  "dulce-de-leche",
+  "double-chocolate-tres-leches-cake",
+  "eggnog-tres-leches-cake",
+]) {
+  check(slug, bySlug(slug), "tres-leches");
+}
+check(
+  "there are exactly eight of them",
+  Object.values(PRODUCT_FAMILY_BY_SLUG).filter((f) => f === "tres-leches").length,
+  9 // eight products, plus the unaccented spelling of piña-colada
+);
+
+console.log("\n  the two flans, which their names cannot separate");
+// "Neapolitan Flan Tres Leches" ($70) and "Artisan Neapolitan Flan" ($50)
+// are different products. By name alone both read as a neapolitan flan.
+check("flan-tres-leches is the Gourmet one", bySlug("flan-tres-leches"), "gourmet");
+check("flan-napolitan is with the flanes", bySlug("flan-napolitan"), "gelatinas-y-flanes");
+check("they are not in the same family", bySlug("flan-tres-leches") === bySlug("flan-napolitan"), false);
+
+console.log("\n  clásicos");
+check("chocoflan", bySlug("chocoflan"), "clasicos");
+check("pineapple-upside-down", bySlug("pineapple-upside-down"), "clasicos");
+check("bloom-cake", bySlug("bloom-cake"), "clasicos");
+check("lemon-loaf (never assigned by Karyana)", bySlug("lemon-loaf"), "clasicos");
+
+console.log("\n  gelatinas y flanes");
+check("mosaic-gelatin", bySlug("mosaic-gelatin"), "gelatinas-y-flanes");
+check("gelaflan", bySlug("gelaflan"), "gelatinas-y-flanes");
+
+console.log("\n  the toppers are not a cake family");
+check("floral-topper-Cake", bySlug("floral-topper-Cake", "Floral Topper Cake"), null);
+check("hp-topper-cake", bySlug("hp-topper-cake", "Happy Birthday Topper Cake"), null);
+
+console.log("\n  slug beats name");
+// The slug is what the catalog keys on and never reads two ways.
+check(
+  "a misleading name does not override the slug",
+  bySlug("flan-napolitan", "Neapolitan Flan Tres Leches"),
+  "gelatinas-y-flanes"
+);
+check("case in the slug does not matter", bySlug("CHOCOFLAN"), "clasicos");
+check("the unaccented piña colada works too", bySlug("pina-colada"), "tres-leches");
+check(
+  "a product added later still falls back to its name",
+  familyForProduct({ slug: "brand-new-slug", name: "3 Leches Mango" })?.slug,
+  "tres-leches"
+);
+check("...and an unknown one is still nothing", familyForProduct({ slug: "x", name: "Mystery" }), null);
+
+console.log("\n  every cake on the site is filed");
+const live = [
+  "tres-leches-tiramisu", "classic-3-leches", "flan-tres-leches", "lemon-loaf",
+  "dulce-de-leche", "chocoflan", "pistachio-raspberry-tres-leches-cake",
+  "mosaic-gelatin", "double-chocolate-tres-leches-cake", "3-leches-mango",
+  "piña-colada", "eggnog-tres-leches-cake", "bloom-cake",
+  "pineapple-upside-down", "gelaflan", "flan-napolitan",
+];
+check("all sixteen have a family", live.filter((s) => bySlug(s) === null), []);
+
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 if (failed) process.exit(1);

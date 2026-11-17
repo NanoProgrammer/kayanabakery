@@ -105,6 +105,54 @@ export const CAKE_FAMILIES: CakeFamily[] = [
   },
 ];
 
+/**
+ * The catalog as it stands, product slug → family.
+ *
+ * This is the authority. Matching on names is a fallback for products added
+ * later; a slug never changes under us and never reads two ways. Taken from
+ * karyanabakery.ca/category/cakes on 17 Nov 2026.
+ *
+ * Note the two different flans, which the names alone cannot separate:
+ *   flan-tres-leches  "Neapolitan Flan Tres Leches"  $70  → Gourmet
+ *   flan-napolitan    "Artisan Neapolitan Flan"      $50  → Gelatinas y Flanes
+ */
+export const PRODUCT_FAMILY_BY_SLUG: Record<string, CakeFamilySlug> = {
+  // Tres Leches — the eight flavours of Karyana's table
+  "classic-3-leches": "tres-leches",
+  "tres-leches-tiramisu": "tres-leches",
+  "3-leches-mango": "tres-leches",
+  "pistachio-raspberry-tres-leches-cake": "tres-leches",
+  "piña-colada": "tres-leches",
+  "pina-colada": "tres-leches",
+  "dulce-de-leche": "tres-leches",
+  "double-chocolate-tres-leches-cake": "tres-leches",
+  "eggnog-tres-leches-cake": "tres-leches",
+
+  // Gourmet — flan and tres leches in one cake
+  "flan-tres-leches": "gourmet",
+
+  // Clásicos
+  "chocoflan": "clasicos",
+  "pineapple-upside-down": "clasicos",
+  "bloom-cake": "clasicos",
+  // Never assigned by Karyana. It is not a tres leches, a flan or a
+  // gelatina, so it sits here until she says otherwise.
+  "lemon-loaf": "clasicos",
+
+  // Gelatinas y Flanes — the gluten-free ones
+  "mosaic-gelatin": "gelatinas-y-flanes",
+  "gelaflan": "gelatinas-y-flanes",
+  "flan-napolitan": "gelatinas-y-flanes",
+
+  // Toppers are not a cake family. Listed so they are a decision rather
+  // than something that merely failed to match.
+  // "floral-topper-Cake", "hp-topper-cake" → none
+};
+
+export function normalizeSlug(slug: string): string {
+  return slug.trim().toLowerCase();
+}
+
 export function normalizeName(name: string): string {
   return name
     .normalize("NFD")
@@ -122,6 +170,23 @@ export function normalizeName(name: string): string {
  * nothing is NOT guessed into a family — it still appears on the Cakes page
  * under "Everything else", where Karyana can see it needs filing.
  */
+/**
+ * The family for a product, by slug first and name second.
+ *
+ * The slug is what the catalog actually keys on, so it decides; the name
+ * rules only catch products added after this list was written.
+ */
+export function familyForProduct(product: {
+  slug?: string | null;
+  name?: string | null;
+}): CakeFamily | null {
+  const bySlug = product.slug
+    ? PRODUCT_FAMILY_BY_SLUG[normalizeSlug(product.slug)]
+    : undefined;
+  if (bySlug) return familyBySlug(bySlug);
+  return product.name ? familyForProductName(product.name) : null;
+}
+
 export function familyForProductName(name: string): CakeFamily | null {
   const target = normalizeName(name);
   let best: { family: CakeFamily; length: number } | null = null;
@@ -142,15 +207,17 @@ export function familyBySlug(slug: string): CakeFamily | null {
 }
 
 /** Splits a list of cakes into the four families, keeping the leftovers. */
-export function groupIntoFamilies<T extends { name: string }>(
+export function groupIntoFamilies<T extends { name: string; slug?: string | null }>(
   products: readonly T[]
 ): { family: CakeFamily; products: T[] }[] {
   return CAKE_FAMILIES.map((family) => ({
     family,
-    products: products.filter((p) => familyForProductName(p.name)?.slug === family.slug),
+    products: products.filter((p) => familyForProduct(p)?.slug === family.slug),
   }));
 }
 
-export function unfiled<T extends { name: string }>(products: readonly T[]): T[] {
-  return products.filter((p) => !familyForProductName(p.name));
+export function unfiled<T extends { name: string; slug?: string | null }>(
+  products: readonly T[]
+): T[] {
+  return products.filter((p) => !familyForProduct(p));
 }

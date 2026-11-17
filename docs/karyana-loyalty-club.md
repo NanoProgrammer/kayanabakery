@@ -178,6 +178,45 @@ Este límite es **independiente** del tope operativo de 10 referidos por
 ciclo. Tras el décimo, el miembro puede pedir una revisión personal para
 habilitar otro ciclo.
 
+### 2.5 Cambio solicitado: que un referido suba KLC «como si fuera una compra»
+
+**Pendiente de aprobación de Karina y Rubén. No implementado.**
+
+Santiago pidió (17-nov-2026) que referir suba los créditos KLC como si fuera
+una compra. Hay que separar dos cosas, porque una ya existe y la otra choca
+con una regla escrita:
+
+**Ya existe:** un referido convertido **sí sube KLC**, +2, en cuanto la
+persona referida hace su primera compra válida (sección 2.2). Eso ya está en
+el motor.
+
+**Choca con la adenda:** que cuente *como una compra propia* no se puede sin
+cambiar una regla que Karina y Rubén escribieron dos veces:
+
+> «No permitir que referidos o exploración sustituyan el requisito mínimo de
+> compras propias y en fechas distintas para categorías superiores;
+> particularmente Legendario requiere al menos cuatro compras personales
+> verificadas.»
+
+Si un referido cuenta como compra, esa protección desaparece: alguien podría
+llegar a Legendario sin haber comprado nunca.
+
+**Y un número que conviene mirar antes de decidir.** Con los valores de la
+adenda —+2 KLC por referido y tope de 6 KLC por 365 días— referir a 10
+personas da esto (calculado con el motor, no estimado):
+
+| | |
+| --- | --- |
+| 10 referidos convertidos | **6 KLC otorgados, 14 rechazados** |
+| Referidos que llegan a contar | **3 de 10** |
+| Nivel alcanzado con 10 referidos y 0 compras propias | **Artesano** |
+
+O sea: el tope operativo son 10 referidos por ciclo, pero **solo los 3
+primeros suben KLC**. Los otros 7 no mueven la aguja. Si la intención es
+premiar a quien trae 10 personas, **el tope de 6 es lo que hay que subir**,
+no la regla de las compras propias. Son dos decisiones distintas y conviene
+tomarlas por separado.
+
 ---
 
 ## 3. Integridad

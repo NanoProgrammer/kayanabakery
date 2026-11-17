@@ -80,11 +80,28 @@ de $60 genera 60 / 120 / 240 / 300 puntos = $0.60 / $1.20 / $2.40 / $3.00.
 
 **El prepago y los puntos canjeables comparten hoy la misma columna.** La
 cuota de membresía se convierte en `pointsBalance`, mezclada con los puntos
-ganados por compra. Para cumplir F.2 hay que **separarlos antes de migrar**,
-y a partir de los `PointsTransaction` se puede reconstruir cuánto de cada
-saldo vino de un prepago. Esa reconstrucción es un requisito previo, no un
-detalle: sin ella no se puede garantizar que ninguna obligación pagada se
-borre.
+ganados por compra.
+
+**Esto ya está resuelto del lado técnico.** `lib/loyalty/balances.ts`
+reconstruye los dos saldos desde `PointsTransaction`, y
+`npm run report:balances` lo corre contra la base real — **solo lectura, no
+cambia nada**:
+
+- `BONUS` = dinero que el cliente pagó (cuota de membresía convertida a
+  puntos a valor nominal). **Es una obligación.**
+- Todo lo demás positivo (`EARNED`, `REFERRAL`, `BIRTHDAY`, `ADJUSTMENT`) =
+  puntos regalados por comprar. **Es un costo de marketing, no una deuda.**
+
+Un canje consume **los créditos más antiguos primero**, que es como se
+comporta un saldo de verdad y es el único reparto que no exige una decisión
+que nadie ha tomado. El reporte muestra además los dos extremos (si todo
+canje saliera del prepago, o si saliera de lo ganado) para que el rango sea
+visible en vez de supuesto.
+
+**El reporte también detecta cuentas cuyo saldo el libro no explica** — puntos
+que se movieron sin dejar registro. Ésas hay que resolverlas antes de
+migrar: reconstruir una de ellas le daría al cliente una obligación **menor**
+de la que realmente pagó.
 
 ---
 
@@ -205,8 +222,9 @@ compra para Legendario» — y no un número de créditos que ya tiene.
 
 **Trabajo técnico previo:**
 
-- Separar prepago de puntos canjeables reconstruyendo desde
-  `PointsTransaction` (sección 1.3). **Bloqueante para la migración.**
+- ~~Separar prepago de puntos canjeables~~ **hecho** (`lib/loyalty/balances.ts`,
+  `npm run report:balances`). Queda **correr el reporte contra producción** y
+  resolver las cuentas que salgan marcadas antes de migrar.
 - Sacar la tarifa neta real de Square de su panel; no está en esta base de
   datos (1.2.4).
 - Re-simular la distribución Básico/Artesano/Selecto/Legendario con la

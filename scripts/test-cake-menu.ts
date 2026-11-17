@@ -70,10 +70,11 @@ check(
   labels(optionsForProduct("Chocoflán", sub("clasicos")), "flavour"),
   ["Vanilla", "Strawberry"]
 );
+// One size: its product text says 10 x 4 inches, serves 12-15.
 check(
-  "...and does not come in 10 inch",
+  "...and has no size choice at all",
   labels(optionsForProduct("Chocoflán", sub("clasicos")), "size"),
-  ['6"', '8"']
+  null
 );
 check(
   "pineapple upside down has no choices at all",
@@ -120,6 +121,13 @@ check("the bloom cake is found by name", ruleForProduct("Bloom Cake")?.label, "B
 check("an unrelated cake matches nothing", ruleForProduct("Tres Leches Fresa"), null);
 check("normalizing strips accents and punctuation", normalizeName("Piña — Upside-Down!"), "pina upside down");
 
+console.log("\n  chocoflán is one size and two flavours");
+check(
+  "it offers only a flavour",
+  optionsForProduct("Chocoflán", sub("clasicos")).map((o) => o.key),
+  ["flavour"]
+);
+
 console.log("\n  the merge: money already in Studio survives");
 const existing = [
   {
@@ -132,7 +140,10 @@ const existing = [
     ],
   },
 ];
-const merged = mergeProductOptions(existing, optionsForProduct("Chocoflán", sub("clasicos")));
+// The Gourmet flan, which legitimately has sizes and legitimately drops the
+// 10". Chocoflán no longer has a size option at all, so it cannot exercise
+// this.
+const merged = mergeProductOptions(existing, optionsForProduct("Flan Tres Leches", sub("gourmet")));
 const size = merged.options.find((o) => o.key === "size")!;
 // The labels in Studio still read "8 inch"; the menu now says
 // '8" (Serves 12-20)'. Matching on the whole label would call that a delete

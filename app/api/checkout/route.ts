@@ -34,6 +34,7 @@ import { randomUUID } from "crypto";
 import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calendar";
 import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
 import { getServerLocale } from "@/lib/i18n/server";
+import { withBuiltInOptions } from "@/lib/products/built-in-options";
 
 async function reserveDeliverySlot({
   slotStartTime,
@@ -256,7 +257,9 @@ export async function POST(req: Request) {
 
   for (const it of data.items) {
     const p = products.find((pr) => pr._id === it.productId)!;
-    const resolved = resolveOptions(p.options, it.options, p.name);
+    // The same fill-in the product page uses. If these two ever disagreed,
+    // a customer would pick a flavour and be told it was invalid.
+    const resolved = resolveOptions(withBuiltInOptions(p), it.options, p.name);
 
     if (!resolved.ok) {
       return NextResponse.json({ error: resolved.error }, { status: 400 });

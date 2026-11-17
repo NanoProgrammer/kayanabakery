@@ -8,6 +8,7 @@
  * these tests are what pins it.
  */
 import {
+  CAKE_PICKUP_WINDOWS,
   PICKUP_WINDOWS,
   PICKUP_MIN_LEAD_HOURS,
   windowsForDate,
@@ -61,6 +62,21 @@ check("...and a four-hour item still waits eight", effectivePickupLeadHours(4), 
 check("a longer item wins", effectivePickupLeadHours(48), 48);
 check("a negative one is ignored", effectivePickupLeadHours(-5), 8);
 check("NaN is ignored", effectivePickupLeadHours(NaN), 8);
+
+console.log("\n  cakes keep their own windows and their own notice");
+// The product's "Lead time (hours)" in Studio is the rule. A cake saying 4
+// waits 4; the bread floor must not overrule Karyana's own schedule.
+check("a cake order has four windows", windowsForDate("2026-11-20", true).map((w) => `${w.startHour}-${w.endHour}`), ["11-13", "13-15", "15-17", "17-19"]);
+check("...on a Sunday too", windowsForDate("2026-11-22", true).length, 4);
+check("there are four cake windows defined", CAKE_PICKUP_WINDOWS.length, 4);
+check("a 4-hour cake waits 4, not 8", effectivePickupLeadHours(4, true), 4);
+check("a 12-hour cake waits 12", effectivePickupLeadHours(12, true), 12);
+check("a cake with no lead time set waits none", effectivePickupLeadHours(0, true), 0);
+// Bread keeps the floor.
+check("bread with a 4-hour item still waits 8", effectivePickupLeadHours(4, false), 8);
+check("a cake window is not a bread window", findWindow("2026-11-20", "11:00 AM – 1:00 PM", false), null);
+check("...and is found for a cake order", findWindow("2026-11-20", "11:00 AM – 1:00 PM", true)?.startHour, 11);
+check("a bread window is not offered to a cake order", findWindow("2026-11-20", "7:00 PM – 9:00 PM", true), null);
 
 console.log("\n  what is offered, and when");
 // Friday 20 Nov 2026, 1 PM local (MST, UTC-7 → 20:00 UTC).

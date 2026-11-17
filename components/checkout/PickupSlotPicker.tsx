@@ -29,12 +29,15 @@ export function PickupSlotPicker({
   onDateChange,
   onTimeChange,
   minLeadHours = 0,
+  hasCake = false,
 }: {
   date: string;
   time: string;
   onDateChange: (d: string) => void;
   onTimeChange: (t: string) => void;
   minLeadHours?: number;
+  /** A cake in the basket moves the whole pickup onto the cake windows. */
+  hasCake?: boolean;
 }) {
   const { locale } = useLocale();
   const es = locale === "es";
@@ -50,8 +53,8 @@ export function PickupSlotPicker({
   }, []);
 
   const windows = useMemo(
-    () => (now ? offeredPickupWindows({ now, itemLeadHours: minLeadHours }) : []),
-    [now, minLeadHours]
+    () => (now ? offeredPickupWindows({ now, itemLeadHours: minLeadHours, hasCake }) : []),
+    [now, minLeadHours, hasCake]
   );
 
   const days = useMemo(() => {
@@ -76,7 +79,7 @@ export function PickupSlotPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windows, now]);
 
-  const required = effectivePickupLeadHours(minLeadHours);
+  const required = effectivePickupLeadHours(minLeadHours, hasCake);
   const selectedDay = days.find((d) => d.date === date);
 
   function dayLabel(d: string) {
@@ -108,7 +111,15 @@ export function PickupSlotPicker({
   return (
     <div className="space-y-4">
       <p className="rounded-2xl border border-canela/20 bg-canela-light px-4 py-3 text-xs text-ink">
-        {required > PICKUP_MIN_LEAD_HOURS
+        {hasCake
+          ? required > 0
+            ? es
+              ? `Tu pastel necesita ${required}h de preparación.`
+              : `Your cake needs ${required}h to prepare.`
+            : es
+            ? "Elige cuándo recoger tu pastel."
+            : "Choose when to collect your cake."
+          : required > PICKUP_MIN_LEAD_HOURS
           ? es
             ? `Tu pedido necesita ${required}h de preparación.`
             : `Your order needs ${required}h to prepare.`

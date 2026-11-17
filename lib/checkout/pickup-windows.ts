@@ -83,10 +83,27 @@ export function dayOfWeek(dateStr: string): number | null {
   return Number.isNaN(at.getTime()) ? null : at.getUTCDay();
 }
 
+/**
+ * The windows a CAKE order is collected in: 11–1, 1–3, 3–5, 5–7, every day
+ * the bakery is open. Cakes come out of the kitchen through the day, so
+ * they do not wait for the bread window.
+ *
+ * Defined here beside the bread windows so there is still one place to look.
+ */
+export const CAKE_PICKUP_WINDOWS: { startHour: number; endHour: number }[] = [
+  { startHour: 11, endHour: 13 },
+  { startHour: 13, endHour: 15 },
+  { startHour: 15, endHour: 17 },
+  { startHour: 17, endHour: 19 },
+];
+
 /** Every window that day has, in order, regardless of the time now. */
-export function windowsForDate(dateStr: string): PickupWindowDef[] {
+export function windowsForDate(dateStr: string, hasCake = false): PickupWindowDef[] {
   const dow = dayOfWeek(dateStr);
   if (dow === null) return [];
+  if (hasCake) {
+    return CAKE_PICKUP_WINDOWS.map((w) => ({ dayOfWeek: dow, ...w }));
+  }
   return PICKUP_WINDOWS.filter((w) => w.dayOfWeek === dow).sort(
     (a, b) => a.startHour - b.startHour
   );
@@ -102,9 +119,19 @@ export function windowLabel(w: PickupWindowDef): string {
   return `${fmt(w.startHour)} – ${fmt(w.endHour)}`;
 }
 
-/** The notice a pickup actually needs: the floor, or the basket, whichever is more. */
-export function effectivePickupLeadHours(itemLeadHours: number): number {
+/**
+ * The notice a pickup actually needs.
+ *
+ * Bread: the eight-hour floor, or the basket, whichever is longer.
+ *
+ * Cakes: whatever the cake itself says, with no floor. Each cake carries its
+ * own "Lead time (hours)" in Studio, set from Karyana's table, and that is
+ * the number to respect — forcing a 4-hour cake to wait 8 would be the site
+ * overruling her own schedule.
+ */
+export function effectivePickupLeadHours(itemLeadHours: number, hasCake = false): number {
   const items = Number.isFinite(itemLeadHours) && itemLeadHours > 0 ? itemLeadHours : 0;
+  if (hasCake) return items;
   return Math.max(PICKUP_MIN_LEAD_HOURS, items);
 }
 
@@ -125,20 +152,22 @@ export type OfferedWindow = PickupWindowDef & {
 export function offeredPickupWindows({
   now,
   itemLeadHours = 0,
+  hasCake = false,
   days = 14,
 }: {
   now: Date;
   itemLeadHours?: number;
+  hasCake?: boolean;
   days?: number;
 }): OfferedWindow[] {
-  const leadHours = effectivePickupLeadHours(itemLeadHours);
+  const leadHours = effectivePickupLeadHours(itemLeadHours, hasCake);
   const earliest = new Date(now.getTime() + leadHours * 3_600_000);
   const out: OfferedWindow[] = [];
 
   for (let i = 0; i <= days; i++) {
     const date = bakeryDay(new Date(now.getTime() + i * 86_400_000));
     if (isClosedDate(date)) continue;
-    for (const w of windowsForDate(date)) {
+    for (const w of windowsForDate(date, hasCake)) {
       const opensAt = atBakeryHour(date, w.startHour);
       if (opensAt.getTime() < earliest.getTime()) continue;
       out.push({ ...w, date, label: windowLabel(w), opensAt });
@@ -153,11 +182,15 @@ export function offeredPickupWindows({
  * The label is checked against the day's real windows rather than trusted,
  * because a request built by hand would send whatever label it liked.
  */
-export function findWindow(dateStr: string, label: string | null | undefined): PickupWindowDef | null {
+export function findWindow(
+  dateStr: string,
+  label: string | null | undefined,
+  hasCake = false
+): PickupWindowDef | null {
   if (!label) return null;
   const wanted = label.replace(/\s+/g, " ").replace(/[–—]/g, "-").trim().toLowerCase();
   return (
-    windowsForDate(dateStr).find(
+    windowsForDate(dateStr, hasCake).find(
       (w) => windowLabel(w).replace(/\s+/g, " ").replace(/[–—]/g, "-").trim().toLowerCase() === wanted
     ) ?? null
   );

@@ -10,6 +10,8 @@
  * for half of it.
  */
 import {
+  CAKE_WINDOWS,
+  cakeWindowLabel,
   CAKE_SLOT_HOURS,
   CAKE_LAST_HOUR,
   GUEST_CAKE_NOTICE_HOURS,
@@ -39,11 +41,16 @@ function check(label: string, actual: unknown, expected: unknown) {
 console.log("\nCake handover times\n");
 
 console.log("  the schedule itself");
-check("from 11 AM, every two hours, 8 PM last", CAKE_SLOT_HOURS, [11, 13, 15, 17, 19, 20]);
-check("nothing after 8 PM", Math.max(...CAKE_SLOT_HOURS), CAKE_LAST_HOUR);
+// Four two-hour windows, 11 AM to 7 PM, for delivery as well as pickup.
+check("there are four windows", CAKE_WINDOWS.length, 4);
+check("11-1, 1-3, 3-5, 5-7", CAKE_WINDOWS.map((w) => `${w.startHour}-${w.endHour}`), ["11-13", "13-15", "15-17", "17-19"]);
+check("they open at 11, 1, 3 and 5", CAKE_SLOT_HOURS, [11, 13, 15, 17]);
+check("the last one closes at 7 PM", CAKE_LAST_HOUR, 19);
 check("nothing before 11 AM", Math.min(...CAKE_SLOT_HOURS), 11);
-check("11 AM reads as 11:00 AM", formatSlotHour(11, "en"), "11:00 AM");
-check("20 reads as 8:00 PM", formatSlotHour(20, "en"), "8:00 PM");
+check("each is two hours", CAKE_WINDOWS.every((w) => w.endHour - w.startHour === 2), true);
+check("they do not overlap", CAKE_WINDOWS.every((w, i, a) => i === 0 || w.startHour >= a[i - 1].endHour), true);
+check("the first reads as 11:00 AM – 1:00 PM", cakeWindowLabel(CAKE_WINDOWS[0]), "11:00 AM – 1:00 PM");
+check("the last reads as 5:00 PM – 7:00 PM", cakeWindowLabel(CAKE_WINDOWS[3]), "5:00 PM – 7:00 PM");
 check("noon is 12 PM, not 0 PM", formatSlotHour(12, "en"), "12:00 PM");
 
 console.log("\n  how much notice is needed");
@@ -56,10 +63,21 @@ check("a Selecto waits 2", noticeHoursFor(mango, "SELECTO", true), 2);
 // The guest rule can only ever add time, never shorten it.
 check("a guest still waits 48h for a chocoflán, not 24", noticeHoursFor(chocoflan, "GUEST", false), 48);
 check("a Selecto waits 6 for a chocoflán", noticeHoursFor(chocoflan, "SELECTO", true), 6);
+// Several cakes in one order: the longest notice wins.
 check(
   "a basket takes the slowest cake in it",
   noticeHoursFor(["3 Leches Mango", "Chocoflán"], "SELECTO", true),
   6
+);
+check(
+  "...and for a guest, 48 beats 24",
+  noticeHoursFor(["3 Leches Mango", "Chocoflán"], "GUEST", false),
+  48
+);
+check(
+  "three cakes still take the slowest",
+  noticeHoursFor(["Carlota", "Gelatina de Mosaico", "Flan 3 Leches"], "ARTESANO", true),
+  12
 );
 check("something that is not a cake needs no notice", noticeHoursFor(["Concha"], "SELECTO", true), 0);
 check("an empty order needs none", noticeHoursFor([], "SELECTO", true), 0);
@@ -83,12 +101,17 @@ check("they come back soonest first", soon.map((s) => s.at.getTime()).every((t, 
 check(
   "the rest of today is offered",
   soon.filter((s) => s.day === "2026-11-12").map((s) => s.hour),
-  [13, 15, 17, 19, 20]
+  [13, 15, 17]
 );
 check(
   "and all of tomorrow",
   soon.filter((s) => s.day === "2026-11-13").map((s) => s.hour),
-  [11, 13, 15, 17, 19, 20]
+  [11, 13, 15, 17]
+);
+check(
+  "...with their labels",
+  soon.filter((s) => s.day === "2026-11-13").map((s) => s.label),
+  ["11:00 AM – 1:00 PM", "1:00 PM – 3:00 PM", "3:00 PM – 5:00 PM", "5:00 PM – 7:00 PM"]
 );
 
 const guest = cakeSlots({ now, noticeHours: 24, days: 2 });

@@ -42,6 +42,19 @@ import {
   effectivePickupLeadHours,
 } from "@/lib/checkout/pickup-windows";
 
+/**
+ * The categories whose products follow the cake schedule. A cake in the
+ * basket moves the whole pickup onto the cake windows, because the order
+ * goes out in one handover.
+ */
+const CAKE_CATEGORY_SLUGS = [
+  "cakes",
+  "tres-leches",
+  "gourmet",
+  "clasicos",
+  "gelatinas-y-flanes",
+];
+
 async function reserveDeliverySlot({
   slotStartTime,
   slotEndTime,
@@ -434,6 +447,13 @@ export async function POST(req: Request) {
     0
   );
 
+  // Cakes have their own windows and their own notice; bread has the
+  // eight-hour floor. Read from the catalog, never from what the browser
+  // sent — the category is what decides which schedule applies.
+  const hasCake = products.some((p) =>
+    (p.categorySlugs ?? []).some((slug) => CAKE_CATEGORY_SLUGS.includes(slug))
+  );
+
   if (data.fulfillmentType === "PICKUP") {
     const dateStr = (data.pickupDate ?? "").slice(0, 10);
 
@@ -441,7 +461,7 @@ export async function POST(req: Request) {
     // that day. Checking only the date would let a request name any hours
     // it liked — Sunday has no 7-9 PM window, and nothing stopped an order
     // claiming one.
-    const window = findWindow(dateStr, data.pickupTime);
+    const window = findWindow(dateStr, data.pickupTime, hasCake);
     if (!window) {
       return NextResponse.json(
         {
@@ -455,7 +475,7 @@ export async function POST(req: Request) {
 
     // Eight hours minimum on every pickup, or longer if something in the
     // basket needs it.
-    const required = effectivePickupLeadHours(leadHours);
+    const required = effectivePickupLeadHours(leadHours, hasCake);
     const opensAt = atBakeryHour(dateStr, window.startHour);
     const verdict = checkDeliveryLeadTime({ slotStart: opensAt, leadHours: required, now: new Date() });
 

@@ -34,6 +34,26 @@ import { randomUUID } from "crypto";
 import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calendar";
 import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
 import { getServerLocale } from "@/lib/i18n/server";
+import { withBuiltInOptions } from "@/lib/products/built-in-options";
+import { checkDeliveryLeadTime, leadTimeMessage } from "@/lib/checkout/lead-time";
+import {
+  findWindow,
+  atBakeryHour,
+  effectivePickupLeadHours,
+} from "@/lib/checkout/pickup-windows";
+
+/**
+ * The categories whose products follow the cake schedule. A cake in the
+ * basket moves the whole pickup onto the cake windows, because the order
+ * goes out in one handover.
+ */
+const CAKE_CATEGORY_SLUGS = [
+  "cakes",
+  "tres-leches",
+  "gourmet",
+  "clasicos",
+  "gelatinas-y-flanes",
+];
 
 async function reserveDeliverySlot({
   slotStartTime,
@@ -256,7 +276,9 @@ export async function POST(req: Request) {
 
   for (const it of data.items) {
     const p = products.find((pr) => pr._id === it.productId)!;
-    const resolved = resolveOptions(p.options, it.options, p.name);
+    // The same fill-in the product page uses. If these two ever disagreed,
+    // a customer would pick a flavour and be told it was invalid.
+    const resolved = resolveOptions(withBuiltInOptions(p), it.options, p.name);
 
     if (!resolved.ok) {
       return NextResponse.json({ error: resolved.error }, { status: 400 });
@@ -408,6 +430,85 @@ export async function POST(req: Request) {
     if (tier === "ARTESANO") prioritySlotFeeCents = deliverySlot.feeCentsArtesano ?? 0;
     else if (tier === "BASICO") prioritySlotFeeCents = deliverySlot.feeCentsBasico ?? 0;
     // SELECTO, LEGENDARIO, EMBAJADOR: 0
+  }
+
+  // ── Production time ────────────────────────────────────────────────
+  //
+  // The kitchen needs notice, and until now nothing on the server checked
+  // it: the browser was the only guard, so a page left open, a stale cache
+  // or a request built by hand walked straight past. An order came in for a
+  // same-day 4 PM pickup on items needing hours of preparation.
+  //
+  // The window is derived from the date here, never from the label the
+  // browser sent — that label is exactly what a forged order would lie
+  // about.
+  const leadHours = products.reduce(
+    (max, p) => Math.max(max, Number(p.leadTime ?? 0) || 0),
+    0
+  );
+
+  // Cakes have their own windows and their own notice; bread has the
+  // eight-hour floor. Read from the catalog, never from what the browser
+  // sent — the category is what decides which schedule applies.
+  const hasCake = products.some((p) =>
+    (p.categorySlugs ?? []).some((slug) => CAKE_CATEGORY_SLUGS.includes(slug))
+  );
+
+  if (data.fulfillmentType === "PICKUP") {
+    const dateStr = (data.pickupDate ?? "").slice(0, 10);
+
+    // The window the browser sent has to be one the bakery actually offers
+    // that day. Checking only the date would let a request name any hours
+    // it liked — Sunday has no 7-9 PM window, and nothing stopped an order
+    // claiming one.
+    const window = findWindow(dateStr, data.pickupTime, hasCake);
+    if (!window) {
+      return NextResponse.json(
+        {
+          error: "BAD_PICKUP_WINDOW",
+          message: "That pickup time is not one we offer on that day.",
+          messageEs: "Ese horario de recolección no existe ese día.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Eight hours minimum on every pickup, or longer if something in the
+    // basket needs it.
+    const required = effectivePickupLeadHours(leadHours, hasCake);
+    const opensAt = atBakeryHour(dateStr, window.startHour);
+    const verdict = checkDeliveryLeadTime({ slotStart: opensAt, leadHours: required, now: new Date() });
+
+    if (!verdict.ok) {
+      return NextResponse.json(
+        {
+          error: "LEAD_TIME",
+          message: leadTimeMessage(verdict, "en"),
+          messageEs: leadTimeMessage(verdict, "es"),
+          leadHours: required,
+          earliestDate: (verdict as any).earliestDate ?? null,
+        },
+        { status: 409 }
+      );
+    }
+  } else if (leadHours > 0) {
+    const verdict = checkDeliveryLeadTime({
+      slotStart: deliverySlot!.startTime,
+      leadHours,
+      now: new Date(),
+    });
+    if (!verdict.ok) {
+      return NextResponse.json(
+        {
+          error: "LEAD_TIME",
+          message: leadTimeMessage(verdict, "en"),
+          messageEs: leadTimeMessage(verdict, "es"),
+          leadHours,
+          earliestDate: (verdict as any).earliestDate ?? null,
+        },
+        { status: 409 }
+      );
+    }
   }
 
   const pricing = computePricing({

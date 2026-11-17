@@ -17,8 +17,11 @@ export function MembershipFAQ() {
             a: "Es una precompra de productos y servicios futuros, no una cuota de membresía.\n\nEl 100% de lo que pagas vuelve a ti en puntos (1 punto = 1 centavo, 100 puntos = $1 CAD). Nada se queda en el camino. Esos puntos los gastas en lo que tú quieras: pan, pasteles, café, lo que sea, cuando tú quieras.\n\nAdemás, mientras seas miembro tienes prioridad en entregas y acceso a productos y servicios que no están abiertos al público.\n\nDicho simple: no estás pagando una membresía, estás pagando por adelantado lo que ya ibas a comprar.",
           },
           {
-            q: "¿Cómo se cobran las membresías?",
-            a: "Procesamos los pagos con Square. La tarjeta se carga automáticamente cada mes (Selecto, Legendario) o cada año (Artesano). Puedes cancelar cuando quieras.",
+            // No "cómo se cobran las cuotas": el Club no es una cuota, y
+            // describirlo así era exactamente lo que confundía sobre qué
+            // estaba comprando la gente.
+            q: "¿Cómo funciona exactamente?",
+            a: "Pagas por adelantado — cada mes (Selecto, Legendario) o una vez al año (Artesano) — y ese dinero no se queda en la panadería: se convierte íntegro en puntos a tu nombre. 1 punto = 1 centavo, así que $30 son 3,000 puntos, $30 para gastar.\n\nAl entrar eliges cómo usarlo:\n\n• Pedido automático de pan: cada semana te preparamos tu caja sin que hagas nada. Se paga con tus puntos, y a tu tarjeta solo le cobramos lo que los puntos no alcancen a cubrir.\n\n• Solo puntos: no hay orden automática. Tus puntos quedan ahí y pides lo que quieras, cuando quieras.\n\nPuedes cambiar entre las dos opciones cuando quieras desde tu cuenta. Y mientras seas miembro tienes prioridad en entregas y acceso a cosas que no están abiertas al público.",
           },
           {
             q: "¿Qué pasa si cancelo?",
@@ -43,8 +46,8 @@ export function MembershipFAQ() {
             a: "It's a prepayment for future products and services, not a membership fee.\n\n100% of what you pay comes back to you as points (1 point = 1 cent, 100 points = $1 CAD). Nothing is held back. You spend those points on whatever you like — bread, cakes, coffee, anything — whenever you like.\n\nOn top of that, while you're a member you get priority on deliveries and access to products and services that aren't open to the public.\n\nPut simply: you're not paying for a membership, you're paying in advance for what you were going to buy anyway.",
           },
           {
-            q: "How are memberships billed?",
-            a: "We process payments through Square. Your card is auto-charged monthly (Selecto, Legendario) or yearly (Artesano). Cancel anytime.",
+            q: "How does it actually work?",
+            a: "You pay up front — monthly (Selecto, Legendario) or once a year (Artesano) — and that money doesn't stay with the bakery: all of it becomes points in your name. 1 point = 1 cent, so $30 is 3,000 points, which is $30 to spend.\n\nWhen you join you choose how to use it:\n\n• Bread auto reorder: every week we make up your box without you doing anything. It's paid from your points, and your card is only charged for whatever the points don't cover.\n\n• Points only: no automatic order. Your points sit there and you order what you like, when you like.\n\nYou can switch between the two any time from your account. And while you're a member you get priority on deliveries and access to things that aren't open to the public.",
           },
           {
             q: "What happens if I cancel?",

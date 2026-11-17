@@ -42,6 +42,7 @@ import {
   type CheckoutStep,
   type StepState,
 } from "@/lib/checkout/steps";
+import { familyForProduct } from "@/lib/products/cake-families";
 
 type UserCtx = {
   id: string;
@@ -209,6 +210,11 @@ export function CheckoutForm({
   }, [fulfillment, chosenAddress]);
 
   const maxLeadTime = items.reduce((max, it) => Math.max(max, it.leadTime ?? 0), 0);
+
+  // A cake in the basket puts the whole pickup on the cake windows. The
+  // server decides this from the catalog; this is only so the picker shows
+  // the same thing rather than offering times the server will refuse.
+  const hasCake = items.some((it) => !!familyForProduct({ slug: it.slug, name: it.name }));
 
   // Pricing
   const pricing = useMemo(() => {
@@ -484,6 +490,7 @@ export function CheckoutForm({
                 onDateChange={setPickupDate}
                 onTimeChange={setPickupTime}
                 minLeadHours={maxLeadTime}
+                hasCake={hasCake}
               />
             ) : (
               <DeliverySlotPicker

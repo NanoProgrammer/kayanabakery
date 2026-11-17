@@ -2,16 +2,17 @@
  * Karyana — Pickup & Delivery schedule constants.
  * Single source of truth. All times in America/Edmonton local.
  *
- * PICKUP:
- *   Mon–Sat: 4:00 PM – 6:00 PM
+ * PICKUP (see lib/checkout/pickup-windows.ts):
+ *   Mon–Sat: 4–6 PM, 6–8 PM, 7–9 PM
  *   Sunday:  1:00 PM – 3:00 PM
  *
  * DELIVERY:
  *   Tue–Sat: two windows → 6:00–8:00 PM, 7:00–9:00 PM (max 5 per slot)
  *   Sunday:  1:00–3:00 PM (max 10 per slot)
  *
- * NOTE: EVENING_ONLY below is currently on, so what is actually being offered
- * is 6 PM onwards. The definitions above are what comes back when it is off.
+ * PICKUP hours now live in lib/checkout/pickup-windows.ts, which is the one
+ * source the picker, the server and the lead-time check all read. The
+ * definitions here are kept for the delivery side.
  */
 
 import { isClosedDate } from "./closures";
@@ -91,7 +92,11 @@ export type DeliverySlotOption = {
 // Tuesday to Saturday. Sunday's only window is an afternoon one, so Sunday
 // delivery is withdrawn along with the rest — say the word and it moves to
 // the evening instead.
-const EVENING_ONLY = true;
+// Switched off. It was a temporary "6 PM onwards only" request, and the
+// side effect was that Sunday delivery disappeared: Sunday's only window is
+// an afternoon one, so filtering by start hour withdrew it. Karyana has
+// asked for Sunday 1-3 PM back on delivery as well as pickup.
+const EVENING_ONLY = false;
 const EVENING_FROM_HOUR = 18;
 const EVENING_PICKUP_END_HOUR = 20;
 

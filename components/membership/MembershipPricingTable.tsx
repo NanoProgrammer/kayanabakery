@@ -318,8 +318,8 @@ export function MembershipPricingTable({
 
       <p className="mt-10 text-center text-xs text-ink-soft">
   {locale === "es"
-    ? "100 pts = $1. Cancela cuando quieras. Artesano: primer año gratis. ¿Necesitas tu pedido antes de las 6 PM? Básico $8.99 • Artesano $4.99 • GRATIS con Selecto y Legendario."
-    : "100 pts = $1. Cancel anytime. Artesano: first year free. Need your order before 6 PM? Basic $8.99 • Artesano $4.99 • FREE with Selecto & Legendario."}
+    ? "Lo que pagas vuelve completo en puntos: 100 pts = $1. Cancela cuando quieras y conservas tus puntos. Artesano: primer año gratis. ¿Necesitas tu pedido antes de las 6 PM? Básico $8.99 • Artesano $4.99 • GRATIS con Selecto y Legendario."
+    : "What you pay comes back in full as points: 100 pts = $1. Cancel anytime and keep them. Artesano: first year free. Need your order before 6 PM? Basic $8.99 • Artesano $4.99 • FREE with Selecto & Legendario."}
     </p>
     </section>
   );

@@ -125,10 +125,12 @@ export type ProductRule = {
 
 export const PRODUCT_RULES: ProductRule[] = [
   {
-    // Strawberry and vanilla only, and it does not come in 10".
+    // Vanilla or strawberry, and ONE size. Its own product text says
+    // 10 x 4 inches, serves 12-15. ("no cambia de tamaño, de 10in" — I first
+    // read that as "not 10 inch" and had it backwards.)
     match: ["chocoflan"],
     label: "Chocoflán",
-    options: [SIZE(6, 8), FLAVOURS(VANILLA, STRAWBERRY)],
+    options: [FLAVOURS(VANILLA, STRAWBERRY)],
   },
   {
     // 6" or 8", and no flavour choice. Same as the Gourmet default, but

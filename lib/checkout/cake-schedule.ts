@@ -2,8 +2,11 @@
  * When a cake can be picked up or delivered.
  *
  * Cakes do not follow the bakery's ordinary slots. They come out of the
- * kitchen through the day, so they are offered on their own two-hourly
- * schedule from 11 AM, with 8 PM the last handover of the day.
+ * kitchen through the day, so they get their own four two-hour windows —
+ * 11–1, 1–3, 3–5, 5–7 — and those apply to DELIVERY as well as pickup.
+ *
+ * With several cakes in one order the longest notice wins, which is what
+ * noticeHoursFor already does by taking the maximum across the basket.
  *
  * And they need notice. A member's notice is Karyana's table
  * (lib/products/cake-lead-times.ts); someone ordering without an account
@@ -15,18 +18,46 @@
 import type { LeadTimeAudience } from "@/lib/products/cake-lead-times";
 import { leadTimeHours, leadTimeFor } from "@/lib/products/cake-lead-times";
 
-/** Every handover time offered for a cake, in 24-hour local time. */
-export const CAKE_SLOT_HOURS = [11, 13, 15, 17, 19, 20];
+/**
+ * The four windows a cake can be handed over in, pickup or delivery alike.
+ *
+ * Two hours each, 11 AM to 7 PM. Cakes do not use the bread schedule: they
+ * come out of the kitchen through the day, and they are the one thing the
+ * bakery will drive out in the afternoon.
+ */
+export const CAKE_WINDOWS: { startHour: number; endHour: number }[] = [
+  { startHour: 11, endHour: 13 },
+  { startHour: 13, endHour: 15 },
+  { startHour: 15, endHour: 17 },
+  { startHour: 17, endHour: 19 },
+];
+
+/** Kept as the opening hours, which is what the lead time is measured against. */
+export const CAKE_SLOT_HOURS = CAKE_WINDOWS.map((w) => w.startHour);
 
 /** The last handover of the day. Nothing is offered after it. */
-export const CAKE_LAST_HOUR = 20;
+export const CAKE_LAST_HOUR = CAKE_WINDOWS[CAKE_WINDOWS.length - 1].endHour;
+
+/** "11:00 AM – 1:00 PM" */
+export function cakeWindowLabel(w: { startHour: number; endHour: number }): string {
+  const fmt = (h: number) => {
+    const suffix = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:00 ${suffix}`;
+  };
+  return `${fmt(w.startHour)} – ${fmt(w.endHour)}`;
+}
 
 /** What someone with no account waits, whatever the cake is. */
 export const GUEST_CAKE_NOTICE_HOURS = 24;
 
 export type CakeSlot = {
-  /** Local hour, 24-hour clock. */
+  /** Local hour the window OPENS, 24-hour clock. */
   hour: number;
+  /** The hour it closes. */
+  endHour: number;
+  /** "11:00 AM – 1:00 PM" */
+  label: string;
   /** The day, as YYYY-MM-DD in bakery time. */
   day: string;
   /** Exact moment the handover happens. */
@@ -101,10 +132,19 @@ export function cakeSlots({
   for (let dayOffset = 0; dayOffset <= days; dayOffset++) {
     const dayStart = new Date(now.getTime() + dayOffset * 86_400_000);
     const day = bakeryDay(dayStart);
-    for (const hour of CAKE_SLOT_HOURS) {
-      const at = atBakeryHour(day, hour);
+    for (const w of CAKE_WINDOWS) {
+      // Measured from when the window OPENS. A customer who picks 11–1
+      // collects at 11, so that is the moment the kitchen has to be ready
+      // for — not 1.
+      const at = atBakeryHour(day, w.startHour);
       if (at.getTime() < earliest.getTime()) continue;
-      slots.push({ hour, day, at });
+      slots.push({
+        hour: w.startHour,
+        endHour: w.endHour,
+        label: cakeWindowLabel(w),
+        day,
+        at,
+      });
     }
   }
   return slots.sort((a, b) => a.at.getTime() - b.at.getTime());

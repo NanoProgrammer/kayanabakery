@@ -80,11 +80,28 @@ de $60 genera 60 / 120 / 240 / 300 puntos = $0.60 / $1.20 / $2.40 / $3.00.
 
 **El prepago y los puntos canjeables comparten hoy la misma columna.** La
 cuota de membresía se convierte en `pointsBalance`, mezclada con los puntos
-ganados por compra. Para cumplir F.2 hay que **separarlos antes de migrar**,
-y a partir de los `PointsTransaction` se puede reconstruir cuánto de cada
-saldo vino de un prepago. Esa reconstrucción es un requisito previo, no un
-detalle: sin ella no se puede garantizar que ninguna obligación pagada se
-borre.
+ganados por compra.
+
+**Esto ya está resuelto del lado técnico.** `lib/loyalty/balances.ts`
+reconstruye los dos saldos desde `PointsTransaction`, y
+`npm run report:balances` lo corre contra la base real — **solo lectura, no
+cambia nada**:
+
+- `BONUS` = dinero que el cliente pagó (cuota de membresía convertida a
+  puntos a valor nominal). **Es una obligación.**
+- Todo lo demás positivo (`EARNED`, `REFERRAL`, `BIRTHDAY`, `ADJUSTMENT`) =
+  puntos regalados por comprar. **Es un costo de marketing, no una deuda.**
+
+Un canje consume **los créditos más antiguos primero**, que es como se
+comporta un saldo de verdad y es el único reparto que no exige una decisión
+que nadie ha tomado. El reporte muestra además los dos extremos (si todo
+canje saliera del prepago, o si saliera de lo ganado) para que el rango sea
+visible en vez de supuesto.
+
+**El reporte también detecta cuentas cuyo saldo el libro no explica** — puntos
+que se movieron sin dejar registro. Ésas hay que resolverlas antes de
+migrar: reconstruir una de ellas le daría al cliente una obligación **menor**
+de la que realmente pagó.
 
 ---
 
@@ -161,6 +178,45 @@ Este límite es **independiente** del tope operativo de 10 referidos por
 ciclo. Tras el décimo, el miembro puede pedir una revisión personal para
 habilitar otro ciclo.
 
+### 2.5 Cambio solicitado: que un referido suba KLC «como si fuera una compra»
+
+**Pendiente de aprobación de Karina y Rubén. No implementado.**
+
+Santiago pidió (17-nov-2026) que referir suba los créditos KLC como si fuera
+una compra. Hay que separar dos cosas, porque una ya existe y la otra choca
+con una regla escrita:
+
+**Ya existe:** un referido convertido **sí sube KLC**, +2, en cuanto la
+persona referida hace su primera compra válida (sección 2.2). Eso ya está en
+el motor.
+
+**Choca con la adenda:** que cuente *como una compra propia* no se puede sin
+cambiar una regla que Karina y Rubén escribieron dos veces:
+
+> «No permitir que referidos o exploración sustituyan el requisito mínimo de
+> compras propias y en fechas distintas para categorías superiores;
+> particularmente Legendario requiere al menos cuatro compras personales
+> verificadas.»
+
+Si un referido cuenta como compra, esa protección desaparece: alguien podría
+llegar a Legendario sin haber comprado nunca.
+
+**Y un número que conviene mirar antes de decidir.** Con los valores de la
+adenda —+2 KLC por referido y tope de 6 KLC por 365 días— referir a 10
+personas da esto (calculado con el motor, no estimado):
+
+| | |
+| --- | --- |
+| 10 referidos convertidos | **6 KLC otorgados, 14 rechazados** |
+| Referidos que llegan a contar | **3 de 10** |
+| Nivel alcanzado con 10 referidos y 0 compras propias | **Artesano** |
+
+O sea: el tope operativo son 10 referidos por ciclo, pero **solo los 3
+primeros suben KLC**. Los otros 7 no mueven la aguja. Si la intención es
+premiar a quien trae 10 personas, **el tope de 6 es lo que hay que subir**,
+no la regla de las compras propias. Son dos decisiones distintas y conviene
+tomarlas por separado.
+
 ---
 
 ## 3. Integridad
@@ -205,8 +261,9 @@ compra para Legendario» — y no un número de créditos que ya tiene.
 
 **Trabajo técnico previo:**
 
-- Separar prepago de puntos canjeables reconstruyendo desde
-  `PointsTransaction` (sección 1.3). **Bloqueante para la migración.**
+- ~~Separar prepago de puntos canjeables~~ **hecho** (`lib/loyalty/balances.ts`,
+  `npm run report:balances`). Queda **correr el reporte contra producción** y
+  resolver las cuentas que salgan marcadas antes de migrar.
 - Sacar la tarifa neta real de Square de su panel; no está en esta base de
   datos (1.2.4).
 - Re-simular la distribución Básico/Artesano/Selecto/Legendario con la

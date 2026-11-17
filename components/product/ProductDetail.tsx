@@ -23,6 +23,7 @@ import { MembershipUpsellModal } from "@/components/membership/MembershipUpsellM
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics/gtag";
 import type { Product } from "@/types";
+import { withBuiltInOptions } from "@/lib/products/built-in-options";
 
 export function ProductDetail({ product }: { product: Product }) {
   const { t, locale } = useLocale();
@@ -35,7 +36,10 @@ export function ProductDetail({ product }: { product: Product }) {
 
   // Sizes and flavours. Required ones start on their first available choice so
   // the price on screen is a price somebody can actually pay.
-  const options: ProductOption[] = (product as any).options ?? [];
+  // Sanity's options, plus any the catalog is missing — the flavours were
+  // never written into Studio. The checkout fills them in from the same
+  // function, so what is offered here is what is validated and priced there.
+  const options: ProductOption[] = withBuiltInOptions(product as any);
   const [selection, setSelection] = useState<Record<string, string>>(() => {
     const start: Record<string, string> = {};
     for (const option of options) {

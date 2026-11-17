@@ -113,5 +113,34 @@ check(
   { kind: "success", redirect: "/checkout/success?order=KAR-202610-00042" }
 );
 
-console.log(`\n${passed} passed, ${failed} failed\n`);
-process.exit(failed > 0 ? 1 : 0);
+console.log("\n  an order the kitchen cannot make in time");
+check(
+  "the server's own sentence reaches the customer",
+  interpretCheckoutResponse({
+    ok: false,
+    status: 409,
+    body: JSON.stringify({
+      error: "LEAD_TIME",
+      message: "Your order needs 4 hours to prepare. The first available day is 2026-11-14.",
+      leadHours: 4,
+    }),
+  }),
+  { kind: "error", message: "Your order needs 4 hours to prepare. The first available day is 2026-11-14." }
+);
+check(
+  "...and not a bare code that reads as a crash",
+  (interpretCheckoutResponse({
+    ok: false,
+    status: 409,
+    body: JSON.stringify({ error: "LEAD_TIME", message: "needs 4 hours" }),
+  }) as any).message === "LEAD_TIME",
+  false
+);
+check(
+  "a LEAD_TIME with no sentence still says something",
+  (interpretCheckoutResponse({ ok: false, status: 409, body: JSON.stringify({ error: "LEAD_TIME" }) }) as any).message,
+  "LEAD_TIME"
+);
+
+console.log(`\n  ${passed} passed, ${failed} failed\n`);
+if (failed) process.exit(1);

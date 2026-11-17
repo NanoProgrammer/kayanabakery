@@ -54,6 +54,7 @@
     "test:address": "npx tsx scripts/test-address-choice.ts",
     "test:signedin": "npx tsx scripts/test-signed-in-redirect.ts",
     "test:cakes": "npx tsx scripts/test-cake-menu.ts",
+    "test:klc": "npx tsx scripts/test-klc.ts",
     "test:steps": "npx tsx scripts/test-checkout-steps.ts",
     "test:free-cake": "npx tsx scripts/test-free-cake.ts",
     "test:coupon-scope": "npx tsx scripts/test-coupon-scope.ts",

@@ -15,6 +15,12 @@ import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { cookies } from "next/headers";
 import type { Category, Product } from "@/types";
+import {
+  familyBySlug,
+  familyForProductName,
+  groupIntoFamilies,
+  unfiled,
+} from "@/lib/products/cake-families";
 
 export const revalidate = 60;
 
@@ -107,13 +113,76 @@ export default async function CategoryPage({
   const cookieStore = await cookies();
   const locale = cookieStore.get("karyana-lang")?.value === "es" ? "es" : "en";
 
-  const category = await sanityFetch<CategoryWithProducts | null>({
+  let category = await sanityFetch<CategoryWithProducts | null>({
     query: categoryBySlugQuery,
     params: { slug: slug.toLowerCase() },
     tags: ["category", "product"],
   });
 
+  // ── The four cake subcategories, when Sanity has none ──────────────
+  //
+  // They are meant to be categories created by `npm run cakes:setup:apply`,
+  // which has never been run — so /category/cakes found no children and fell
+  // back to one long grid of every cake, which is the thing Karyana has asked
+  // to change five times. The four are built into the code (see
+  // lib/products/cake-families.ts) and used only when Sanity has nothing;
+  // real categories, once they exist, take precedence and none of this runs.
+  const builtInFamily = familyBySlug(slug.toLowerCase());
+
+  if (builtInFamily && (!category || !category.products?.length)) {
+    // A family page: the cakes whose names belong to it, taken from the
+    // parent Cakes category.
+    const cakes = await sanityFetch<CategoryWithProducts | null>({
+      query: categoryBySlugQuery,
+      params: { slug: "cakes" },
+      tags: ["category", "product"],
+    }).catch(() => null);
+
+    const mine = (cakes?.products ?? []).filter(
+      (p: any) => familyForProductName(p.name)?.slug === builtInFamily.slug
+    );
+
+    if (mine.length) {
+      category = {
+        ...(category ?? ({} as CategoryWithProducts)),
+        _id: `builtin-${builtInFamily.slug}`,
+        name: builtInFamily.name,
+        nameEs: builtInFamily.nameEs,
+        tagline: builtInFamily.tagline,
+        taglineEs: builtInFamily.taglineEs,
+        slug: builtInFamily.slug,
+        products: mine,
+        children: [],
+        parent: { name: "Cakes", slug: "cakes" },
+      } as CategoryWithProducts;
+    }
+  }
+
   if (!category) notFound();
+
+  // On the Cakes page with no subcategories in Sanity, show the four built-in
+  // ones — but only those that actually have cakes behind them, so no card
+  // leads to an empty page.
+  const builtInChildren =
+    slug.toLowerCase() === "cakes" && !category.children?.length
+      ? groupIntoFamilies(category.products ?? [])
+          .filter((g) => g.products.length > 0)
+          .map((g) => ({
+            _id: `builtin-${g.family.slug}`,
+            name: g.family.name,
+            nameEs: g.family.nameEs,
+            slug: g.family.slug,
+            tagline: g.family.tagline,
+            taglineEs: g.family.taglineEs,
+            image: (g.products[0] as any)?.image,
+            productCount: g.products.length,
+          }))
+      : [];
+
+  // Cakes that match no family are still shown, so one that needs filing is
+  // visible rather than quietly missing from the shop.
+  const leftoverCakes =
+    builtInChildren.length > 0 ? unfiled(category.products ?? []) : (category.products ?? []);
 
   const name        = pickI18n(category, "name", locale);
   const tagline     = pickI18n(category, "tagline", locale);
@@ -201,10 +270,10 @@ export default async function CategoryPage({
       {/* Subcategories. A category that has them is a menu, not a shelf: Cakes
           leads to Tres Leches, Gourmet and Clásicos rather than listing every
           cake at once. Products filed directly here still show underneath. */}
-      {!!category.children?.length && (
+      {(!!category.children?.length || builtInChildren.length > 0) && (
         <section className="container-bakery pt-16 md:pt-20">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {category.children.map((child) => {
+            {(category.children?.length ? category.children : (builtInChildren as any)).map((child: any) => {
               const childName = pickI18n(child as any, "name", locale);
               const childTagline = pickI18n(child as any, "tagline", locale);
               return (
@@ -256,7 +325,7 @@ export default async function CategoryPage({
           are filed under Cakes too — so the four cards were buried and the
           page read as one undifferentiated grid. */}
       <section className="container-bakery py-16 md:py-20">
-        {category.children?.length ? null : !category.products?.length ? (
+        {category.children?.length ? null : !leftoverCakes.length ? (
           (
             <div className="py-12 text-center">
               <p className="text-ink/60">
@@ -268,7 +337,7 @@ export default async function CategoryPage({
           )
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {category.products.map((product) => (
+            {leftoverCakes.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}
           </div>

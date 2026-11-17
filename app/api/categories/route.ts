@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { client } from "@/lib/sanity/lib/client";
+import { CAKE_FAMILIES } from "@/lib/products/cake-families";
 
 /**
  * GET /api/categories
@@ -29,13 +30,31 @@ const QUERY = `*[_type == "category" && !defined(parent)] | order(displayOrder a
 
 export async function GET() {
   try {
-    const categories = await client.fetch(
+    const categories = await client.fetch<any[]>(
       QUERY,
       {},
       { next: { revalidate: 300 } }
     );
 
-    return NextResponse.json({ categories });
+    // The four cake subcategories are meant to be categories in Sanity,
+    // created by a setup script that has never been run — so the header
+    // submenu had nothing to show under Cakes. They are built into the code
+    // and filled in here only when Sanity has none; a real subcategory takes
+    // precedence. See lib/products/cake-families.ts.
+    const withCakeFamilies = (categories ?? []).map((cat: any) => {
+      if (cat?.slug !== "cakes" || cat?.children?.length) return cat;
+      return {
+        ...cat,
+        children: CAKE_FAMILIES.map((f) => ({
+          _id: `builtin-${f.slug}`,
+          slug: f.slug,
+          title: f.name,
+          titleEs: f.nameEs,
+        })),
+      };
+    });
+
+    return NextResponse.json({ categories: withCakeFamilies });
   } catch (err: any) {
     console.error("[api/categories]", err.message);
     return NextResponse.json(

@@ -35,11 +35,12 @@ import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calenda
 import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
 import { getServerLocale } from "@/lib/i18n/server";
 import { withBuiltInOptions } from "@/lib/products/built-in-options";
+import { checkDeliveryLeadTime, leadTimeMessage } from "@/lib/checkout/lead-time";
 import {
-  checkPickupLeadTime,
-  checkDeliveryLeadTime,
-  leadTimeMessage,
-} from "@/lib/checkout/lead-time";
+  findWindow,
+  atBakeryHour,
+  effectivePickupLeadHours,
+} from "@/lib/checkout/pickup-windows";
 
 async function reserveDeliverySlot({
   slotStartTime,
@@ -433,21 +434,49 @@ export async function POST(req: Request) {
     0
   );
 
-  if (leadHours > 0) {
-    const now = new Date();
-    const verdict =
-      data.fulfillmentType === "PICKUP"
-        ? checkPickupLeadTime({
-            dateStr: (data.pickupDate ?? "").slice(0, 10),
-            leadHours,
-            now,
-          })
-        : checkDeliveryLeadTime({
-            slotStart: deliverySlot!.startTime,
-            leadHours,
-            now,
-          });
+  if (data.fulfillmentType === "PICKUP") {
+    const dateStr = (data.pickupDate ?? "").slice(0, 10);
 
+    // The window the browser sent has to be one the bakery actually offers
+    // that day. Checking only the date would let a request name any hours
+    // it liked — Sunday has no 7-9 PM window, and nothing stopped an order
+    // claiming one.
+    const window = findWindow(dateStr, data.pickupTime);
+    if (!window) {
+      return NextResponse.json(
+        {
+          error: "BAD_PICKUP_WINDOW",
+          message: "That pickup time is not one we offer on that day.",
+          messageEs: "Ese horario de recolección no existe ese día.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Eight hours minimum on every pickup, or longer if something in the
+    // basket needs it.
+    const required = effectivePickupLeadHours(leadHours);
+    const opensAt = atBakeryHour(dateStr, window.startHour);
+    const verdict = checkDeliveryLeadTime({ slotStart: opensAt, leadHours: required, now: new Date() });
+
+    if (!verdict.ok) {
+      return NextResponse.json(
+        {
+          error: "LEAD_TIME",
+          message: leadTimeMessage(verdict, "en"),
+          messageEs: leadTimeMessage(verdict, "es"),
+          leadHours: required,
+          earliestDate: (verdict as any).earliestDate ?? null,
+        },
+        { status: 409 }
+      );
+    }
+  } else if (leadHours > 0) {
+    const verdict = checkDeliveryLeadTime({
+      slotStart: deliverySlot!.startTime,
+      leadHours,
+      now: new Date(),
+    });
     if (!verdict.ok) {
       return NextResponse.json(
         {

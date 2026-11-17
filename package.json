@@ -54,6 +54,7 @@
     "test:address": "npx tsx scripts/test-address-choice.ts",
     "test:signedin": "npx tsx scripts/test-signed-in-redirect.ts",
     "test:cakes": "npx tsx scripts/test-cake-menu.ts",
+    "test:pickup-windows": "npx tsx scripts/test-pickup-windows.ts",
     "test:lead-time": "npx tsx scripts/test-lead-time.ts",
     "test:balances": "npx tsx scripts/test-balances.ts",
     "report:balances": "npx tsx scripts/report-balances.ts",

@@ -20,16 +20,25 @@
  *
  * All times are America/Edmonton, like the rest of the schedule.
  */
+import { windowsForDate } from "./pickup-windows";
+
 const TZ = "America/Edmonton";
 
-/** The pickup window for a given day. Sunday is early; the shop shuts Mon-Sat at 6. */
+/**
+ * The pickup window for a given day: the EARLIEST one, since that is the
+ * soonest an order on that date could be collected.
+ *
+ * Read from lib/checkout/pickup-windows.ts rather than kept here. This file
+ * used to hold its own copy of the hours, which is how the picker and the
+ * server came to disagree about what a Friday looks like.
+ */
 export type PickupWindow = { startHour: number; endHour: number };
 
 export function pickupWindowFor(dateStr: string): PickupWindow | null {
-  const dow = dayOfWeek(dateStr);
-  if (dow === null) return null;
-  if (dow === 0) return { startHour: 13, endHour: 15 };
-  return { startHour: 16, endHour: 18 };
+  const windows = windowsForDate(dateStr);
+  if (!windows.length) return null;
+  const first = windows[0];
+  return { startHour: first.startHour, endHour: first.endHour };
 }
 
 /** 0 = Sunday … 6 = Saturday, for a YYYY-MM-DD in bakery time. */

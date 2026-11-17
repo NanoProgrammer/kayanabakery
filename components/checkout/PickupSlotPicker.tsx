@@ -1,75 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Calendar, Clock, Check } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, Check, Clock } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
-import { isClosedDate, closedDateLabel } from "@/lib/checkout/closures";
+import {
+  offeredPickupWindows,
+  effectivePickupLeadHours,
+  PICKUP_MIN_LEAD_HOURS,
+  type OfferedWindow,
+} from "@/lib/checkout/pickup-windows";
 
-type PickupDay = {
-  date: string;
-  dayLabel: string;
-  windowLabel: string;
-  closed: boolean;
-};
-
-function generatePickupDays(minLeadHours: number, locale = "en"): PickupDay[] {
-  const now = new Date();
-  const earliest = new Date(now.getTime() + minLeadHours * 60 * 60 * 1000);
-  const days: PickupDay[] = [];
-
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + i);
-    d.setHours(0, 0, 0, 0);
-    const dow = d.getDay();
-
-    let startH: number, endH: number;
-    if (dow === 0) {
-      startH = 13;
-      endH = 15;
-    } else if (dow >= 1 && dow <= 6) {
-      startH = 16;
-      endH = 18;
-    } else {
-      continue;
-    }
-
-    // Measured from when the window OPENS, not when it closes. Comparing
-    // against the end offered a 4-6 PM slot to someone whose order could
-    // not be ready until 5 — and they collect at 4. The server refuses
-    // these now; this stops them being shown in the first place.
-    const windowStart = new Date(d);
-    windowStart.setHours(startH, 0, 0, 0);
-    if (windowStart < earliest) continue;
-
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const closed = isClosedDate(dateStr);
-    const dayLabel = d.toLocaleDateString(locale === "es" ? "es-MX" : "en-CA", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-    });
-
-    const fmt = (h: number) => {
-      const p = h >= 12 ? "PM" : "AM";
-      const h12 = h > 12 ? h - 12 : h;
-      return `${h12}:00 ${p}`;
-    };
-
-    days.push({
-      date: dateStr,
-      closed,
-      dayLabel,
-      windowLabel: closed
-        ? closedDateLabel(dateStr, locale)
-        : `${fmt(startH)} – ${fmt(endH)}`,
-    });
-  }
-
-  return days;
-}
-
+/**
+ * Choosing when to collect an order.
+ *
+ * Monday to Saturday now has three windows, not one, so the day is no
+ * longer the whole choice — a day is picked, then a time within it.
+ *
+ * The windows come from lib/checkout/pickup-windows.ts, which is also what
+ * the server checks against. This component used to carry its own copy of
+ * the opening hours, and it had drifted: it offered a 4-6 PM slot to someone
+ * whose order could not be ready until 5, because it compared the lead time
+ * against when the window CLOSED.
+ */
 export function PickupSlotPicker({
   date,
   time,
@@ -84,80 +37,164 @@ export function PickupSlotPicker({
   minLeadHours?: number;
 }) {
   const { locale } = useLocale();
-  const [pickupDays, setPickupDays] = useState<PickupDay[]>([]);
+  const es = locale === "es";
 
-  // Generate client-side only to avoid SSR/hydration mismatch with new Date()
+  // Recomputed on the client only: the server and the browser can sit in
+  // different hours, and a window rendered on the server would be stale by
+  // the time anyone looked at it.
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    setPickupDays(generatePickupDays(minLeadHours, locale));
-  }, [minLeadHours, locale]);
+    setNow(new Date());
+    const tick = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(tick);
+  }, []);
 
-  function handleSelect(day: PickupDay) {
-    if (day.closed) return;
-    onDateChange(day.date);
-    onTimeChange(day.windowLabel);
+  const windows = useMemo(
+    () => (now ? offeredPickupWindows({ now, itemLeadHours: minLeadHours }) : []),
+    [now, minLeadHours]
+  );
+
+  const days = useMemo(() => {
+    const byDate = new Map<string, OfferedWindow[]>();
+    for (const w of windows) {
+      if (!byDate.has(w.date)) byDate.set(w.date, []);
+      byDate.get(w.date)!.push(w);
+    }
+    return [...byDate.entries()].map(([d, list]) => ({ date: d, windows: list }));
+  }, [windows]);
+
+  // Clear a choice that is no longer on offer — an hour spent on the page
+  // can take the selected window past its lead time, and leaving it selected
+  // would send the server something it is about to refuse.
+  useEffect(() => {
+    if (!now || !date) return;
+    const stillThere = windows.some((w) => w.date === date && (!time || w.label === time));
+    if (!stillThere) {
+      onDateChange("");
+      onTimeChange("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windows, now]);
+
+  const required = effectivePickupLeadHours(minLeadHours);
+  const selectedDay = days.find((d) => d.date === date);
+
+  function dayLabel(d: string) {
+    const [y, m, day] = d.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, day, 12)).toLocaleDateString(
+      es ? "es-MX" : "en-CA",
+      { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" }
+    );
   }
 
-  if (pickupDays.length === 0) {
+  if (!now) {
     return (
       <div className="rounded-2xl border border-canela/15 bg-cream p-4 text-sm text-ink-soft">
-        {locale === "es"
-          ? "No hay horarios de recolección disponibles ahora."
-          : "No pickup times available right now."}
+        {es ? "Cargando horarios…" : "Loading times…"}
+      </div>
+    );
+  }
+
+  if (!days.length) {
+    return (
+      <div className="rounded-2xl border border-canela/15 bg-cream p-4 text-sm text-ink-soft">
+        {es
+          ? "No hay horarios de recolección disponibles para este pedido."
+          : "There are no pickup times available for this order."}
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {minLeadHours > 0 && (
-        <p className="mb-3 text-xs text-ink-soft">
-          ⏱{" "}
-          {locale === "es"
-            ? `Algunos productos requieren ${minLeadHours}h de anticipación.`
-            : `Some items need ${minLeadHours}h advance notice.`}
+    <div className="space-y-4">
+      <p className="rounded-2xl border border-canela/20 bg-canela-light px-4 py-3 text-xs text-ink">
+        {required > PICKUP_MIN_LEAD_HOURS
+          ? es
+            ? `Tu pedido necesita ${required}h de preparación.`
+            : `Your order needs ${required}h to prepare.`
+          : es
+          ? `Las recolecciones se piden con ${PICKUP_MIN_LEAD_HOURS}h de anticipación.`
+          : `Pickups need ${PICKUP_MIN_LEAD_HOURS}h advance notice.`}
+      </p>
+
+      <div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+          {es ? "Día" : "Day"}
         </p>
-      )}
-      <div className="grid gap-2 sm:grid-cols-2">
-        {pickupDays.map((day) => {
-          const isSelected = !day.closed && date === day.date;
-          return (
-            <button
-              type="button"
-              key={day.date}
-              disabled={day.closed}
-              onClick={() => handleSelect(day)}
-              className={cn(
-                "flex items-center gap-3 rounded-2xl border p-4 text-left transition-all",
-                day.closed
-                  ? "cursor-not-allowed border-canela/15 bg-cream/50 text-ink-soft opacity-60"
-                  : isSelected
-                  ? "border-canela-dark bg-canela-light"
-                  : "border-canela/30 bg-cream hover:border-canela"
-              )}
-            >
-              <div
+        <div className="grid gap-2 sm:grid-cols-2">
+          {days.map((d) => {
+            const isSelected = date === d.date;
+            return (
+              <button
+                type="button"
+                key={d.date}
+                onClick={() => {
+                  onDateChange(d.date);
+                  // One window that day is not a choice; take it.
+                  onTimeChange(d.windows.length === 1 ? d.windows[0].label : "");
+                }}
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-full",
-                  isSelected ? "bg-canela-dark text-cream" : "bg-canela-light"
+                  "flex items-center gap-3 rounded-2xl border p-4 text-left transition-all",
+                  isSelected
+                    ? "border-canela-dark bg-canela-light"
+                    : "border-canela/30 bg-cream hover:border-canela"
                 )}
               >
-                {isSelected ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Calendar className="h-4 w-4" />
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{day.dayLabel}</p>
-                <p className="flex items-center gap-1 text-xs text-ink-soft">
-                  <Clock className="h-3 w-3" />
-                  {day.windowLabel}
-                </p>
-              </div>
-            </button>
-          );
-        })}
+                <div
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-full",
+                    isSelected ? "bg-canela-dark text-cream" : "bg-canela-light"
+                  )}
+                >
+                  {isSelected ? <Check className="h-4 w-4" /> : <Calendar className="h-4 w-4" />}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{dayLabel(d.date)}</p>
+                  <p className="text-xs text-ink-soft">
+                    {d.windows.length}{" "}
+                    {es
+                      ? d.windows.length === 1
+                        ? "horario"
+                        : "horarios"
+                      : d.windows.length === 1
+                      ? "time"
+                      : "times"}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {selectedDay && (
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-ink-soft">
+            {es ? "Horario" : "Time"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {selectedDay.windows.map((w) => {
+              const isSelected = time === w.label;
+              return (
+                <button
+                  type="button"
+                  key={w.label}
+                  onClick={() => onTimeChange(w.label)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition",
+                    isSelected
+                      ? "border-canela-dark bg-canela-light font-medium"
+                      : "border-canela/30 bg-cream hover:border-canela"
+                  )}
+                >
+                  <Clock className="h-3.5 w-3.5 text-canela-dark" />
+                  {w.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

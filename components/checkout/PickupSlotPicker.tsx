@@ -35,9 +35,13 @@ function generatePickupDays(minLeadHours: number, locale = "en"): PickupDay[] {
       continue;
     }
 
-    const windowEnd = new Date(d);
-    windowEnd.setHours(endH, 0, 0, 0);
-    if (windowEnd <= earliest) continue;
+    // Measured from when the window OPENS, not when it closes. Comparing
+    // against the end offered a 4-6 PM slot to someone whose order could
+    // not be ready until 5 — and they collect at 4. The server refuses
+    // these now; this stops them being shown in the first place.
+    const windowStart = new Date(d);
+    windowStart.setHours(startH, 0, 0, 0);
+    if (windowStart < earliest) continue;
 
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const closed = isClosedDate(dateStr);

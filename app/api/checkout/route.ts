@@ -35,6 +35,11 @@ import { getCalendar, KARYANA_CALENDAR_ID, TIMEZONE } from "@/lib/google/calenda
 import { syncOrderCompleted, syncGuestOrder } from "@/lib/brevo/sync";
 import { getServerLocale } from "@/lib/i18n/server";
 import { withBuiltInOptions } from "@/lib/products/built-in-options";
+import {
+  checkPickupLeadTime,
+  checkDeliveryLeadTime,
+  leadTimeMessage,
+} from "@/lib/checkout/lead-time";
 
 async function reserveDeliverySlot({
   slotStartTime,
@@ -411,6 +416,50 @@ export async function POST(req: Request) {
     if (tier === "ARTESANO") prioritySlotFeeCents = deliverySlot.feeCentsArtesano ?? 0;
     else if (tier === "BASICO") prioritySlotFeeCents = deliverySlot.feeCentsBasico ?? 0;
     // SELECTO, LEGENDARIO, EMBAJADOR: 0
+  }
+
+  // ── Production time ────────────────────────────────────────────────
+  //
+  // The kitchen needs notice, and until now nothing on the server checked
+  // it: the browser was the only guard, so a page left open, a stale cache
+  // or a request built by hand walked straight past. An order came in for a
+  // same-day 4 PM pickup on items needing hours of preparation.
+  //
+  // The window is derived from the date here, never from the label the
+  // browser sent — that label is exactly what a forged order would lie
+  // about.
+  const leadHours = products.reduce(
+    (max, p) => Math.max(max, Number(p.leadTime ?? 0) || 0),
+    0
+  );
+
+  if (leadHours > 0) {
+    const now = new Date();
+    const verdict =
+      data.fulfillmentType === "PICKUP"
+        ? checkPickupLeadTime({
+            dateStr: (data.pickupDate ?? "").slice(0, 10),
+            leadHours,
+            now,
+          })
+        : checkDeliveryLeadTime({
+            slotStart: deliverySlot!.startTime,
+            leadHours,
+            now,
+          });
+
+    if (!verdict.ok) {
+      return NextResponse.json(
+        {
+          error: "LEAD_TIME",
+          message: leadTimeMessage(verdict, "en"),
+          messageEs: leadTimeMessage(verdict, "es"),
+          leadHours,
+          earliestDate: (verdict as any).earliestDate ?? null,
+        },
+        { status: 409 }
+      );
+    }
   }
 
   const pricing = computePricing({

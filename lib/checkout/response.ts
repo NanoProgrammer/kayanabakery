@@ -42,6 +42,13 @@ export function interpretCheckoutResponse(input: {
     if (data.code === "PAID_NOT_SAVED" || data.paid === true) {
       return { kind: "unconfirmed", reference: typeof data.paymentId === "string" ? data.paymentId : "" };
     }
+    // The kitchen cannot make it in time. The server says how long it
+    // needs and the first day that works, and that sentence is what the
+    // customer should see — not "Checkout failed", which tells them
+    // nothing and reads as the site being broken.
+    if (data.error === "LEAD_TIME" && typeof data.message === "string") {
+      return { kind: "error", message: data.message };
+    }
     return {
       kind: "error",
       message: typeof data.error === "string" && data.error ? data.error : "Checkout failed",

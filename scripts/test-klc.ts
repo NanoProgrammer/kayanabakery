@@ -101,10 +101,17 @@ check(
 );
 
 console.log("\n  product families, for exploration");
+// The shop's real category slugs, read off the site on 17 Nov 2026.
 check("conchas", familyForCategories(["conchas"]), "CONCHAS_PAN_DULCE");
+check("traditional-mexican-bread", familyForCategories(["traditional-mexican-bread"]), "PAN_TRADICIONAL");
+check("churros", familyForCategories(["churros"]), "POSTRES");
+check("cakes", familyForCategories(["cakes"]), "PASTELES");
+// A box can hold items from several families. Crediting it as one would
+// pick a family arbitrarily; as all four would give 4 KLC for one purchase.
+check("boxes belong to no family until Karyana decides", familyForCategories(["boxes"]), null);
 check("pan dulce", familyForCategories(["pan-dulce"]), "CONCHAS_PAN_DULCE");
 check("a tres leches is a cake", familyForCategories(["cakes", "tres-leches"]), "PASTELES");
-check("gelatinas are desserts", familyForCategories(["gelatinas-y-flanes"]), "POSTRES");
+check("gelatinas sit under cakes, which is where the shop files them", familyForCategories(["gelatinas-y-flanes"]), "PASTELES");
 // A product in no family earns nothing rather than being guessed into one.
 check("an unmapped category earns no family", familyForCategories(["decoraciones"]), null);
 check("no categories, no family", familyForCategories([]), null);

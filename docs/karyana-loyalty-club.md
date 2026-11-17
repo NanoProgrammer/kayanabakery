@@ -127,12 +127,20 @@ registrarse es un sistema aparte, con sus propias reglas, y no se toca.
 
 **+1 KLC** la primera vez que el miembro compra de cada familia:
 
-| Familia | Slugs del catálogo (**mapeo inicial, por confirmar**) |
+| Familia | Slug real del catálogo |
 | --- | --- |
-| (a) Conchas y pan dulce | `conchas`, `pan-dulce` |
-| (b) Pan tradicional y de temporada | `pan`, `pan-tradicional`, `temporada`, `seasonal` |
-| (c) Pasteles y celebraciones | `cakes`, `tres-leches`, `gourmet`, `clasicos`, `celebraciones` |
-| (d) Postres y especialidades | `postres`, `gelatinas-y-flanes`, `especialidades`, `desserts` |
+| (a) Conchas y pan dulce | `conchas` |
+| (b) Pan tradicional y de temporada | `traditional-mexican-bread` |
+| (c) Pasteles y celebraciones | `cakes` (se muestra como «Confectionery») |
+| (d) Postres y especialidades | `churros` |
+
+Leído del sitio el 17-nov-2026. Las categorías reales de la tienda son
+`conchas`, `cakes`, `churros`, `traditional-mexican-bread` y `boxes`.
+
+**PENDIENTE: `boxes`.** Una caja puede llevar productos de varias familias.
+Acreditarla como una sola familia sería elegir una arbitrariamente;
+acreditarla como las cuatro daría 4 KLC por una sola compra. Hoy no cuenta
+para ninguna. Lo tiene que decidir Karyana.
 
 Una familia se reconoce **una sola vez**, por muchos sabores que se prueben.
 Un producto que no cae en ninguna familia **no genera crédito**, en vez de
@@ -192,7 +200,8 @@ compra para Legendario» — y no un número de créditos que ya tiene.
 - Política de envío y prioridad, y corregir la página según 1.2.5.
 - Techo del costo total de beneficios (puntos + regalo + envío incremental +
   promociones).
-- Confirmar el mapeo de familias de 2.3 contra el catálogo real.
+- Decidir qué hacer con `boxes` en el mapeo de familias de 2.3 (único punto
+  que queda abierto: el resto ya está confirmado contra el catálogo real).
 
 **Trabajo técnico previo:**
 

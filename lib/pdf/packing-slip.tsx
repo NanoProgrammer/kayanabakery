@@ -1,6 +1,7 @@
 import { renderToStream } from "@react-pdf/renderer";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { PackingSlipPDF, type PackingSlipData } from "@/lib/pdf/packing-slip-pdf";
+import { karyanaMakesThisCake, slipNote } from "@/lib/membership/legendario-cake";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.karyanabakery.ca";
 
@@ -27,6 +28,45 @@ const ORDER_FIELDS = `{
   orderNumber, customerName, customerPhone, customerEmail, customerTier,
   fulfillmentType, deliveryAddress, pickupDate, notes, items, createdAt
 }`;
+
+/**
+ * The customer's birthday, for the Legendario cake promise.
+ *
+ * Not on the Sanity order — looked up by email, the same way the tier is.
+ * No account, or no birthday on file, simply means the quieter note.
+ */
+async function resolveBirthday(order: {
+  customerEmail?: string | null;
+}): Promise<Date | null> {
+  if (!order.customerEmail) return null;
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const user = await prisma.user.findUnique({
+      where: { email: order.customerEmail.toLowerCase() },
+      select: { birthday: true },
+    });
+    return user?.birthday ?? null;
+  } catch {
+    // A slip that prints without the birthday beats one that does not print.
+    return null;
+  }
+}
+
+/**
+ * The handover date as a real Date.
+ *
+ * `pickupDate` on the Sanity order is a human label — "Friday, Nov 13 ·
+ * 4:00 PM" — which Date() cannot read. Falling back to when the order was
+ * placed keeps the birthday check working instead of silently never firing.
+ */
+function handoverDate(order: { pickupDate?: string | null; createdAt?: string | null }): Date | null {
+  for (const candidate of [order.pickupDate, order.createdAt]) {
+    if (!candidate) continue;
+    const parsed = new Date(candidate);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return null;
+}
 
 /**
  * The customer's plan, for the badge the kitchen reads priority off.
@@ -105,6 +145,16 @@ export async function buildPackingSlipPdf(
       options: it.options ?? null,
     })),
     note: order.notes ?? null,
+    // Worked out here, where the tier and the items are both already in
+    // hand, so the printer agent needs to know nothing about memberships.
+    karyanaCakeNote: slipNote(
+      karyanaMakesThisCake({
+        tier: await resolveTier(order),
+        items: (order.items || []).map((it: any) => ({ name: it.name, slug: it.slug ?? null })),
+        birthday: await resolveBirthday(order),
+        handover: handoverDate(order),
+      })
+    ),
     logoUrl: `${APP_URL}/logo-print.jpg`,
   };
 

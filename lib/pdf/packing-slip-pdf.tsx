@@ -56,6 +56,20 @@ const styles = StyleSheet.create({
   },
   // Outlined rather than filled, so it reads as a label beside the black
   // pickup/delivery badge instead of competing with it.
+  karyanaBanner: {
+    marginTop: 6,
+    marginBottom: 2,
+    borderWidth: 2,
+    borderColor: "#000",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  karyanaBannerText: {
+    fontSize: 10,
+    fontWeight: 700,
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
   tierBadge: {
     fontSize: 8,
     fontWeight: 700,
@@ -183,6 +197,8 @@ export type PackingSlipData = {
   shippingAddress?: string | null;
   items: { name: string; quantity: number; options?: string | null }[];
   note?: string | null;
+  /** "KARYANA MAKES THIS CAKE" — the Legendario promise, for the kitchen. */
+  karyanaCakeNote?: string | null;
   logoUrl: string;
 };
 
@@ -264,6 +280,15 @@ export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
             </View>
           ))}
         </View>
+
+        {/* The Legendario promise. Its own banner rather than a line in the
+            customer note: the note is skimmed, and this is the one thing on
+            the slip that changes WHO makes the order. */}
+        {data.karyanaCakeNote && (
+          <View style={styles.karyanaBanner}>
+            <Text style={styles.karyanaBannerText}>{data.karyanaCakeNote}</Text>
+          </View>
+        )}
 
         {/* Customer note — always shown, even blank, so there's room to
             write one by hand on the printed slip if there isn't one on file */}

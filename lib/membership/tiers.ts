@@ -49,6 +49,9 @@ export interface TierBenefits {
   autoMonthlyPromos: boolean;
   partnerDiscounts: boolean;
 
+  /** Karyana makes this member's cake herself. */
+  karyanaMakesYourCake: boolean;
+
   // Points
   pointsMultiplier: number;
 
@@ -86,6 +89,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     autoMonthlyPromos: false,
     partnerDiscounts: false,
 
+    karyanaMakesYourCake: false,
     pointsMultiplier: 1,
 
     paidForDelivery: false,
@@ -120,6 +124,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     autoMonthlyPromos: true,
     partnerDiscounts: true,
 
+    karyanaMakesYourCake: false,
     pointsMultiplier: 2,
 
     paidForDelivery: false,
@@ -154,6 +159,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     autoMonthlyPromos: true,
     partnerDiscounts: true,
 
+    karyanaMakesYourCake: false,
     pointsMultiplier: 4,
 
     paidForDelivery: false,
@@ -188,6 +194,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     autoMonthlyPromos: true,
     partnerDiscounts: true,
 
+    karyanaMakesYourCake: true,
     pointsMultiplier: 5,
 
     paidForDelivery: false,
@@ -222,6 +229,7 @@ export const TIERS: Record<MembershipTier, TierBenefits> = {
     autoMonthlyPromos: true,
     partnerDiscounts: true,
 
+    karyanaMakesYourCake: true,
     pointsMultiplier: 10,
 
     paidForDelivery: true,

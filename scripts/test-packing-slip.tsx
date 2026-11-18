@@ -153,6 +153,39 @@ console.log("\n5. Delivery slips too\n");
   check("the badge survives a delivery slip", has(delivery, "Legendario"));
   check("alongside the delivery marking", has(delivery, "Delivery"));
 
+
+  console.log("\nThe Legendario cake banner\n");
+
+  // A promise the kitchen cannot see is a promise that does not happen.
+  const birthdaySlip = await textFor({
+    ...base,
+    customerTier: "LEGENDARIO",
+    items: [{ name: "3 Leches Tiramisu", quantity: 1 }],
+    karyanaCakeNote: "BIRTHDAY CAKE — KARYANA MAKES THIS ONE",
+  });
+  // The extractor concatenates text runs without spaces, so these look for
+  // the phrase with whitespace removed.
+  const squashed = (t: string) => t.replace(/\s+/g, "").toUpperCase();
+  check(
+    "the birthday banner is on the printed slip",
+    squashed(birthdaySlip).includes("KARYANAMAKESTHISONE")
+  );
+  check("...and says it is a birthday cake", squashed(birthdaySlip).includes("BIRTHDAYCAKE"));
+
+  const plainSlip = await textFor({
+    ...base,
+    customerTier: "LEGENDARIO",
+    items: [{ name: "Chocoflan", quantity: 1 }],
+    karyanaCakeNote: "LEGENDARIO — KARYANA MAKES THIS CAKE",
+  });
+  check("a plain Legendario cake still prints the note", squashed(plainSlip).includes("KARYANAMAKESTHISCAKE"));
+
+  const noneSlip = await textFor({ ...base, customerTier: "SELECTO", karyanaCakeNote: null });
+  // "MAKESTHIS" cannot come from the header, which carries the bakery name.
+  check("nobody else gets it", !squashed(noneSlip).includes("MAKESTHIS"));
+  const emptySlip = await textFor({ ...base, karyanaCakeNote: undefined });
+  check("an order without it prints nothing extra", !squashed(emptySlip).includes("MAKESTHIS"));
+
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed > 0 ? 1 : 0);
 }

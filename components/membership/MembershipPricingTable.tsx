@@ -160,6 +160,15 @@ export function MembershipPricingTable({
             // subscription, and listing a free loaf alongside that muddled
             // what people were actually buying.
             {
+              // The one perk that changes WHO makes the order, not what it
+              // costs. Worth its own line.
+              ok: data.karyanaMakesYourCake,
+              label:
+                locale === "es"
+                  ? "Karyana hace tu pastel de cumpleaños"
+                  : "Karyana makes your birthday cake",
+            },
+            {
               ok: data.autoMonthlyPromos,
               label:
                 locale === "es"

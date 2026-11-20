@@ -37,7 +37,26 @@ export function CategoryDropdown({
   );
   // Which parent row the pointer is on, so its subcategories can open beside
   // the menu instead of being listed inside it.
+  //
+  // Closing is delayed. The arrow sits at the right edge of the row, so the
+  // natural move is rightwards — and that crossed a gap between the menu and
+  // the panel, which cleared the hover before the pointer arrived. The
+  // submenu never opened. The gap is gone and the close waits long enough to
+  // cross whatever is left.
   const [hovered, setHovered] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function holdOpen(id: string) {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setHovered(id);
+  }
+  function scheduleClose() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setHovered(null), 200);
+  }
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
   const ref = useRef<HTMLDivElement>(null);
 
   const submenu = categories.find(
@@ -153,9 +172,9 @@ export function CategoryDropdown({
                 // beside it instead, and clicking the parent goes to its page,
                 // where the subcategories are laid out as cards to choose
                 // from. onFocus/onBlur so a keyboard reaches them too.
-                onMouseEnter={() => hasChildren && setHovered(cat._id)}
-                onMouseLeave={() => hasChildren && setHovered((h) => (h === cat._id ? null : h))}
-                onFocus={() => hasChildren && setHovered(cat._id)}
+                onMouseEnter={() => (hasChildren ? holdOpen(cat._id) : scheduleClose())}
+                onMouseLeave={() => hasChildren && scheduleClose()}
+                onFocus={() => hasChildren && holdOpen(cat._id)}
               >
                 <Link
                   href={`/category/${cat.slug}`}
@@ -189,9 +208,11 @@ export function CategoryDropdown({
           closing under it. */}
       {submenu && (
         <div
-          onMouseEnter={() => setHovered(submenu._id)}
-          onMouseLeave={() => setHovered(null)}
-          className="ml-2 w-60 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl"
+          onMouseEnter={() => holdOpen(submenu._id)}
+          onMouseLeave={scheduleClose}
+          // No left margin: a gap here is what the pointer fell into. The
+          // panel starts where the menu ends.
+          className="w-60 overflow-hidden rounded-2xl border border-canela/15 bg-cream shadow-xl"
         >
           <p className="border-b border-canela/10 px-4 py-3 text-xs font-bold uppercase tracking-widest text-canela-dark">
             {categoryDisplayName(submenu, locale)}

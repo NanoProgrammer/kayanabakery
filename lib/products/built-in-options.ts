@@ -83,6 +83,35 @@ function keyOf(option: ProductOption): string {
   return k?.current ?? "";
 }
 
+/**
+ * What an option IS, for deciding whether the catalogue already has one.
+ *
+ * Not the key alone. An option in Studio can be named "Size" with the key
+ * field left empty, and matching on the key then saw no size option and
+ * added a built-in one on top — so the product page showed SIZE twice, the
+ * real one with its prices and a second with none. The name is the fallback,
+ * in both languages.
+ */
+const NAME_TO_KEY: Record<string, string> = {
+  size: "size",
+  tamano: "size",
+  tamaño: "size",
+  flavour: "flavour",
+  flavor: "flavour",
+  sabor: "flavour",
+};
+
+export function optionIdentity(option: ProductOption): string {
+  const key = keyOf(option).trim().toLowerCase();
+  if (key) return key;
+  const name = (option.name ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  return NAME_TO_KEY[name] ?? name;
+}
+
 function toProductOption(option: BuiltInOption): ProductOption {
   return {
     name: option.name,
@@ -119,7 +148,9 @@ export function withBuiltInOptions(product: {
   const builtIn = BUILT_IN_OPTIONS[slug];
   if (!builtIn?.length) return fromSanity;
 
-  const present = new Set(fromSanity.map(keyOf).filter(Boolean));
+  // Identified by key, or by name when the key was never filled in.
+  // Dropping the empty keys here is what produced two SIZE blocks.
+  const present = new Set(fromSanity.map(optionIdentity).filter(Boolean));
   const missing = builtIn.filter((o) => !present.has(o.key)).map(toProductOption);
   return [...fromSanity, ...missing];
 }

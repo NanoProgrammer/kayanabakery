@@ -7,7 +7,7 @@
  * already carry price differences Karyana typed into Studio — a 10" at
  * +$20 on the live site today. Sanity must win every time.
  */
-import { withBuiltInOptions, BUILT_IN_OPTIONS } from "../lib/products/built-in-options";
+import { withBuiltInOptions, BUILT_IN_OPTIONS, optionIdentity } from "../lib/products/built-in-options";
 
 let passed = 0;
 let failed = 0;
@@ -87,6 +87,36 @@ check(
   keys(withBuiltInOptions({ slug: "bloom-cake", options: [liveSizes as any] })),
   ["size"]
 );
+
+console.log("\n  the duplicate SIZE on the product page");
+// Reported from the live site: a cake showed SIZE twice, the real one with
+// its prices and a second, priceless one underneath. The Studio option was
+// named "Size" with the key field left empty, so matching on the key alone
+// saw no size option and added one on top.
+const keylessSize = {
+  name: "Size",
+  choices: [
+    { label: '6"', priceDelta: -1000 },
+    { label: '8"', priceDelta: 0 },
+    { label: '10"', priceDelta: 2000 },
+  ],
+} as any;
+const once = withBuiltInOptions({ slug: "classic-3-leches", options: [keylessSize] });
+check("a keyless Size option is recognised", once.length, 1);
+check("...and it is the one from Studio, with its prices", (once[0] as any).choices[2].priceDelta, 2000);
+check("the Spanish name counts too", withBuiltInOptions({ slug: "classic-3-leches", options: [{ name: "Tamaño", choices: [] } as any] }).length, 1);
+check("...unaccented as well", withBuiltInOptions({ slug: "classic-3-leches", options: [{ name: "Tamano", choices: [] } as any] }).length, 1);
+check("lower case counts", withBuiltInOptions({ slug: "classic-3-leches", options: [{ name: "size", choices: [] } as any] }).length, 1);
+check("a keyless Flavour blocks the built-in flavour", withBuiltInOptions({ slug: "chocoflan", options: [{ name: "Sabor", choices: [] } as any] }).length, 1);
+// An unrelated option must NOT block a size.
+check(
+  "an unrelated keyless option does not block it",
+  withBuiltInOptions({ slug: "classic-3-leches", options: [{ name: "Message on top", choices: [] } as any] }).length,
+  2
+);
+check("identity from the key when there is one", optionIdentity({ key: { current: "size" }, name: "Whatever" } as any), "size");
+check("identity from the name when there is not", optionIdentity({ name: "Tamaño" } as any), "size");
+check("an unknown name is its own identity", optionIdentity({ name: "Message" } as any), "message");
 
 console.log("\n  everything built in is free");
 const allChoices = Object.values(BUILT_IN_OPTIONS)

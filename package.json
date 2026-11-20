@@ -54,6 +54,7 @@
     "test:address": "npx tsx scripts/test-address-choice.ts",
     "test:signedin": "npx tsx scripts/test-signed-in-redirect.ts",
     "test:cakes": "npx tsx scripts/test-cake-menu.ts",
+    "test:gallery": "npx tsx scripts/test-gallery.ts",
     "test:legendario-cake": "npx tsx scripts/test-legendario-cake.ts",
     "test:pickup-windows": "npx tsx scripts/test-pickup-windows.ts",
     "test:lead-time": "npx tsx scripts/test-lead-time.ts",

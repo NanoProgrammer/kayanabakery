@@ -24,6 +24,13 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics/gtag";
 import type { Product } from "@/types";
 import { withBuiltInOptions } from "@/lib/products/built-in-options";
+import {
+  initialGallery,
+  pickThumbnail,
+  optionChanged,
+  visibleImage,
+  highlightedIndex,
+} from "@/lib/products/gallery";
 
 export function ProductDetail({ product }: { product: Product }) {
   const { t, locale } = useLocale();
@@ -31,7 +38,9 @@ export function ProductDetail({ product }: { product: Product }) {
   const tier = ((session?.user as any)?.tier ?? "BASICO") as MembershipTier;
 
   const [qty, setQty] = useState(1);
-  const [activeImg, setActiveImg] = useState(0);
+  // Which picture is on screen, and whether the customer chose it. A
+  // deliberate click beats the option's own image; see lib/products/gallery.ts.
+  const [gallery, setGallery] = useState(initialGallery);
   const [showUpsell, setShowUpsell] = useState(false);
 
   // Sizes and flavours. Required ones start on their first available choice so
@@ -85,6 +94,9 @@ export function ProductDetail({ product }: { product: Product }) {
   const isUnavailable = !product.inStock && !product.isOffSeason;
 
   const images = [product.image, ...(product.gallery || [])].filter(Boolean);
+
+  const shownImage = visibleImage({ images, choiceImage, state: gallery });
+  const ringed = highlightedIndex({ images, choiceImage, state: gallery });
 
   useEffect(() => {
     trackEvent("view_item", {
@@ -155,9 +167,9 @@ export function ProductDetail({ product }: { product: Product }) {
         {/* Gallery */}
         <div>
           <div className="relative aspect-square overflow-hidden rounded-3xl bg-canela-light">
-            {(choiceImage ?? images[activeImg]) && (
+            {shownImage && (
               <Image
-                src={urlFor(choiceImage ?? images[activeImg]).width(900).height(900).url()}
+                src={urlFor(shownImage).width(900).height(900).url()}
                 alt={name}
                 fill
                 priority
@@ -190,10 +202,10 @@ export function ProductDetail({ product }: { product: Product }) {
               {images.map((img, i) => (
                 <button
                   key={i}
-                  onClick={() => setActiveImg(i)}
+                  onClick={() => setGallery(pickThumbnail(i))}
                   className={cn(
                     "relative h-20 w-20 overflow-hidden rounded-xl border-2 transition-all",
-                    activeImg === i
+                    ringed === i
                       ? "border-canela-dark"
                       : "border-transparent hover:border-canela/50"
                   )}
@@ -254,14 +266,18 @@ export function ProductDetail({ product }: { product: Product }) {
           <ProductOptions
             options={options}
             selection={selection}
-            onChange={(key, label) =>
+            onChange={(key, label) => {
+              // Changing an option is the deliberate act now, so the
+              // option's own picture takes the gallery back from whatever
+              // thumbnail was clicked before.
+              setGallery(optionChanged());
               setSelection((current) => {
                 const next = { ...current };
                 if (label) next[key] = label;
                 else delete next[key];
                 return next;
-              })
-            }
+              });
+            }}
           />
 
           {/* How many people the CHOSEN size feeds. The line above this one

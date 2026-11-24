@@ -41,6 +41,7 @@ import {
   atBakeryHour,
   effectivePickupLeadHours,
 } from "@/lib/checkout/pickup-windows";
+import { orderLeadHours, orderIsReadyNow } from "@/lib/products/ready-now";
 
 /**
  * The categories whose products follow the cake schedule. A cake in the
@@ -132,6 +133,10 @@ const schema = z.object({
   couponCode: field.code.optional(),
   pointsToRedeem: z.number().int().min(0).optional(),
   tipCents: z.number().int().min(0).optional(),
+  // What the customer wants the kitchen to know. The slip has printed a
+  // "Customer note" box since it was built and it was always empty on web
+  // orders, because the checkout never asked for one.
+  orderNotes: field.notes,
   items: z
     .array(
       z.object({
@@ -195,12 +200,13 @@ export async function POST(req: Request) {
       membersOnly?: boolean;
       isOffSeason?: boolean;
       leadTime?: number;
+      stockQuantity?: number;
       categorySlugs?: string[];
       options?: ProductOption[];
     }>
   >({
     query: `*[_type == "product" && _id in $ids]{
-      _id, name, "slug": slug.current, price, inStock, membersOnly, isOffSeason, leadTime,
+      _id, name, "slug": slug.current, price, inStock, membersOnly, isOffSeason, leadTime, stockQuantity,
       "categorySlugs": categories[]->slug.current,
       options[]{ name, nameEs, key, required, choices[]{ label, labelEs, priceDelta, soldOut } }
     }`,
@@ -442,10 +448,20 @@ export async function POST(req: Request) {
   // The window is derived from the date here, never from the label the
   // browser sent — that label is exactly what a forged order would lie
   // about.
-  const leadHours = products.reduce(
-    (max, p) => Math.max(max, Number(p.leadTime ?? 0) || 0),
-    0
-  );
+  // A product with a number in Studio's stock box is already baked, so it
+  // needs no notice. Counted against what the customer actually asked for:
+  // three on the shelf and four wanted means the fourth still has to be
+  // made, and telling them otherwise sends someone over for bread that is
+  // not there.
+  const stocked = products.map((p) => ({
+    leadTime: p.leadTime ?? 0,
+    stockQuantity: p.stockQuantity ?? null,
+    quantity: data.items
+      .filter((it) => it.productId === p._id)
+      .reduce((n, it) => n + it.quantity, 0),
+  }));
+  const leadHours = orderLeadHours(stocked);
+  const readyNow = orderIsReadyNow(stocked);
 
   // Cakes have their own windows and their own notice; bread has the
   // eight-hour floor. Read from the catalog, never from what the browser
@@ -475,7 +491,9 @@ export async function POST(req: Request) {
 
     // Eight hours minimum on every pickup, or longer if something in the
     // basket needs it.
-    const required = effectivePickupLeadHours(leadHours, hasCake);
+    // Nothing to make means nothing to wait for — the eight-hour pickup
+    // floor is there for bread that still has to be baked.
+    const required = effectivePickupLeadHours(leadHours, hasCake, readyNow);
     const opensAt = atBakeryHour(dateStr, window.startHour);
     const verdict = checkDeliveryLeadTime({ slotStart: opensAt, leadHours: required, now: new Date() });
 
@@ -701,6 +719,7 @@ paymentId = result.payment?.id ?? undefined;
         freeDeliveryReason: pricing.freeDeliveryReason,
         gst: pricing.gstCents,
         tipCents: pricing.tipCents,
+        notes: data.orderNotes || null,
         total: pricing.totalCents,
         pointsEarned: pricing.pointsEarned,
         confirmedAt: new Date(),

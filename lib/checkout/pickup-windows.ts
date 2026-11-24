@@ -129,8 +129,15 @@ export function windowLabel(w: PickupWindowDef): string {
  * the number to respect — forcing a 4-hour cake to wait 8 would be the site
  * overruling her own schedule.
  */
-export function effectivePickupLeadHours(itemLeadHours: number, hasCake = false): number {
+export function effectivePickupLeadHours(
+  itemLeadHours: number,
+  hasCake = false,
+  readyNow = false
+): number {
   const items = Number.isFinite(itemLeadHours) && itemLeadHours > 0 ? itemLeadHours : 0;
+  // Nothing to make, nothing to wait for. The floor exists for bread that
+  // still has to be baked.
+  if (readyNow) return 0;
   if (hasCake) return items;
   return Math.max(PICKUP_MIN_LEAD_HOURS, items);
 }
@@ -153,14 +160,17 @@ export function offeredPickupWindows({
   now,
   itemLeadHours = 0,
   hasCake = false,
+  readyNow = false,
   days = 14,
 }: {
   now: Date;
   itemLeadHours?: number;
   hasCake?: boolean;
+  /** Everything is on the shelf: no floor, but the same windows as ever. */
+  readyNow?: boolean;
   days?: number;
 }): OfferedWindow[] {
-  const leadHours = effectivePickupLeadHours(itemLeadHours, hasCake);
+  const leadHours = effectivePickupLeadHours(itemLeadHours, hasCake, readyNow);
   const earliest = new Date(now.getTime() + leadHours * 3_600_000);
   const out: OfferedWindow[] = [];
 

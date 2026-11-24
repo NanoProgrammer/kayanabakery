@@ -78,6 +78,24 @@ check("a cake window is not a bread window", findWindow("2026-11-20", "11:00 AM 
 check("...and is found for a cake order", findWindow("2026-11-20", "11:00 AM – 1:00 PM", true)?.startHour, 11);
 check("a bread window is not offered to a cake order", findWindow("2026-11-20", "7:00 PM – 9:00 PM", true), null);
 
+console.log("\n  already on the shelf");
+// A number in Studio's stock box means it is baked. No wait — but the same
+// windows as always: the bakery still only hands over when it is open.
+check("ready now removes the floor", effectivePickupLeadHours(0, false, true), 0);
+check("...even with a lead time on the product", effectivePickupLeadHours(12, false, true), 0);
+check("...and it does NOT switch to the cake windows", windowsForDate("2026-11-20", false).map((w) => w.startHour), [16, 18, 19]);
+const readyFriday = offeredPickupWindows({ now: new Date("2026-11-20T20:00:00Z"), readyNow: true, days: 0 });
+check("the same day is offered at 1 PM", readyFriday.map((w) => w.label), [
+  "4:00 PM – 6:00 PM",
+  "6:00 PM – 8:00 PM",
+  "7:00 PM – 9:00 PM",
+]);
+// Without it, 1 PM plus the eight-hour floor is 9 PM: nothing today.
+check("without it, nothing is offered that day", offeredPickupWindows({ now: new Date("2026-11-20T20:00:00Z"), days: 0 }).length, 0);
+// A window that has already opened is still not offered.
+const lateEvening = offeredPickupWindows({ now: new Date("2026-11-21T02:30:00Z"), readyNow: true, days: 0 });
+check("a window already under way is not offered", lateEvening.length, 0);
+
 console.log("\n  what is offered, and when");
 // Friday 20 Nov 2026, 1 PM local (MST, UTC-7 → 20:00 UTC).
 const fridayOnePm = new Date("2026-11-20T20:00:00Z");

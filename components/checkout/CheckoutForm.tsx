@@ -42,6 +42,7 @@ import {
   type CheckoutStep,
   type StepState,
 } from "@/lib/checkout/steps";
+import { orderLeadHours, orderIsReadyNow } from "@/lib/products/ready-now";
 import { familyForProduct } from "@/lib/products/cake-families";
 
 type UserCtx = {
@@ -90,6 +91,7 @@ export function CheckoutForm({
   const [guestAddress, setGuestAddress] = useState<AddressData | null>(null);
   const [addingAddress, setAddingAddress] = useState(false);
   const [step, setStep] = useState<CheckoutStep>(1);
+  const [orderNotes, setOrderNotes] = useState("");
 
   const chosenAddress = useMemo(
     () =>
@@ -209,7 +211,11 @@ export function CheckoutForm({
     return false;
   }, [fulfillment, chosenAddress]);
 
-  const maxLeadTime = items.reduce((max, it) => Math.max(max, it.leadTime ?? 0), 0);
+  // Items already on the shelf need no notice, so they do not push the
+  // pickup out. The server decides this too; this is only so the picker
+  // offers the same windows.
+  const maxLeadTime = orderLeadHours(items);
+  const readyNow = orderIsReadyNow(items);
 
   // A cake in the basket puts the whole pickup on the cake windows. The
   // server decides this from the catalog; this is only so the picker shows
@@ -276,6 +282,7 @@ export function CheckoutForm({
       couponCode: coupon?.code,
       pointsToRedeem: pointsToRedeem || undefined,
       tipCents: tipCents || undefined,
+      orderNotes: orderNotes.trim() || undefined,
       clientReferenceId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     };
 
@@ -491,6 +498,7 @@ export function CheckoutForm({
                 onTimeChange={setPickupTime}
                 minLeadHours={maxLeadTime}
                 hasCake={hasCake}
+                readyNow={readyNow}
               />
             ) : (
               <DeliverySlotPicker
@@ -544,7 +552,27 @@ export function CheckoutForm({
           {/* ── Step 3: discounts, tip and the card ────────────── */}
           {step === 3 && (
           <>
-          <Section num={1} title={locale === "es" ? "Descuentos" : "Discounts"}>
+          {/* Above the discounts, where Karyana asked for it. The kitchen
+              slip has had a "Customer note" box all along and it was always
+              blank on web orders, because nothing ever asked. */}
+          <Section num={1} title={locale === "es" ? "Notas para la panadería" : "Notes for the bakery"}>
+            <textarea
+              value={orderNotes}
+              onChange={(e) => setOrderNotes(e.target.value.slice(0, 500))}
+              rows={3}
+              placeholder={
+                locale === "es"
+                  ? "Alergias, mensaje en el pastel, instrucciones de entrega…"
+                  : "Allergies, a message on the cake, delivery instructions…"
+              }
+              className="w-full rounded-2xl border border-canela/30 bg-cream px-4 py-3 text-sm focus:border-canela-dark focus:outline-none"
+            />
+            <p className="mt-2 text-right text-xs text-ink-soft">
+              {orderNotes.length}/500
+            </p>
+          </Section>
+
+          <Section num={2} title={locale === "es" ? "Descuentos" : "Discounts"}>
             <div className="space-y-4">
               <CouponInput
                 applied={coupon}
@@ -563,12 +591,12 @@ export function CheckoutForm({
             </div>
           </Section>
 
-          <Section num={2} title={locale === "es" ? "Propina" : "Tip"}>
+          <Section num={3} title={locale === "es" ? "Propina" : "Tip"}>
             <TipInput subtotalCents={pricing.subtotalCents} tipCents={tipCents} onChange={setTipCents} />
           </Section>
 
           {/* Payment */}
-          <Section num={3} title={locale === "es" ? "Pago" : "Payment"}>
+          <Section num={4} title={locale === "es" ? "Pago" : "Payment"}>
             {/* Stays on screen: the toast fades, and a Pay button that is dark
                 for no visible reason is exactly what makes someone reload and
                 try again. */}

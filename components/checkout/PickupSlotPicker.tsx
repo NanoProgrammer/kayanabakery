@@ -30,6 +30,7 @@ export function PickupSlotPicker({
   onTimeChange,
   minLeadHours = 0,
   hasCake = false,
+  readyNow = false,
 }: {
   date: string;
   time: string;
@@ -38,6 +39,8 @@ export function PickupSlotPicker({
   minLeadHours?: number;
   /** A cake in the basket moves the whole pickup onto the cake windows. */
   hasCake?: boolean;
+  /** Everything is already baked, so the eight-hour floor does not apply. */
+  readyNow?: boolean;
 }) {
   const { locale } = useLocale();
   const es = locale === "es";
@@ -53,8 +56,17 @@ export function PickupSlotPicker({
   }, []);
 
   const windows = useMemo(
-    () => (now ? offeredPickupWindows({ now, itemLeadHours: minLeadHours, hasCake }) : []),
-    [now, minLeadHours, hasCake]
+    () =>
+      now
+        ? offeredPickupWindows({
+            now,
+            itemLeadHours: minLeadHours,
+            hasCake,
+            readyNow,
+            days: 14,
+          })
+        : [],
+    [now, minLeadHours, hasCake, readyNow]
   );
 
   const days = useMemo(() => {
@@ -79,7 +91,7 @@ export function PickupSlotPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windows, now]);
 
-  const required = effectivePickupLeadHours(minLeadHours, hasCake);
+  const required = effectivePickupLeadHours(minLeadHours, hasCake, readyNow);
   const selectedDay = days.find((d) => d.date === date);
 
   function dayLabel(d: string) {
@@ -111,7 +123,11 @@ export function PickupSlotPicker({
   return (
     <div className="space-y-4">
       <p className="rounded-2xl border border-canela/20 bg-canela-light px-4 py-3 text-xs text-ink">
-        {hasCake
+        {readyNow
+          ? es
+            ? "Listo ahora — elige cuándo pasar por él."
+            : "Ready now — choose when to collect."
+          : hasCake
           ? required > 0
             ? es
               ? `Tu pastel necesita ${required}h de preparación.`

@@ -17,6 +17,7 @@
  * was invalid.
  */
 import type { ProductOption } from "./options";
+import { inchesFromLabel } from "./servings";
 
 type BuiltInChoice = { label: string; labelEs: string };
 type BuiltInOption = {
@@ -84,32 +85,68 @@ function keyOf(option: ProductOption): string {
 }
 
 /**
- * What an option IS, for deciding whether the catalogue already has one.
+ * What an option answers to, for deciding whether the catalogue already has
+ * one of its own.
  *
- * Not the key alone. An option in Studio can be named "Size" with the key
- * field left empty, and matching on the key then saw no size option and
- * added a built-in one on top — so the product page showed SIZE twice, the
- * real one with its prices and a second with none. The name is the fallback,
- * in both languages.
+ * BOTH the key and the name, canonicalised. The first version of this only
+ * looked at the name when the key was EMPTY — and the live cakes have a key
+ * that simply is not the word "size", so a built-in size was still appended
+ * and the product page still showed TAMAÑO twice: the real one with its
+ * prices, and a second without. Either signal saying "size" is enough.
  */
-const NAME_TO_KEY: Record<string, string> = {
+const CANONICAL: Record<string, string> = {
   size: "size",
+  sizes: "size",
   tamano: "size",
-  tamaño: "size",
+  tamanos: "size",
+  "cake size": "size",
+  inches: "size",
+  pulgadas: "size",
   flavour: "flavour",
+  flavours: "flavour",
   flavor: "flavour",
+  flavors: "flavour",
   sabor: "flavour",
+  sabores: "flavour",
+  "cake flavour": "flavour",
+  "cake flavor": "flavour",
 };
 
-export function optionIdentity(option: ProductOption): string {
-  const key = keyOf(option).trim().toLowerCase();
-  if (key) return key;
-  const name = (option.name ?? "")
+function normalizeLabel(value: string | null | undefined): string {
+  return (value ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
-  return NAME_TO_KEY[name] ?? name;
+}
+
+function canonical(value: string | null | undefined): string {
+  const n = normalizeLabel(value);
+  return CANONICAL[n] ?? n;
+}
+
+export function optionIdentities(option: ProductOption): string[] {
+  const named = [canonical(keyOf(option)), canonical(option.name)].filter(Boolean);
+  // Last line of defence, independent of what anyone called it: an option
+  // whose choices are inch measurements IS a size option. Naming is the
+  // part that keeps surprising us — this does not depend on it.
+  if (looksLikeSizes(option)) named.push("size");
+  return named;
+}
+
+function looksLikeSizes(option: ProductOption): boolean {
+  const choices = option.choices ?? [];
+  if (!choices.length) return false;
+  const sized = choices.filter((c) => inchesFromLabel(c?.label ?? "") !== null);
+  // Most of them, not all: a "custom" choice among real sizes is common.
+  return sized.length >= Math.ceil(choices.length / 2);
+}
+
+/** The single best name for an option, for logs and tests. */
+export function optionIdentity(option: ProductOption): string {
+  return optionIdentities(option)[0] ?? "";
 }
 
 function toProductOption(option: BuiltInOption): ProductOption {
@@ -148,9 +185,9 @@ export function withBuiltInOptions(product: {
   const builtIn = BUILT_IN_OPTIONS[slug];
   if (!builtIn?.length) return fromSanity;
 
-  // Identified by key, or by name when the key was never filled in.
-  // Dropping the empty keys here is what produced two SIZE blocks.
-  const present = new Set(fromSanity.map(optionIdentity).filter(Boolean));
+  // Every name an existing option answers to, from its key AND its name.
+  // Looking at only one of them is what left TAMAÑO showing twice.
+  const present = new Set(fromSanity.flatMap(optionIdentities));
   const missing = builtIn.filter((o) => !present.has(o.key)).map(toProductOption);
   return [...fromSanity, ...missing];
 }

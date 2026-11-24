@@ -2,7 +2,8 @@
 
 import { Crown, Sparkles, Coins, Zap } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { clubCopy } from "@/lib/membership/club-copy";
+import { clubCopy, earnedClubCopy } from "@/lib/membership/club-copy";
+import { KLC_LIVE } from "@/lib/loyalty/standing";
 
 /**
  * The top of the Karyana Club page.
@@ -17,7 +18,11 @@ import { clubCopy } from "@/lib/membership/club-copy";
  */
 export function MembershipsHero() {
   const { locale } = useLocale();
-  const copy = clubCopy(locale);
+  // While the earned scheme is switched off this is exactly the page
+  // customers have today. Flipping KLC_LIVE swaps the wording with it, so
+  // the page and the rules can never describe two different clubs.
+  const copy = KLC_LIVE ? earnedClubCopy(locale) : clubCopy(locale);
+  const keeping = KLC_LIVE ? earnedClubCopy(locale).keeping : null;
   const es = locale === "es";
 
   return (
@@ -56,10 +61,17 @@ export function MembershipsHero() {
           </div>
         </div>
 
+        {keeping && (
+          <p className="mx-auto mt-6 max-w-2xl rounded-2xl border border-canela/25 bg-canela-light/40 p-4 text-sm text-ink">
+            {keeping}
+          </p>
+        )}
+
         <p className="mx-auto mt-7 max-w-2xl font-script text-2xl text-gold md:text-3xl">
           {copy.reassurance}
         </p>
 
+        {!KLC_LIVE && (
         <div className="mx-auto mt-8 inline-flex items-center gap-3 rounded-full border border-gold/40 bg-gold/10 px-6 py-3">
           <Sparkles className="h-4 w-4 shrink-0 text-gold" />
           <span className="text-sm font-medium text-ink">
@@ -68,6 +80,7 @@ export function MembershipsHero() {
               : "Artesano: first year completely free — just add a card on file"}
           </span>
         </div>
+        )}
       </div>
     </section>
   );

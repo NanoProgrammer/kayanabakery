@@ -54,6 +54,7 @@
     "test:address": "npx tsx scripts/test-address-choice.ts",
     "test:signedin": "npx tsx scripts/test-signed-in-redirect.ts",
     "test:cakes": "npx tsx scripts/test-cake-menu.ts",
+    "test:discover-bread": "npx tsx scripts/test-discover-bread.ts",
     "test:shop-filters": "npx tsx scripts/test-shop-filters.ts",
     "test:ready-now": "npx tsx scripts/test-ready-now.ts",
     "test:gallery": "npx tsx scripts/test-gallery.ts",

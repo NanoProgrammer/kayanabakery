@@ -41,6 +41,14 @@ export type SanityOrderInput = {
   status?: string;
   /** Shown in Studio so staff can tell an automatic order from a normal one. */
   source?: "checkout" | "weekly-auto";
+  /**
+   * What the customer asked for. The slip has printed a "Customer note" box
+   * since it was built; this is what fills it. The checkout only started
+   * collecting one recently, and this is the step that carries it across.
+   */
+  notes?: string | null;
+  /** The coupon used, so the slip can act on a Discover Bread code. */
+  couponCode?: string | null;
 };
 
 export async function createSanityOrder(input: SanityOrderInput): Promise<boolean> {
@@ -66,6 +74,8 @@ export async function createSanityOrder(input: SanityOrderInput): Promise<boolea
       })),
       deliveryAddress: input.deliveryAddress ?? null,
       pickupDate: input.pickupDate ?? null,
+      notes: input.notes ?? null,
+      couponCode: input.couponCode ?? null,
       status: input.status ?? "IN_PROGRESS",
       createdAt: new Date().toISOString(),
     });

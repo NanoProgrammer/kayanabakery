@@ -186,6 +186,36 @@ console.log("\n5. Delivery slips too\n");
   const emptySlip = await textFor({ ...base, karyanaCakeNote: undefined });
   check("an order without it prints nothing extra", !squashed(emptySlip).includes("MAKESTHIS"));
 
+
+  console.log("\nDiscover Bread on the slip\n");
+
+  const earnedSlip = await textFor({
+    ...base,
+    items: [{ name: "3 Leches Tiramisu", quantity: 1 }],
+    discoverBreadNote: "DISCOVER BREAD COUPON: PAN100042 — 2 FREE BREADS ON THEIR NEXT ORDER",
+  });
+  const flat = (t: string) => t.replace(/\s+/g, "").toUpperCase();
+  check("the cake's slip carries the code", flat(earnedSlip).includes("PAN100042"));
+  check("...and what it is worth", flat(earnedSlip).includes("2FREEBREADS"));
+
+  // On a redemption this is two loaves somebody has to physically put in
+  // the box, not a discount to work out.
+  const redeemSlip = await textFor({
+    ...base,
+    discoverBreadNote: "ADD 2 FREE BREADS — OUR CHOICE",
+  });
+  check("using it prints an instruction", flat(redeemSlip).includes("ADD2FREEBREADS"));
+  check("...and says the bakery chooses", flat(redeemSlip).includes("OURCHOICE"));
+
+  const plain = await textFor({ ...base, discoverBreadNote: null });
+  check("an ordinary order prints neither", !flat(plain).includes("FREEBREADS"));
+
+  console.log("\nCustomer notes on the slip\n");
+  // The box has been printed since the slip was built and was always empty,
+  // because nothing ever filled it.
+  const noted = await textFor({ ...base, note: "Sin nuez por favor, alergia" });
+  check("the customer's note is printed", flat(noted).includes("SINNUEZPORFAVOR"));
+
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed > 0 ? 1 : 0);
 }

@@ -199,6 +199,8 @@ export type PackingSlipData = {
   note?: string | null;
   /** "KARYANA MAKES THIS CAKE" — the Legendario promise, for the kitchen. */
   karyanaCakeNote?: string | null;
+  /** The Discover Bread code to hand over, or the instruction to add bread. */
+  discoverBreadNote?: string | null;
   logoUrl: string;
 };
 
@@ -287,6 +289,16 @@ export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
         {data.karyanaCakeNote && (
           <View style={styles.karyanaBanner}>
             <Text style={styles.karyanaBannerText}>{data.karyanaCakeNote}</Text>
+          </View>
+        )}
+
+        {/* Discover Bread. Its own box: on a cake order it is a code to be
+            read out, and on a redemption it is two loaves somebody has to
+            physically put in the box. Neither survives being a line in the
+            customer note. */}
+        {data.discoverBreadNote && (
+          <View style={styles.karyanaBanner}>
+            <Text style={styles.karyanaBannerText}>{data.discoverBreadNote}</Text>
           </View>
         )}
 

@@ -13,6 +13,8 @@ export type Category = {
   accentColor?: string;
   isFeatured?: boolean;
   displayOrder?: number;
+  /** Sanity's creation time, for sorting the shop by newest. */
+  _createdAt?: string;
 };
 
 export type Product = {
@@ -38,6 +40,8 @@ export type Product = {
   isOffSeason?: boolean;
   isFeatured?: boolean;
   displayOrder?: number;
+  /** Sanity's creation time, for sorting the shop by newest. */
+  _createdAt?: string;
   categories?: { slug: string; name: string }[];
 };
 
@@ -95,6 +99,8 @@ export type Testimonial = {
   accent?: string;
   isFeatured?: boolean;
   displayOrder?: number;
+  /** Sanity's creation time, for sorting the shop by newest. */
+  _createdAt?: string;
 };
 
 export type GoogleReview = {

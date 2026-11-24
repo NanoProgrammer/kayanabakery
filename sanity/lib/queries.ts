@@ -70,7 +70,7 @@ export const productsByCategorySlugQuery = groq`
 
 export const allProductsQuery = groq`
   *[_type == "product"] | order(displayOrder asc) {
-    _id, name, nameEs, "slug": slug.current,
+    _id, _createdAt, displayOrder, name, nameEs, "slug": slug.current,
     description, descriptionEs,
     price, compareAtPrice, image, tag,
     inStock, stockQuantity, unit, leadTime, membersOnly, isOffSeason,

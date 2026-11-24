@@ -59,6 +59,7 @@ export function ProductCard({ product }: { product: Product }) {
         : "",
       unit: product.unit,
       leadTime: product.leadTime,
+      stockQuantity: (product as any).stockQuantity ?? null,
       membersOnly: product.membersOnly ?? false,
     });
 

@@ -41,7 +41,7 @@ export const categoryBySlugQuery = groq`
       _id, name, nameEs, "slug": slug.current,
       description, descriptionEs,
       price, compareAtPrice, image, tag,
-      inStock, unit, leadTime, membersOnly, isOffSeason,
+      inStock, stockQuantity, unit, leadTime, membersOnly, isOffSeason,
       "categories": categories[]->{ "slug": slug.current, name, nameEs }
     }
   }
@@ -53,7 +53,7 @@ export const featuredProductsQuery = groq`
     _id, name, nameEs, "slug": slug.current,
     description, descriptionEs,
     price, compareAtPrice, image, tag,
-    inStock, unit, leadTime, membersOnly, isOffSeason,
+    inStock, stockQuantity, unit, leadTime, membersOnly, isOffSeason,
     "categories": categories[]->{ "slug": slug.current, name, nameEs }
   }
 `;
@@ -63,7 +63,7 @@ export const productsByCategorySlugQuery = groq`
     _id, name, nameEs, "slug": slug.current,
     description, descriptionEs,
     price, compareAtPrice, image, tag,
-    inStock, unit, leadTime, membersOnly, isOffSeason,
+    inStock, stockQuantity, unit, leadTime, membersOnly, isOffSeason,
     "categories": categories[]->{ "slug": slug.current, name, nameEs }
   }
 `;
@@ -73,7 +73,7 @@ export const allProductsQuery = groq`
     _id, name, nameEs, "slug": slug.current,
     description, descriptionEs,
     price, compareAtPrice, image, tag,
-    inStock, unit, leadTime, membersOnly, isOffSeason,
+    inStock, stockQuantity, unit, leadTime, membersOnly, isOffSeason,
     "categories": categories[]->{ "slug": slug.current, name, nameEs }
   }
 `;

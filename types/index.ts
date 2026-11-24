@@ -154,6 +154,8 @@ export type CartItem = {
   image?: string;
   unit?: string;
   leadTime?: number;
+  /** Studio's stock box. A number means it is baked and needs no notice. */
+  stockQuantity?: number | null;
   quantity: number;
   membersOnly?: boolean;
   /** Which size, which flavour — keyed by the option's key. */

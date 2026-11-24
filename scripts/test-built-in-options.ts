@@ -7,7 +7,12 @@
  * already carry price differences Karyana typed into Studio — a 10" at
  * +$20 on the live site today. Sanity must win every time.
  */
-import { withBuiltInOptions, BUILT_IN_OPTIONS, optionIdentity } from "../lib/products/built-in-options";
+import {
+  withBuiltInOptions,
+  BUILT_IN_OPTIONS,
+  optionIdentity,
+  optionIdentities,
+} from "../lib/products/built-in-options";
 
 let passed = 0;
 let failed = 0;
@@ -117,6 +122,84 @@ check(
 check("identity from the key when there is one", optionIdentity({ key: { current: "size" }, name: "Whatever" } as any), "size");
 check("identity from the name when there is not", optionIdentity({ name: "Tamaño" } as any), "size");
 check("an unknown name is its own identity", optionIdentity({ name: "Message" } as any), "message");
+
+console.log("\n  the duplicate that survived the first fix");
+// Still live after the first attempt: the Studio option HAS a key, it just
+// is not the word "size". Looking at the name only when the key was empty
+// never saw it, so TAMAÑO kept appearing twice.
+for (const key of ["tamano", "tamaño", "cake-size", "SIZE", "sizes", "pulgadas"]) {
+  check(
+    `a Studio key of "${key}" blocks the built-in size`,
+    withBuiltInOptions({
+      slug: "classic-3-leches",
+      options: [{ name: "Tamaño", key: { current: key }, choices: [] } as any],
+    }).length,
+    1
+  );
+}
+check(
+  "a key that means nothing still loses to the NAME",
+  withBuiltInOptions({
+    slug: "classic-3-leches",
+    options: [{ name: "Size", key: { current: "opt-1" }, choices: [] } as any],
+  }).length,
+  1
+);
+check(
+  "...and with neither matching, the built-in is added",
+  withBuiltInOptions({
+    slug: "classic-3-leches",
+    options: [{ name: "Message", key: { current: "opt-1" }, choices: [] } as any],
+  }).length,
+  2
+);
+check("an option answers to both its key and its name", optionIdentities({ key: { current: "tamano" }, name: "Size" } as any), ["size", "size"]);
+check("underscores and dashes do not matter", optionIdentity({ key: { current: "cake_size" } } as any), "size");
+check("sabores blocks the flavour", withBuiltInOptions({ slug: "chocoflan", options: [{ name: "Sabores", choices: [] } as any] }).length, 1);
+
+console.log("\n  the safety net: it looks like sizes, so it is");
+// Independent of naming, which is the part that keeps surprising us.
+check(
+  "an option called anything, with inch choices, blocks the built-in size",
+  withBuiltInOptions({
+    slug: "classic-3-leches",
+    options: [{ name: "Elige", key: { current: "opt-9" }, choices: [{ label: '6"' }, { label: '8"' }, { label: '10"' }] } as any],
+  }).length,
+  1
+);
+check(
+  "...with the Spanish spelling too",
+  withBuiltInOptions({
+    slug: "classic-3-leches",
+    options: [{ name: "Elige", key: { current: "x" }, choices: [{ label: "6 pulgadas" }, { label: "8 pulgadas" }] } as any],
+  }).length,
+  1
+);
+check(
+  "...and with one odd choice among the sizes",
+  withBuiltInOptions({
+    slug: "classic-3-leches",
+    options: [{ name: "Elige", key: { current: "x" }, choices: [{ label: '6"' }, { label: '8"' }, { label: "Custom" }] } as any],
+  }).length,
+  1
+);
+// Flavours must NOT be mistaken for sizes, or a cake would lose its size.
+check(
+  "a flavour option does not look like sizes",
+  withBuiltInOptions({
+    slug: "classic-3-leches",
+    options: [{ name: "Elige", key: { current: "x" }, choices: [{ label: "Vanilla" }, { label: "Chocolate" }] } as any],
+  }).length,
+  2
+);
+check(
+  "an option with no choices is not a size",
+  withBuiltInOptions({
+    slug: "classic-3-leches",
+    options: [{ name: "Elige", key: { current: "x" }, choices: [] } as any],
+  }).length,
+  2
+);
 
 console.log("\n  everything built in is free");
 const allChoices = Object.values(BUILT_IN_OPTIONS)

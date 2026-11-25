@@ -12,6 +12,7 @@ import { googleReview } from "./googleReview";
 import { membershipPlan } from "./membershipPlan";
 import order from "./order";
 import customer from "./customer";
+import smsOptOut from "./smsOptOut";
 
 export const schemaTypes = [
   // Content
@@ -37,4 +38,5 @@ export const schemaTypes = [
   order,
   // People
   customer,
+  smsOptOut,
 ];

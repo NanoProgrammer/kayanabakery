@@ -231,6 +231,19 @@ export default defineType({
       description: "Editable. Prints on the packing slip.",
     }),
     defineField({
+      // Which statuses this customer has already been messaged about.
+      // Written by the status webhook before it sends, so a retried
+      // delivery or a status nudged back and forth cannot text someone
+      // "your order is ready" twice.
+      name: "notifiedStatuses",
+      title: "Messages already sent",
+      type: "array",
+      of: [{ type: "string" }],
+      readOnly: true,
+      hidden: ({ document }) => !(document?.notifiedStatuses as unknown[])?.length,
+      description: "Set automatically. Each status the customer has been texted about.",
+    }),
+    defineField({
       name: "status",
       title: "Order status",
       type: "string",
@@ -238,6 +251,10 @@ export default defineType({
       // on the Sanity Studio mobile web app; a native <select> works everywhere.
       options: {
         list: [
+          // "Confirmado" — the first of the four states the meeting asked
+          // customers to be told about (Situación 10). Without it there
+          // was no way to tell someone we had their order at all.
+          { title: "🧾 Confirmado", value: "CONFIRMED" },
           { title: "⏳ En preparación", value: "IN_PROGRESS" },
           { title: "✅ Orden lista", value: "READY" },
           { title: "🚚 Enviando", value: "OUT_FOR_DELIVERY" },

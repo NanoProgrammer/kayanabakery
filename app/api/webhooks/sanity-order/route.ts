@@ -10,6 +10,7 @@ import {
   resolveCustomerLocale,
 } from "@/lib/notifications/order-messages";
 import { cancelOrderNotifications } from "@/lib/notifications/schedule-order-messages";
+import { shouldNotify, optOutDocId } from "@/lib/notifications/consent";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 
@@ -17,6 +18,9 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://karyanabakery.ca";
 // importantly, calls off the notifications Twilio is already holding — without
 // it a cancelled order would still text the customer "your order is ready".
 const VALID_STATUSES = [
+  // "Confirmado" — the first of the four states the meeting asked
+  // customers to be told about (Situación 10). It was missing entirely.
+  "CONFIRMED",
   "IN_PROGRESS",
   "READY",
   "OUT_FOR_DELIVERY",
@@ -37,36 +41,82 @@ function verify(req: Request, body: string): boolean {
   return hash === expected;
 }
 
+/**
+ * Has this number asked us to stop?
+ *
+ * Read per message rather than cached: an opt-out that takes effect in
+ * an hour is an opt-out that failed. A failed lookup is treated as NOT
+ * opted out, because the alternative is an outage silently stopping
+ * every "your order is ready" text in the bakery.
+ */
+async function hasOptedOut(phone: string | null): Promise<boolean> {
+  const docId = optOutDocId(phone);
+  if (!docId) return false;
+  try {
+    const found = await sanityClient.fetch<string | null>(
+      `*[_type == "smsOptOut" && _id == $id][0]._id`,
+      { id: docId }
+    );
+    return !!found;
+  } catch (err) {
+    console.error("[sanity-order webhook] opt-out check failed:", err);
+    return false;
+  }
+}
+
 async function notifyCustomer(
   status: ValidStatus,
   order: {
+    _id: string;
     orderNumber: string;
     customerName: string;
     customerEmail: string | null;
     customerPhone: string | null;
+    notifiedStatuses?: unknown;
     preferredLang?: string | null;
     langChosenByUser?: boolean | null;
     isPickup: boolean;
   }
 ) {
-  // Ready, on the way, and completed all get a message — WhatsApp first,
-  // SMS if that can't be delivered — written in the customer's language
-  // instead of the old bilingual one-liner.
-  if (
-    (status === "READY" ||
-      status === "OUT_FOR_DELIVERY" ||
-      status === "COMPLETED") &&
-    order.customerPhone
-  ) {
+  // All four states the meeting named — confirmado, en preparación, en
+  // camino, entregado — plus READY, which is what "on its way" means for
+  // a pickup. WhatsApp first, SMS if that cannot be delivered, in the
+  // customer's own language.
+  //
+  // One decision, made in lib/notifications/consent.ts, so that a
+  // customer who did not get a message can be explained rather than
+  // guessed about.
+  const decision = shouldNotify({
+    status,
+    phone: order.customerPhone,
+    optedOut: await hasOptedOut(order.customerPhone),
+    alreadySent: order.notifiedStatuses,
+  });
+
+  if (decision.send) {
     const locale = resolveCustomerLocale({
       preferredLang: order.preferredLang,
       langChosenByUser: order.langChosenByUser,
       name: order.customerName,
     });
 
+    // Recorded BEFORE sending. A crash between the two costs one
+    // message; recording after would cost a duplicate on every retried
+    // webhook delivery, and a customer who gets "your order is ready"
+    // three times stops reading them.
+    try {
+      await sanityClient
+        .patch(order._id)
+        .setIfMissing({ notifiedStatuses: [] })
+        .append("notifiedStatuses", [status])
+        .commit();
+    } catch (err) {
+      console.error("[sanity-order webhook] could not record the send:", err);
+    }
+
     const channel = await sendCustomerMessage(
-      order.customerPhone,
-      orderStatusMessage(status, locale, {
+      order.customerPhone!,
+      orderStatusMessage(status as never, locale, {
         orderNumber: order.orderNumber,
         isPickup: order.isPickup,
       }),
@@ -75,6 +125,10 @@ async function notifyCustomer(
 
     console.log(
       `[sanity-order webhook] ${order.orderNumber} → ${status} notified via ${channel}`
+    );
+  } else {
+    console.log(
+      `[sanity-order webhook] ${order.orderNumber} → ${status} not notified (${decision.reason})`
     );
   }
 
@@ -129,8 +183,8 @@ export async function POST(req: Request) {
   const cleanId = String(_id).replace(/^drafts\./, "");
   const order = await sanityClient.fetch(
     `*[_id == "drafts." + $id || _id == $id] | order(_updatedAt desc) [0] {
-      orderNumber, prismaId, customerName, customerEmail, customerPhone,
-      fulfillmentType, notes
+      _id, orderNumber, prismaId, customerName, customerEmail, customerPhone,
+      fulfillmentType, notes, notifiedStatuses
     }`,
     { id: cleanId }
   );
@@ -166,6 +220,7 @@ export async function POST(req: Request) {
   // back to Prisma for those, but notifications still apply below.
   if (order.prismaId) {
     const timestampField: Record<ValidStatus, string> = {
+      CONFIRMED: "confirmedAt",
       IN_PROGRESS: "inProgressAt",
       READY: "readyAt",
       OUT_FOR_DELIVERY: "outForDeliveryAt",

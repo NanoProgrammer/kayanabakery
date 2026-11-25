@@ -62,6 +62,7 @@
     "test:bestsellers": "npx tsx scripts/test-bestsellers.ts",
     "test:customer-lookup": "npx tsx scripts/test-customer-lookup.ts",
     "test:invoice-email": "npx tsx scripts/test-invoice-email.ts",
+    "test:notification-consent": "npx tsx scripts/test-notification-consent.ts",
     "test:shop-filters": "npx tsx scripts/test-shop-filters.ts",
     "test:ready-now": "npx tsx scripts/test-ready-now.ts",
     "test:gallery": "npx tsx scripts/test-gallery.ts",

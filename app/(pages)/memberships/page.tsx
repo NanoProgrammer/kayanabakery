@@ -4,6 +4,7 @@ import { sanityFetch } from "@/sanity/lib/fetch";
 import { membershipPlansQuery } from "@/sanity/lib/queries";
 import { MembershipsHero } from "@/components/membership/MembershipsHero";
 import { ClubTiers } from "@/components/membership/ClubTiers";
+import { KLC_PUBLIC_ROADMAP } from "@/lib/feature-flags";
 import { MembershipBenefitsGrid } from "@/components/membership/MembershipBenefitsGrid";
 import { MembershipFAQ } from "@/components/membership/MembershipFAQ";
 import { ClubRoadmap } from "@/components/membership/ClubRoadmap";
@@ -39,10 +40,17 @@ export default async function MembershipsPage() {
       <MembershipsHero />
 
       {/* Situación 8: the climb first — it is what the Club now IS — then
-          the levels in detail. Neither of them sells anything. */}
-      <ClubRoadmap currentTier={currentTier as any} />
+          the levels in detail. Neither of them sells anything.
 
-      <ClubTiers currentTier={currentTier as any} />
+          Both wait on KLC_PUBLIC_ROADMAP, because together they change
+          what a customer understands the Club to be, and announcing that
+          is Karyana's to do. See lib/feature-flags.ts. */}
+      {KLC_PUBLIC_ROADMAP && (
+        <>
+          <ClubRoadmap currentTier={currentTier as any} />
+          <ClubTiers currentTier={currentTier as any} />
+        </>
+      )}
 
       <MembershipBenefitsGrid />
 

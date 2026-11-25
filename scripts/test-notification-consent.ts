@@ -16,7 +16,10 @@ import {
   shouldNotify,
   optOutDocId,
   NOTIFIABLE_STATUSES,
+  ALL_NOTIFIABLE_STATUSES,
+  EXISTING_NOTIFIABLE_STATUSES,
 } from "../lib/notifications/consent";
+import { NEW_ORDER_STATUS_MESSAGES } from "../lib/feature-flags";
 import { orderStatusMessage } from "../lib/notifications/order-messages";
 
 let passed = 0;
@@ -91,11 +94,33 @@ check("a string instead of an array is not either", alreadyNotified("READY", "RE
 console.log("\n  the decision");
 const ok = { status: "READY", phone: "4033833681", optedOut: false, alreadySent: [] };
 check("a normal order is messaged", shouldNotify(ok), { send: true });
-check("...for every one of the four states", NOTIFIABLE_STATUSES.length, 5);
 check(
-  "every notifiable status is allowed through",
+  "every status currently switched on is allowed through",
   NOTIFIABLE_STATUSES.every((s) => shouldNotify({ ...ok, status: s }).send),
   true
+);
+// The four states the meeting named, plus READY for a pickup order.
+check("the finished set is all five", ALL_NOTIFIABLE_STATUSES.length, 5);
+check("what was already going out is three", EXISTING_NOTIFIABLE_STATUSES.length, 3);
+// The two new ones wait on the flag, because each is another text on a
+// real customer's phone for every order.
+check(
+  "the flag decides which set is live",
+  NOTIFIABLE_STATUSES,
+  NEW_ORDER_STATUS_MESSAGES ? ALL_NOTIFIABLE_STATUSES : EXISTING_NOTIFIABLE_STATUSES
+);
+check(
+  "confirmado and en preparación are exactly what the flag adds",
+  ALL_NOTIFIABLE_STATUSES.filter((s) => !EXISTING_NOTIFIABLE_STATUSES.includes(s)),
+  ["CONFIRMED", "IN_PROGRESS"]
+);
+// The point of the flag: it holds back new messages, it must never let
+// an unwanted one through. Consent and the duplicate guard are checked
+// below and stay on whichever way it sits.
+check(
+  "the flag never widens who may be messaged",
+  shouldNotify({ ...ok, status: "READY", optedOut: true }),
+  { send: false, reason: "opted-out" }
 );
 // Each silence is named, so a customer who got nothing can be explained
 // rather than guessed about.
@@ -116,7 +141,7 @@ check(
 console.log("\n  the messages themselves");
 // The two the meeting asked for and the site did not have.
 for (const locale of ["es", "en"] as const) {
-  for (const status of NOTIFIABLE_STATUSES) {
+  for (const status of ALL_NOTIFIABLE_STATUSES) {
     const msg = orderStatusMessage(status, locale, { orderNumber: "KAR-1", isPickup: true });
     check(`${status} has a ${locale} message`, msg.length > 0, true);
     check(`...naming the order`, msg.includes("KAR-1"), true);

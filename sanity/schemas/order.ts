@@ -1,5 +1,6 @@
 import { defineField, defineType } from "sanity";
 import { PhoneInput } from "../structure/components/PhoneInput";
+import { CustomerLookupInput } from "../structure/components/CustomerLookupInput";
 import { PickupDateTimeInput } from "../structure/components/PickupDateTimeInput";
 
 // What the money says is settled; what the kitchen does is not.
@@ -55,7 +56,20 @@ export default defineType({
       name: "customerName",
       title: "Customer",
       type: "string",
-      description: "Editable. Saved back to the customer's record.",
+      description:
+        "Start typing a name, phone or email to find an existing customer — picking one fills in their details and links the order to their Karyana Club account. Type a new name for someone who has never ordered.",
+      components: { input: CustomerLookupInput },
+    }),
+    defineField({
+      // The link to the Karyana account, set by the customer search.
+      // Hidden because it is an id, not something anyone types; it is
+      // what lets a custom order count toward the customer's standing.
+      name: "customerId",
+      title: "Karyana Club account",
+      type: "string",
+      readOnly: true,
+      hidden: ({ document }) => !document?.customerId,
+      description: "Set automatically when you pick an existing customer above.",
     }),
     defineField({
       name: "customerTier",
@@ -85,6 +99,55 @@ export default defineType({
       type: "string",
       description: "Editable. Order texts go here.",
       components: { input: PhoneInput },
+    }),
+    defineField({
+      name: "customerLanguage",
+      title: "Language",
+      type: "string",
+      initialValue: "es",
+      options: {
+        list: [
+          { title: "Español", value: "es" },
+          { title: "English", value: "en" },
+        ],
+        layout: "radio",
+      },
+      description: "The language their invoice is written in. Filled in when you pick an existing customer.",
+    }),
+    defineField({
+      // A phone order is often half paid: a deposit on the cake, the rest
+      // on collection. Where that stands is the one thing the customer
+      // and the bakery both need in writing, and it is what the invoice
+      // email leads with.
+      name: "paymentStatus",
+      title: "Payment",
+      type: "string",
+      initialValue: "UNPAID",
+      options: {
+        list: [
+          { title: "Not paid yet", value: "UNPAID" },
+          { title: "Deposit received", value: "DEPOSIT" },
+          { title: "Paid in full", value: "PAID" },
+        ],
+        layout: "radio",
+      },
+      description: "Shown on the invoice email you send from this order.",
+    }),
+    defineField({
+      name: "amountPaid",
+      title: "Deposit received (CAD)",
+      type: "number",
+      hidden: ({ document }) => document?.paymentStatus !== "DEPOSIT",
+      description: "In dollars. The invoice works out the balance from this.",
+      validation: (Rule) => Rule.min(0),
+    }),
+    defineField({
+      name: "invoiceSentAt",
+      title: "Invoice emailed",
+      type: "datetime",
+      readOnly: true,
+      hidden: ({ document }) => !document?.invoiceSentAt,
+      description: "When the invoice was last emailed to the customer.",
     }),
     defineField({
       name: "fulfillmentType",
@@ -168,6 +231,19 @@ export default defineType({
       description: "Editable. Prints on the packing slip.",
     }),
     defineField({
+      // Which statuses this customer has already been messaged about.
+      // Written by the status webhook before it sends, so a retried
+      // delivery or a status nudged back and forth cannot text someone
+      // "your order is ready" twice.
+      name: "notifiedStatuses",
+      title: "Messages already sent",
+      type: "array",
+      of: [{ type: "string" }],
+      readOnly: true,
+      hidden: ({ document }) => !(document?.notifiedStatuses as unknown[])?.length,
+      description: "Set automatically. Each status the customer has been texted about.",
+    }),
+    defineField({
       name: "status",
       title: "Order status",
       type: "string",
@@ -175,6 +251,10 @@ export default defineType({
       // on the Sanity Studio mobile web app; a native <select> works everywhere.
       options: {
         list: [
+          // "Confirmado" — the first of the four states the meeting asked
+          // customers to be told about (Situación 10). Without it there
+          // was no way to tell someone we had their order at all.
+          { title: "🧾 Confirmado", value: "CONFIRMED" },
           { title: "⏳ En preparación", value: "IN_PROGRESS" },
           { title: "✅ Orden lista", value: "READY" },
           { title: "🚚 Enviando", value: "OUT_FOR_DELIVERY" },

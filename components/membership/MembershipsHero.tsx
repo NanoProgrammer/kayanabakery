@@ -2,27 +2,27 @@
 
 import { Crown, Sparkles, Coins, Zap } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
-import { clubCopy, earnedClubCopy } from "@/lib/membership/club-copy";
-import { KLC_LIVE } from "@/lib/loyalty/standing";
+import { earnedClubCopy } from "@/lib/membership/club-copy";
 
 /**
  * The top of the Karyana Club page.
  *
  * It used to lead with "our goal isn't to sell to everyone — it's to earn the
  * loyalty of 1%", which Karyana asked to drop, and said nothing about what
- * the money actually does. The club is a prepayment: what you pay comes back
- * as points. That is the first thing the page should say, so nobody reaches
- * the price without knowing they are buying bread in advance rather than
- * renting a perk. The wording lives in lib/membership/club-copy.ts, with the
- * conversion it describes.
+ * the money actually does.
+ *
+ * It then spent a while describing a prepayment — pay up front, get it back
+ * as points — which is not what the Club is any more. There is no fee, no
+ * card and no plan: a level is earned by buying and kept by buying. The
+ * wording lives in lib/membership/club-copy.ts.
  */
 export function MembershipsHero() {
   const { locale } = useLocale();
-  // While the earned scheme is switched off this is exactly the page
-  // customers have today. Flipping KLC_LIVE swaps the wording with it, so
-  // the page and the rules can never describe two different clubs.
-  const copy = KLC_LIVE ? earnedClubCopy(locale) : clubCopy(locale);
-  const keeping = KLC_LIVE ? earnedClubCopy(locale).keeping : null;
+  // The earned wording, always. The points ENGINE is still switched off
+  // (see lib/loyalty/standing.ts) but the page must describe one club, and
+  // the club is the game — not a subscription waiting to be turned on.
+  const copy = earnedClubCopy(locale);
+  const keeping = copy.keeping;
   const es = locale === "es";
 
   return (
@@ -71,16 +71,17 @@ export function MembershipsHero() {
           {copy.reassurance}
         </p>
 
-        {!KLC_LIVE && (
+        {/* No card, no fee, no plan. The Club is a game of levels, and a
+            banner asking for a card on file said the opposite of that
+            before the reader got as far as the levels. */}
         <div className="mx-auto mt-8 inline-flex items-center gap-3 rounded-full border border-gold/40 bg-gold/10 px-6 py-3">
           <Sparkles className="h-4 w-4 shrink-0 text-gold" />
           <span className="text-sm font-medium text-ink">
             {es
-              ? "Artesano: primer año completamente gratis — solo necesitas tarjeta en file"
-              : "Artesano: first year completely free — just add a card on file"}
+              ? "Sin cuota y sin tarjeta — tu nivel se gana comprando"
+              : "No fee and no card — your level is earned by buying"}
           </span>
         </div>
-        )}
       </div>
     </section>
   );

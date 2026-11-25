@@ -9,6 +9,7 @@ import { GoogleReviewsSection } from "@/components/home/GoogleReviewsSection";
 import { Newsletter } from "@/components/home/Newsletter";
 import { MembershipTeaser } from "@/components/home/MembershipTeaser";
 import { CakesSpotlight } from "@/components/home/CakesSpotlight";
+import { BreadBoxesSpotlight } from "@/components/home/BreadBoxesSpotlight";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import {
   featuredCategoriesQuery,
@@ -19,6 +20,7 @@ import {
   featuredTestimonialsQuery,
   featuredGoogleReviewsQuery,
   cakesForHomeQuery,
+  breadBoxesForHomeQuery,
 } from "@/sanity/lib/queries";
 import type {
   Category,
@@ -42,6 +44,7 @@ export default async function HomePage() {
     testimonials,
     reviews,
     cakes,
+    breadBoxes,
   ] = await Promise.all([
     sanityFetch<Category[]>({
       query: featuredCategoriesQuery,
@@ -75,6 +78,10 @@ export default async function HomePage() {
       query: cakesForHomeQuery,
       tags: ["product"],
     }),
+    sanityFetch<Product[]>({
+      query: breadBoxesForHomeQuery,
+      tags: ["product"],
+    }),
   ]);
 
   return (
@@ -82,6 +89,8 @@ export default async function HomePage() {
       <Hero settings={settings} categories={categories} />
       {/* Situación 9: cakes first, to sell more of them. */}
       <CakesSpotlight cakes={cakes ?? []} />
+      {/* The second door the brief names, right behind the first. */}
+      <BreadBoxesSpotlight boxes={breadBoxes ?? []} />
       <Newsletter />
       <SignatureProducts products={products} />
       {promo && <HolidayBanner promo={promo} />}

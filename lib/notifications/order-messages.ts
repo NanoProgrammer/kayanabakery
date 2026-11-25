@@ -1,7 +1,16 @@
 import { guessLanguageFromName } from "@/lib/i18n/guess-language";
 
 
-export type NotifiableStatus = "READY" | "OUT_FOR_DELIVERY" | "COMPLETED";
+/**
+ * The four states the meeting asked customers to be told about —
+ * confirmado, en preparación, en camino, entregado (Situación 10) — plus
+ * READY, which is what "en camino" means for a pickup order.
+ *
+ * Defined in lib/notifications/consent.ts, alongside the rules about who
+ * may be messaged, so the list and the rules cannot drift apart.
+ */
+export type { NotifiableStatus } from "./consent";
+import type { NotifiableStatus } from "./consent";
 export type Locale = "en" | "es";
 
 /**
@@ -38,6 +47,23 @@ const MESSAGES: Record<
   NotifiableStatus,
   Record<Locale, (input: MessageInput) => string>
 > = {
+  // The first message anyone gets. Short on purpose: its job is to say
+  // "we have it", not to repeat the receipt Square already sent.
+  CONFIRMED: {
+    es: ({ orderNumber }) =>
+      `🧾 Karyana Bakery: Recibimos tu pedido ${orderNumber}. Te avisamos cuando esté listo.`,
+    en: ({ orderNumber }) =>
+      `🧾 Karyana Bakery: We've got your order ${orderNumber}. We'll let you know when it's ready.`,
+  },
+  // "En preparación". This is the one customers ask for by phone — the
+  // gap between ordering a cake and hearing anything was the whole
+  // complaint.
+  IN_PROGRESS: {
+    es: ({ orderNumber }) =>
+      `👩‍🍳 Karyana Bakery: Ya estamos preparando tu pedido ${orderNumber}.`,
+    en: ({ orderNumber }) =>
+      `👩‍🍳 Karyana Bakery: We've started on your order ${orderNumber}.`,
+  },
   READY: {
     es: ({ orderNumber, isPickup }) =>
       isPickup

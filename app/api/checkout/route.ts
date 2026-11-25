@@ -43,6 +43,7 @@ import {
 } from "@/lib/checkout/pickup-windows";
 import { orderLeadHours, orderIsReadyNow } from "@/lib/products/ready-now";
 import { earnsCoupon, couponDocument } from "@/lib/coupons/discover-bread";
+import { stockDecrements, needsClamp } from "@/lib/products/stock";
 
 /**
  * The categories whose products follow the cake schedule. A cake in the
@@ -873,6 +874,51 @@ paymentId = result.payment?.id ?? undefined;
         // slip still prints the code, so the customer is not left short —
         // it can be created by hand from what is on the ticket.
         console.error("[discover-bread] could not create the coupon:", err);
+      }
+    }
+
+    // Take what was sold off the shelf (Situación 13).
+    //
+    // Nothing used to do this. The checkout read stockQuantity to decide
+    // a box needed no lead time and could be collected today, and then
+    // left the number untouched — so after the six real boxes were gone,
+    // the seventh customer was still promised same-day pickup on a box
+    // that did not exist.
+    //
+    // `dec` is atomic on Sanity's side, which is the point: two orders
+    // placed in the same second both reading "1" and both selling it is
+    // exactly the race this has to survive.
+    const decrements = stockDecrements(data.items, products);
+    if (decrements.length) {
+      try {
+        const { writeClient } = await import("@/sanity/lib/client");
+        let tx = writeClient.transaction();
+        for (const d of decrements) {
+          tx = tx.patch(d.productId, (p) => p.dec({ stockQuantity: d.by }));
+        }
+        await tx.commit();
+
+        // An atomic decrement can land below zero. The code reads any
+        // count at or below zero the same way, so this changes no
+        // behaviour — but a negative number in the Studio reads as a bug
+        // to whoever sees it, and Karyana has to trust this field.
+        const after = await writeClient.fetch<{ _id: string; stockQuantity: number | null }[]>(
+          `*[_id in $ids]{ _id, stockQuantity }`,
+          { ids: decrements.map((d) => d.productId) }
+        );
+        const negative = after.filter((p) => needsClamp(p.stockQuantity));
+        if (negative.length) {
+          let fix = writeClient.transaction();
+          for (const p of negative) {
+            fix = fix.patch(p._id, (patch) => patch.set({ stockQuantity: 0 }));
+          }
+          await fix.commit();
+        }
+      } catch (err) {
+        // Stock that fails to come down must not take the order with it:
+        // the customer has paid. It is logged loudly because the result
+        // is overselling same-day pickup, which someone has to notice.
+        console.error("[stock] could not decrement after", orderNumber, err);
       }
     }
 

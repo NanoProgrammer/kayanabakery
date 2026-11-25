@@ -29,9 +29,16 @@ import type { Product, Category } from "@/types";
 export function ShopGrid({
   products,
   categories,
+  sales,
 }: {
   products: Product[];
   categories: Category[];
+  /**
+   * Units sold per slug in the last three months, for the "Más vendidos"
+   * default. Undefined when the orders could not be read — the sort then
+   * falls back to the Studio's tag rather than to nothing.
+   */
+  sales?: Record<string, number> | null;
 }) {
   const { locale } = useLocale();
   const es = locale === "es";
@@ -41,8 +48,8 @@ export function ShopGrid({
   const [showPrice, setShowPrice] = useState(false);
 
   const shown = useMemo(
-    () => applyFilters(products as any, filters) as unknown as Product[],
-    [products, filters]
+    () => applyFilters(products as any, filters, sales) as unknown as Product[],
+    [products, filters, sales]
   );
 
   const filtering = isFiltered(filters, bounds);

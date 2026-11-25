@@ -9,7 +9,7 @@
  * empty, which is exactly the failure that looks like "you didn't do it".
  */
 import { parse, evaluate } from "groq-js";
-import { cakesForHomeQuery } from "../sanity/lib/queries";
+import { cakesForHomeQuery, breadBoxesForHomeQuery } from "../sanity/lib/queries";
 import { CAKE_FAMILIES, familyForProduct } from "../lib/products/cake-families";
 
 let passed = 0;
@@ -136,6 +136,33 @@ const dataset = [
     await evaluate(parse(cakesForHomeQuery), { dataset: [cakesCat, product("x", "Concha", ["cat-conchas"], 1)] })
   ).get()) as any[];
   check("returns nothing rather than everything", empty.length, 0);
+
+  console.log("\n  the second door: the bread boxes");
+  // Situación 9 names two entrances. The boxes band must select boxes and
+  // nothing else, or the home page shows cakes twice.
+  const boxCat = { _id: "cat-boxes", _type: "category", name: "Boxes", slug: { current: "boxes" } };
+  const withBoxes = [
+    ...dataset,
+    boxCat,
+    { ...product("b1", "Family Box", ["cat-boxes"], 2), stockQuantity: 4 },
+    product("b2", "Fiesta Box", ["cat-boxes"], 1),
+    // Filed under both: it is still a box and belongs in the band.
+    product("b3", "Pan Dulce Mix Box", ["cat-boxes", "cat-conchas"], 3),
+  ];
+  const boxes = (await (await evaluate(parse(breadBoxesForHomeQuery), { dataset: withBoxes })).get()) as any[];
+  check(
+    "only the boxes, in her order",
+    boxes.map((r) => r.name),
+    ["Fiesta Box", "Family Box", "Pan Dulce Mix Box"]
+  );
+  check("no cakes in the bread band", boxes.some((r) => r.name.includes("Leches")), false);
+  check("a box filed under two categories still counts", boxes.some((r) => r.name.includes("Mix")), true);
+  // The "Ready today" badge reads this field, so it has to arrive.
+  check("stock comes through, for the Ready-today badge", boxes.find((r) => r.name === "Family Box").stockQuantity, 4);
+  check("...and is absent rather than wrong when unset", boxes.find((r) => r.name === "Fiesta Box").stockQuantity, null);
+  check("at most four, so the band stays one row", breadBoxesForHomeQuery.includes("[0...4]"), true);
+  const noBoxes = (await (await evaluate(parse(breadBoxesForHomeQuery), { dataset })).get()) as any[];
+  check("no boxes in the catalogue means no band", noBoxes.length, 0);
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   if (failed) process.exit(1);

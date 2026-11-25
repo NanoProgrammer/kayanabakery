@@ -19,6 +19,7 @@ import {
   defaultFilters,
   sortLabel,
   SORT_KEYS,
+  waitHours,
   type ShopProduct,
 } from "../lib/products/shop-filters";
 
@@ -112,6 +113,34 @@ check("a product with no creation date sorts last under newest", sortProducts([l
 check("sorting does not mutate the input", (() => { const before = all.map((p) => p._id); sortProducts(all, "name"); return all.map((p) => p._id).join() === before.join(); })(), true);
 check("every sort key has a label", SORT_KEYS.every((k) => !!sortLabel(k, "en") && !!sortLabel(k, "es")), true);
 check("the default is bestsellers", defaultFilters.sort, "featured");
+
+console.log("\n  quickest to make (Situación 12)");
+// A customer who needs something today sorts by this, not by price.
+const onShelf = P({ _id: "s1", name: "Box ready now", price: 25, leadTime: 48, stockQuantity: 6 });
+const quick = P({ _id: "s2", name: "Concha", price: 5, leadTime: 8 });
+const slow = P({ _id: "s3", name: "Chocoflan", price: 55, leadTime: 48 });
+const blank = P({ _id: "s4", name: "No lead time set", price: 9 });
+check("stock on the shelf means no wait at all", waitHours(onShelf), 0);
+check("...even with a 48-hour lead time on the product", onShelf.leadTime, 48);
+check("otherwise the wait is the lead time", waitHours(quick), 8);
+// A blank field is Karyana leaving it empty, not a 1000-hour bake. The
+// checkout reads it the same way, so the shop must not disagree.
+check("a blank lead time is no wait, not an infinite one", waitHours(blank), 0);
+check("a negative lead time cannot push a product up or down", waitHours(P({ _id: "s5", name: "X", price: 1, leadTime: -5 })), 0);
+check(
+  "shortest wait first",
+  sortProducts([slow, quick, onShelf], "fastest").map((p) => p._id),
+  ["s1", "s2", "s3"]
+);
+// Two things both ready now: offer the cheaper one first.
+check(
+  "equal waits go cheapest first",
+  sortProducts([blank, onShelf], "fastest").map((p) => p._id),
+  ["s4", "s1"]
+);
+check("it is offered in both languages", [sortLabel("fastest", "es"), sortLabel("fastest", "en")], ["Más rápidos de preparar", "Quickest to make"]);
+check("and it is one of the options", SORT_KEYS.includes("fastest"), true);
+check("...without displacing bestsellers as the default", defaultFilters.sort, "featured");
 
 console.log("\n  the price slider's ends");
 check("from the catalogue, rounded outwards", priceBounds(all), { min: 5, max: 65 });

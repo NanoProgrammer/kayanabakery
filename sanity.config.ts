@@ -4,6 +4,7 @@ import { visionTool } from "@sanity/vision";
 import { schemaTypes } from "./sanity/schemas";
 import { karyanaStructure } from "./sanity/structure";
 import { printPackingSlipAction } from "./sanity/structure/actions/printPackingSlip";
+import { sendInvoiceAction } from "./sanity/structure/actions/sendInvoice";
 
 export default defineConfig({
   name: "default",
@@ -27,7 +28,7 @@ export default defineConfig({
   document: {
     actions: (prev, context) =>
       context.schemaType === "order"
-        ? [...prev, printPackingSlipAction]
+        ? [...prev, printPackingSlipAction, sendInvoiceAction]
         : prev,
   },
 });

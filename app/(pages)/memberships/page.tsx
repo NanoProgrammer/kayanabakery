@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import { membershipPlansQuery } from "@/sanity/lib/queries";
 import { MembershipsHero } from "@/components/membership/MembershipsHero";
-import { MembershipPricingTable } from "@/components/membership/MembershipPricingTable";
+import { ClubTiers } from "@/components/membership/ClubTiers";
 import { MembershipBenefitsGrid } from "@/components/membership/MembershipBenefitsGrid";
 import { MembershipFAQ } from "@/components/membership/MembershipFAQ";
 import { ClubRoadmap } from "@/components/membership/ClubRoadmap";
@@ -38,15 +38,11 @@ export default async function MembershipsPage() {
     <>
       <MembershipsHero />
 
-      <MembershipPricingTable
-        cmsPlans={cmsPlans ?? []}
-        currentTier={currentTier as any}
-        loggedIn={!!userId}
-        membership={currentMembership}
-      />
-
-      {/* Situación 8: the climb, shown before the fine print. */}
+      {/* Situación 8: the climb first — it is what the Club now IS — then
+          the levels in detail. Neither of them sells anything. */}
       <ClubRoadmap currentTier={currentTier as any} />
+
+      <ClubTiers currentTier={currentTier as any} />
 
       <MembershipBenefitsGrid />
 

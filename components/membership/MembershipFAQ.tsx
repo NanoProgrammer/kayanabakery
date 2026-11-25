@@ -14,56 +14,29 @@ export function MembershipFAQ() {
       ? [
           {
             q: "¿Qué es el Karyana Club?",
-            a: "Es una precompra de productos y servicios futuros, no una cuota de membresía.\n\nEl 100% de lo que pagas vuelve a ti en puntos (1 punto = 1 centavo, 100 puntos = $1 CAD). Nada se queda en el camino. Esos puntos los gastas en lo que tú quieras: pan, pasteles, café, lo que sea, cuando tú quieras.\n\nAdemás, mientras seas miembro tienes prioridad en entregas y acceso a productos y servicios que no están abiertos al público.\n\nDicho simple: no estás pagando una membresía, estás pagando por adelantado lo que ya ibas a comprar.",
+            a: "Es un juego de niveles, no una membresía. No se paga nada y no hay cuota.\n\nCada vez que compras ganas créditos KLC, y los créditos te suben de nivel: Básico, Artesano, Selecto y Legendario. Cada nivel desbloquea beneficios — menos espera en tus pasteles, envío gratis, acceso a cosas que no están abiertas al público.\n\nLos KLC no son dinero y no se canjean por productos. Solo sirven para subir de nivel. Los puntos de Karyana son otra cosa distinta y siguen igual: 100 puntos = $1.",
           },
           {
-            // No "cómo se cobran las cuotas": el Club no es una cuota, y
-            // describirlo así era exactamente lo que confundía sobre qué
-            // estaba comprando la gente.
-            q: "¿Cómo funciona exactamente?",
-            a: "Pagas por adelantado — cada mes (Selecto, Legendario) o una vez al año (Artesano) — y ese dinero no se queda en la panadería: se convierte íntegro en puntos a tu nombre. 1 punto = 1 centavo, así que $30 son 3,000 puntos, $30 para gastar.\n\nAl entrar eliges cómo usarlo:\n\n• Pedido automático de pan: cada semana te preparamos tu caja sin que hagas nada. Se paga con tus puntos, y a tu tarjeta solo le cobramos lo que los puntos no alcancen a cubrir.\n\n• Solo puntos: no hay orden automática. Tus puntos quedan ahí y pides lo que quieras, cuando quieras.\n\nPuedes cambiar entre las dos opciones cuando quieras desde tu cuenta. Y mientras seas miembro tienes prioridad en entregas y acceso a cosas que no están abiertas al público.",
+            q: "¿Cómo subo de nivel?",
+            a: "Hay cinco formas, y ninguna es pagar:\n\n• Comprar: cada compra válida suma.\n• Gastar: los pedidos más grandes suman más.\n• Quedarte: cada año con nosotros suma.\n• Invitar: cuando la persona que invitaste hace su primera compra.\n• Descubrir: la primera vez que pruebas una familia nueva — conchas, pan tradicional, pasteles, postres.\n\nInvitar y descubrir tienen un límite anual, para que el Club siga premiando sobre todo a quien regresa a comprar. Y Legendario pide además compras tuyas en días distintos: no se llega ahí solo con referidos.",
           },
           {
-            q: "¿Qué pasa si cancelo?",
-            a: "Mantienes los beneficios hasta el final del periodo facturado. Después regresas al plan Básico (gratis) sin perder los puntos acumulados.",
-          },
-          {
-            q: "¿Cómo funcionan los puntos?",
-            a: "100 puntos = $1 CAD. Ganas puntos en cada compra según tu tier (Básico 1x, Artesano 2x, Selecto 4x, Legendario 5x, Embajador 10x). Los puedes canjear directamente en el checkout.",
-          },
-          {
-            q: "¿Cómo aplico para Embajador?",
-            a: "Llena el formulario en /ambassador. Revisamos cada aplicación en 5 días hábiles. Buscamos personas que aman Karyana y quieran compartirlo con su comunidad.",
-          },
-          {
-            q: "¿Puedo cambiar de plan?",
-            a: "Sí, puedes hacer upgrade en cualquier momento desde tu cuenta. El cambio se aplica inmediatamente con prorrateo del periodo actual.",
+            q: "¿Qué pasa si dejo de comprar?",
+            a: "No pierdes tu nivel de un día para otro. Los créditos cuentan mientras son recientes, y cuando dejan de alcanzar tienes un periodo de gracia antes de bajar.\n\nTe avisamos antes, nunca después, y nunca bajas más de un nivel a la vez. Una sola compra renueva tu nivel. Tus puntos acumulados no se tocan.",
           },
         ]
       : [
           {
             q: "What is the Karyana Club?",
-            a: "It's a prepayment for future products and services, not a membership fee.\n\n100% of what you pay comes back to you as points (1 point = 1 cent, 100 points = $1 CAD). Nothing is held back. You spend those points on whatever you like — bread, cakes, coffee, anything — whenever you like.\n\nOn top of that, while you're a member you get priority on deliveries and access to products and services that aren't open to the public.\n\nPut simply: you're not paying for a membership, you're paying in advance for what you were going to buy anyway.",
+            a: "It's a game of levels, not a membership. There is nothing to pay and no fee.\n\nEvery time you buy you earn KLC credits, and credits move you up: Básico, Artesano, Selecto and Legendario. Each level unlocks something — less waiting on your cakes, free delivery, access to things that aren't open to the public.\n\nKLC are not money and cannot be exchanged for products. They only move you up a level. Karyana points are a separate thing and work exactly as before: 100 points = $1.",
           },
           {
-            q: "How does it actually work?",
-            a: "You pay up front — monthly (Selecto, Legendario) or once a year (Artesano) — and that money doesn't stay with the bakery: all of it becomes points in your name. 1 point = 1 cent, so $30 is 3,000 points, which is $30 to spend.\n\nWhen you join you choose how to use it:\n\n• Bread auto reorder: every week we make up your box without you doing anything. It's paid from your points, and your card is only charged for whatever the points don't cover.\n\n• Points only: no automatic order. Your points sit there and you order what you like, when you like.\n\nYou can switch between the two any time from your account. And while you're a member you get priority on deliveries and access to things that aren't open to the public.",
+            q: "How do I move up?",
+            a: "Five ways, and none of them is paying:\n\n• Buy: every valid purchase counts.\n• Spend: bigger orders count for more.\n• Stay: each year with us counts.\n• Refer: when the person you invited makes their first purchase.\n• Explore: the first time you try a new family — conchas, traditional bread, cakes, desserts.\n\nReferring and exploring have a yearly cap, so the Club keeps rewarding the people who come back to buy. And Legendario also asks for purchases of your own on different days: you can't get there on referrals alone.",
           },
           {
-            q: "What happens if I cancel?",
-            a: "You keep your benefits until the end of the billing period, then go back to Basico (free). Your accumulated points stay with you.",
-          },
-          {
-            q: "How do points work?",
-            a: "100 points = $1 CAD. Earn on every purchase based on your tier (Basico 1x, Artesano 2x, Selecto 4x, Legendario 5x, Embajador 10x). Redeem at checkout.",
-          },
-          {
-            q: "How do I apply for Embajador?",
-            a: "Fill out the form at /ambassador. We review applications within 5 business days. We look for people who love Karyana and want to share it with their community.",
-          },
-          {
-            q: "Can I change plans?",
-            a: "Yes, you can upgrade anytime from your account. Changes apply immediately with proration of the current period.",
+            q: "What happens if I stop buying?",
+            a: "You don't lose your level overnight. Credits count while they are recent, and when they no longer add up you get a grace period before anything changes.\n\nWe tell you before, never after, and you never drop more than one level at a time. A single order renews it. Your accumulated points are untouched.",
           },
         ];
 

@@ -1,6 +1,13 @@
 # Karyana Loyalty Club (KLC) — especificación
 
 **Estado: PROPUESTA. No autoriza cambios en producción.**
+
+El motor está construido y probado, pero **apagado**: `KLC_LIVE` en
+`lib/loyalty/standing.ts` está en `false`, y mientras lo esté nada de esto
+toca el nivel, el precio ni lo que ve un cliente. La página del Club también
+lee ese interruptor, así que la página y las reglas no pueden describir dos
+clubes distintos. Encenderlo es una línea — después de las decisiones de la
+sección 5.
 Rubén y Karina no han aprobado el despliegue. Los umbrales 4 / 10 / 18 KLC
 son propuestos, no definitivos. Nada de lo descrito aquí está conectado al
 checkout, a la membresía ni al nivel que un cliente tiene hoy.
@@ -216,6 +223,28 @@ primeros suben KLC**. Los otros 7 no mueven la aguja. Si la intención es
 premiar a quien trae 10 personas, **el tope de 6 es lo que hay que subir**,
 no la regla de las compras propias. Son dos decisiones distintas y conviene
 tomarlas por separado.
+
+### 2.6 Conservar el nivel, y perderlo
+
+Implementado en `lib/loyalty/standing.ts` (`npm run test:standing`, 35
+pruebas). **Detrás del interruptor `KLC_LIVE`, hoy en `false`.**
+
+La idea que la membresía pagada nunca tuvo: el nivel **se gana y hay que
+conservarlo**. Los créditos cuentan solo mientras son recientes (365 días),
+así que quien deja de comprar baja solo — sin trabajo de expiración, sin
+correo de "tu membresía venció", solo un número que deja de ser cierto.
+
+Dos cosas evitan que eso sea cruel:
+
+| | |
+| --- | --- |
+| **Subir es inmediato** | Nadie debería esperar para ser premiado |
+| **Bajar espera 90 días** | Un mes flojo después de un año de lealtad no cuesta el nivel |
+| **Nunca más de un escalón** | Una ausencia larga es un descenso, no una caída |
+| **Se avisa antes** | "Conservas Legendario 60 días más — una compra lo renueva" |
+
+El caso que estas reglas evitan es concreto: **un cliente de siempre entrando
+el día de su cumpleaños y encontrándose en Básico.**
 
 ---
 

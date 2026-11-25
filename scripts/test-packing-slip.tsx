@@ -186,6 +186,39 @@ console.log("\n5. Delivery slips too\n");
   const emptySlip = await textFor({ ...base, karyanaCakeNote: undefined });
   check("an order without it prints nothing extra", !squashed(emptySlip).includes("MAKESTHIS"));
 
+
+  console.log("\nDiscover Bread on the slip\n");
+
+  const earnedSlip = await textFor({
+    ...base,
+    items: [{ name: "3 Leches Tiramisu", quantity: 1 }],
+    discoverBreadNote: "DESCUBREPAN — ¡TU CUPÓN HA SIDO REGISTRADO! CÓDIGO: DESCUBREPAN-100042",
+  });
+  const flat = (t: string) => t.replace(/\s+/g, "").toUpperCase();
+  check("the cake's slip carries the code", flat(earnedSlip).includes("DESCUBREPAN-100042"));
+  // react-pdf hyphenates long words across lines; on a comanda read at a
+  // glance, "REG-ISTRADO" is a word misread. Hyphenation is off.
+  check("...and tells them it is registered, unbroken", flat(earnedSlip).includes("REGISTRADO"));
+  check("no word is split with a hyphen", !/[A-ZÁÉÍÓÚÑ]-[A-ZÁÉÍÓÚÑ]{3,}/.test(flat(earnedSlip).replace("DESCUBREPAN-100042", "")));
+
+  // On a redemption this is two loaves somebody has to physically put in
+  // the box, not a discount to work out.
+  const redeemSlip = await textFor({
+    ...base,
+    discoverBreadNote: "DESCUBREPAN — AGREGAR 2 PANES GRATIS",
+  });
+  check("the comanda says to add the breads", flat(redeemSlip).includes("AGREGAR2PANESGRATIS"));
+  check("...under the coupon's name", flat(redeemSlip).includes("DESCUBREPAN"));
+
+  const plain = await textFor({ ...base, discoverBreadNote: null });
+  check("an ordinary order prints neither", !flat(plain).includes("DESCUBREPAN"));
+
+  console.log("\nCustomer notes on the slip\n");
+  // The box has been printed since the slip was built and was always empty,
+  // because nothing ever filled it.
+  const noted = await textFor({ ...base, note: "Sin nuez por favor, alergia" });
+  check("the customer's note is printed", flat(noted).includes("SINNUEZPORFAVOR"));
+
   console.log(`\n${passed} passed, ${failed} failed\n`);
   process.exit(failed > 0 ? 1 : 0);
 }

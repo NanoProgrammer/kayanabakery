@@ -78,3 +78,51 @@ export const CLUB_COPY: Record<"en" | "es", ClubCopy> = {
 export function clubCopy(locale: string): ClubCopy {
   return locale === "es" ? CLUB_COPY.es : CLUB_COPY.en;
 }
+
+/* ------------------------------------------------------------------ */
+/* The proposed earned scheme                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * How the Club is described once tiers are EARNED rather than bought.
+ *
+ * Not shown anywhere yet: it appears only when KLC_LIVE is turned on, and
+ * that is false. Written now so the page can be seen at the meeting beside
+ * the one customers actually have.
+ */
+export const EARNED_CLUB_COPY: Record<"en" | "es", ClubCopy & { keeping: string }> = {
+  es: {
+    name: CLUB_NAME,
+    eyebrow: "Se gana, no se compra",
+    headline: "No se paga.",
+    accent: "Se gana comprando pan.",
+    whatItIs:
+      "Tu nivel en el Karyana Club sube solo: cada compra, cada persona que traes y cada cosa nueva que pruebas te acerca al siguiente.",
+    money:
+      "No hay cuota. Nada que cobrar, nada que cancelar. Los puntos que ya tienes siguen siendo tuyos.",
+    extras:
+      "Entre más alto tu nivel, más prioridad en entregas, más acceso a cosas que no están abiertas al público, y en Legendario Karyana hace tu pastel de cumpleaños ella misma.",
+    reassurance: "Una familia a la vez.",
+    keeping:
+      "El nivel se conserva comprando. Si dejas de venir baja poco a poco — nunca de golpe, y siempre con aviso antes.",
+  },
+  en: {
+    name: CLUB_NAME,
+    eyebrow: "Earned, not bought",
+    headline: "There's nothing to pay.",
+    accent: "You earn it by buying bread.",
+    whatItIs:
+      "Your place in the Karyana Club rises on its own: every order, every person you bring and every new thing you try moves you closer to the next one.",
+    money:
+      "No fee. Nothing to charge, nothing to cancel. The points you already have stay yours.",
+    extras:
+      "The higher you are, the more priority on deliveries, the more access to things that aren't open to the public — and at Legendario, Karyana makes your birthday cake herself.",
+    reassurance: "One family at a time.",
+    keeping:
+      "You keep your place by buying. Stop coming and it eases back down — never all at once, and never without telling you first.",
+  },
+};
+
+export function earnedClubCopy(locale: string) {
+  return locale === "es" ? EARNED_CLUB_COPY.es : EARNED_CLUB_COPY.en;
+}

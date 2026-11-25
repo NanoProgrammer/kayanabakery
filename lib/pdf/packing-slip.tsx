@@ -2,6 +2,12 @@ import { renderToStream } from "@react-pdf/renderer";
 import { writeClient as sanityClient } from "@/sanity/lib/client";
 import { PackingSlipPDF, type PackingSlipData } from "@/lib/pdf/packing-slip-pdf";
 import { karyanaMakesThisCake, slipNote } from "@/lib/membership/legendario-cake";
+import {
+  earnsCoupon,
+  isDiscoverBreadCode,
+  slipNoteForEarned,
+  slipNoteForRedeemed,
+} from "@/lib/coupons/discover-bread";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.karyanabakery.ca";
 
@@ -26,7 +32,8 @@ function formatDate(iso: string): string {
 
 const ORDER_FIELDS = `{
   orderNumber, customerName, customerPhone, customerEmail, customerTier,
-  fulfillmentType, deliveryAddress, pickupDate, notes, items, createdAt
+  fulfillmentType, deliveryAddress, pickupDate, notes, items, createdAt,
+  couponCode
 }`;
 
 /**
@@ -147,6 +154,21 @@ export async function buildPackingSlipPdf(
     note: order.notes ?? null,
     // Worked out here, where the tier and the items are both already in
     // hand, so the printer agent needs to know nothing about memberships.
+    // Buy a cake, earn two breads: the code goes on the cake's own slip so
+    // whoever packs the box can hand it over. Using one is an instruction to
+    // add bread, not a discount to work out.
+    discoverBreadNote: (() => {
+      const lines = (order.items || []).map((it: any) => ({
+        name: it.name,
+        slug: it.slug ?? null,
+        categorySlugs: it.categorySlugs ?? null,
+      }));
+      // Spanish: the comanda is read by the kitchen, and the meeting
+      // agreed the exact wording.
+      if (isDiscoverBreadCode(order.couponCode)) return slipNoteForRedeemed("es");
+      if (earnsCoupon(lines)) return slipNoteForEarned(order.orderNumber ?? "", "es");
+      return null;
+    })(),
     karyanaCakeNote: slipNote(
       karyanaMakesThisCake({
         tier: await resolveTier(order),

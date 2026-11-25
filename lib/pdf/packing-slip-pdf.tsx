@@ -5,7 +5,17 @@
  * single-column layout, not a side-by-side Billing/Shipping invoice layout.
  */
 
-import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer";
+
+/**
+ * No automatic hyphenation.
+ *
+ * react-pdf breaks long words across lines with a hyphen, which turned
+ * "REGISTRADO" into "REG-ISTRADO" on the kitchen slip. On a comanda that is
+ * read at a glance while packing a box, a word split in half is a word
+ * misread — and product names get the same treatment.
+ */
+Font.registerHyphenationCallback((word) => [word]);
 
 // 4in x 6in at 72pt/in
 const PAGE_WIDTH = 4 * 72;
@@ -199,6 +209,8 @@ export type PackingSlipData = {
   note?: string | null;
   /** "KARYANA MAKES THIS CAKE" — the Legendario promise, for the kitchen. */
   karyanaCakeNote?: string | null;
+  /** The Discover Bread code to hand over, or the instruction to add bread. */
+  discoverBreadNote?: string | null;
   logoUrl: string;
 };
 
@@ -287,6 +299,16 @@ export function PackingSlipPDF({ data }: { data: PackingSlipData }) {
         {data.karyanaCakeNote && (
           <View style={styles.karyanaBanner}>
             <Text style={styles.karyanaBannerText}>{data.karyanaCakeNote}</Text>
+          </View>
+        )}
+
+        {/* Discover Bread. Its own box: on a cake order it is a code to be
+            read out, and on a redemption it is two loaves somebody has to
+            physically put in the box. Neither survives being a line in the
+            customer note. */}
+        {data.discoverBreadNote && (
+          <View style={styles.karyanaBanner}>
+            <Text style={styles.karyanaBannerText}>{data.discoverBreadNote}</Text>
           </View>
         )}
 

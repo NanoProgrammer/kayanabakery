@@ -154,6 +154,13 @@ export default defineType({
       components: { input: PickupDateTimeInput },
     }),
     defineField({
+      name: "couponCode",
+      title: "Coupon used",
+      type: "string",
+      readOnly: true,
+      description: "Printed on the kitchen slip — a Discover Bread code means two free breads go in the box.",
+    }),
+    defineField({
       name: "notes",
       title: "Customer notes",
       type: "text",

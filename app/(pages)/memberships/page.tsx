@@ -6,6 +6,7 @@ import { MembershipsHero } from "@/components/membership/MembershipsHero";
 import { MembershipPricingTable } from "@/components/membership/MembershipPricingTable";
 import { MembershipBenefitsGrid } from "@/components/membership/MembershipBenefitsGrid";
 import { MembershipFAQ } from "@/components/membership/MembershipFAQ";
+import { ClubRoadmap } from "@/components/membership/ClubRoadmap";
 import type { MembershipPlanCMS } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,9 @@ export default async function MembershipsPage() {
         loggedIn={!!userId}
         membership={currentMembership}
       />
+
+      {/* Situación 8: the climb, shown before the fine print. */}
+      <ClubRoadmap currentTier={currentTier as any} />
 
       <MembershipBenefitsGrid />
 

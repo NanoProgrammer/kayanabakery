@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Tag, X, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
+import { isDiscoverBreadCode, FREE_BREADS } from "@/lib/coupons/discover-bread";
 
 type AppliedCoupon = {
   code: string;
@@ -68,9 +69,16 @@ export function CouponInput({
           </div>
           <div>
             <p className="font-bold">{applied.code}</p>
-            {applied.description && (
-              <p className="text-xs text-ink-soft">{applied.description}</p>
-            )}
+            {/* A Discover Bread code takes nothing off the bill — the two
+                breads go in the box. Without saying so, the customer
+                applies it, sees $0.00 off and thinks it is broken. */}
+            <p className="text-xs text-ink-soft">
+              {isDiscoverBreadCode(applied.code)
+                ? locale === "es"
+                  ? `${FREE_BREADS} panes gratis — los escogemos nosotros`
+                  : `${FREE_BREADS} free breads — our choice`
+                : applied.description}
+            </p>
           </div>
         </div>
         <button

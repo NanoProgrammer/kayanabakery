@@ -22,12 +22,28 @@ export type ShopProduct = {
   displayOrder?: number | null;
   /** Sanity's creation time, for "newest". */
   _createdAt?: string | null;
+  /**
+   * Hours of notice the kitchen needs, as the Studio already stores it.
+   * Used by the "quickest to make" sort the meeting asked for (Situación
+   * 12): a customer who needs something today is sorting by this, not by
+   * price.
+   */
+  leadTime?: number | null;
+  /** A number here means boxes are on the shelf now — no lead time at all. */
+  stockQuantity?: number | null;
   categories?: { slug: string; name?: string | null }[] | null;
 };
 
-export type SortKey = "featured" | "newest" | "price-asc" | "price-desc" | "name";
+export type SortKey = "featured" | "newest" | "price-asc" | "price-desc" | "fastest" | "name";
 
-export const SORT_KEYS: SortKey[] = ["featured", "newest", "price-asc", "price-desc", "name"];
+export const SORT_KEYS: SortKey[] = [
+  "featured",
+  "newest",
+  "price-asc",
+  "price-desc",
+  "fastest",
+  "name",
+];
 
 export function sortLabel(key: SortKey, locale: string): string {
   const es = locale === "es";
@@ -40,6 +56,8 @@ export function sortLabel(key: SortKey, locale: string): string {
       return es ? "Precio: menor a mayor" : "Price: low to high";
     case "price-desc":
       return es ? "Precio: mayor a menor" : "Price: high to low";
+    case "fastest":
+      return es ? "Más rápidos de preparar" : "Quickest to make";
     case "name":
       return es ? "Nombre (A-Z)" : "Name (A-Z)";
   }
@@ -90,6 +108,22 @@ function tagRank(tag: string | null | undefined): number {
   return 2;
 }
 
+/**
+ * The wait, in hours, for sorting by "quickest to make".
+ *
+ * Anything with stock on the shelf waits for nothing — that is what
+ * Stock Quantity means since Situación 13 — so it sorts ahead of
+ * everything, however long its lead time says it takes to bake. A missing
+ * lead time is treated as no wait, because that is what the checkout does
+ * with it, and a product must not be pushed to the back of the list for a
+ * field Karyana simply left blank.
+ */
+export function waitHours(p: ShopProduct): number {
+  if ((p.stockQuantity ?? 0) > 0) return 0;
+  const h = typeof p.leadTime === "number" ? p.leadTime : 0;
+  return Number.isFinite(h) && h > 0 ? h : 0;
+}
+
 function createdTime(p: ShopProduct): number {
   const t = p._createdAt ? Date.parse(p._createdAt) : NaN;
   return Number.isNaN(t) ? 0 : t;
@@ -113,6 +147,10 @@ export function sortProducts<T extends ShopProduct>(products: readonly T[], key:
       return copy.sort((a, b) => a.price - b.price || tie(a, b));
     case "price-desc":
       return copy.sort((a, b) => b.price - a.price || tie(a, b));
+    case "fastest":
+      // Shortest wait first, and among equal waits the cheaper one — two
+      // products that are both ready now are best offered cheapest first.
+      return copy.sort((a, b) => waitHours(a) - waitHours(b) || a.price - b.price || tie(a, b));
     case "name":
       return copy.sort((a, b) => normalize(a.name).localeCompare(normalize(b.name)) || tie(a, b));
     case "featured":

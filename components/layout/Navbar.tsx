@@ -83,21 +83,25 @@ export function Navbar() {
       </div>
 
       {/* Mobile layout */}
-      <div className="container-bakery relative flex h-16 items-center justify-between lg:hidden">
-        {/* Left: burger */}
+      {/* The phone bar.
+          The logo used to be absolutely centred, which worked while the
+          right-hand side was two round buttons. Adding the language switch
+          made that side wide enough to sit on top of the logo. Everything
+          is in normal flow now, so nothing can overlap whatever else ends
+          up here. */}
+      <div className="container-bakery relative flex h-16 items-center gap-1.5 lg:hidden">
         <button
-          className="relative z-10 inline-flex items-center justify-center rounded-full p-2 hover:bg-canela-light"
+          className="inline-flex shrink-0 items-center justify-center rounded-full p-2 hover:bg-canela-light"
           onClick={() => setMobileOpen(true)}
           aria-label="Open menu"
         >
           <Menu className="h-6 w-6" />
         </button>
 
-        {/* Center: logo — absolute so it stays centered regardless of left/right width */}
         <Link
           href="/"
           aria-label="Karyana Bakery"
-          className="absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2"
+          className="flex min-w-0 flex-1 justify-center"
         >
           <Image
             src="/logo.png"
@@ -105,17 +109,12 @@ export function Navbar() {
             width={90}
             height={90}
             priority
-            className="h-18 w-18 object-contain"
+            className="h-12 w-12 object-contain sm:h-14 sm:w-14"
           />
         </Link>
 
-        {/* Right: language + account + cart.
-            The language switch used to live only inside the burger menu, so on
-            a phone a Spanish-speaking customer had to find it behind two taps
-            on a page already rendered in English. It stays in the bar itself,
-            compact enough not to crowd the logo. */}
-        <div className="relative z-10 flex items-center gap-2">
-          <LanguageToggle className="scale-90 origin-right" />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <LanguageToggle compact />
           {session ? (
             <button
               onClick={() => setAccountOpen((o) => !o)}

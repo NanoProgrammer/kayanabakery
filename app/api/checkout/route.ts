@@ -42,6 +42,7 @@ import {
   effectivePickupLeadHours,
 } from "@/lib/checkout/pickup-windows";
 import { orderLeadHours, orderIsReadyNow } from "@/lib/products/ready-now";
+import { earnsCoupon, couponDocument } from "@/lib/coupons/discover-bread";
 
 /**
  * The categories whose products follow the cake schedule. A cake in the
@@ -855,6 +856,26 @@ paymentId = result.payment?.id ?? undefined;
   // can get cut off mid-flight the instant the response goes out, which is
   // how an order confirms and emails send but never lands in Sanity Studio.
   after(async () => {
+    // Buy a cake, earn two breads. The code is derived from the order
+    // number, so issuing it twice for the same order writes the same
+    // document and the second write is a no-op rather than a second coupon.
+    const lines = items.map((it) => ({
+      name: it.name,
+      slug: it.slug,
+      categorySlugs: it.categorySlugs ?? [],
+    }));
+    if (earnsCoupon(lines)) {
+      try {
+        const { writeClient } = await import("@/sanity/lib/client");
+        await writeClient.createIfNotExists(couponDocument(orderNumber));
+      } catch (err) {
+        // A coupon that fails to mint must not take the order with it. The
+        // slip still prints the code, so the customer is not left short —
+        // it can be created by hand from what is on the ticket.
+        console.error("[discover-bread] could not create the coupon:", err);
+      }
+    }
+
     await createSanityOrder({
       orderNumber,
       prismaId: order.id,
@@ -863,6 +884,11 @@ paymentId = result.payment?.id ?? undefined;
       customerPhone: (user as any)?.phone ?? data.guestPhone ?? "",
       customerTier: tier,
       fulfillmentType: data.fulfillmentType,
+      // The slip has printed a "Customer note" box all along; this is what
+      // finally fills it. Without this the note reaches Prisma and the
+      // kitchen never sees it.
+      notes: data.orderNotes || null,
+      couponCode: coupon?.code ?? null,
       totalCents: pricing.totalCents,
       items: items.map((it) => ({
         productId: it.productId,

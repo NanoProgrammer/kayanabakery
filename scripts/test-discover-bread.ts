@@ -11,6 +11,9 @@
 import {
   FREE_BREADS,
   VALID_FOR_DAYS,
+  MIN_ORDER_DOLLARS,
+  COUPON_NAME,
+  REGISTERED_MESSAGE,
   isCake,
   isBread,
   earnsCoupon,
@@ -56,7 +59,11 @@ check("...by one person", doc.perUserLimit, 1);
 check("it expires", VALID_FOR_DAYS, 90);
 check("...on a real date", Number.isNaN(Date.parse(doc.expiresAt)), false);
 check("two breads", FREE_BREADS, 2);
-check("the document id follows the code", doc._id, "coupon-pan100042");
+check("the document id follows the code", doc._id, "coupon-descubrepan-100042");
+// Thirty dollars of bread, before tax. Enforced by the coupon so it cannot
+// be forgotten at the till.
+check("it needs a $30 order", doc.minOrderDollars, 30);
+check("...the number from the meeting", MIN_ORDER_DOLLARS, 30);
 
 console.log("\n  who earns one");
 check("an order with a cake does", earnsCoupon([cake, concha]), true);
@@ -80,29 +87,35 @@ check("a cake is never counted as bread", isBread(cake), false);
 check("a topper is not bread either", isBread(topper), false);
 
 console.log("\n  the code");
-check("it is derived from the order number", couponCodeFor("KAR-202611-00042"), "PAN100042");
+check("it is named DESCUBREPAN", COUPON_NAME, "DESCUBREPAN");
+check("the code carries the name and the order", couponCodeFor("KAR-202611-00042"), "DESCUBREPAN-100042");
 check("the same order gives the same code", couponCodeFor("KAR-202611-00042"), couponCodeFor("KAR-202611-00042"));
 check("a different order gives a different one", couponCodeFor("KAR-202611-00043") === couponCodeFor("KAR-202611-00042"), false);
 // It gets read aloud over the phone and printed on a receipt printer.
-check("there is no letter O to confuse with zero", couponCodeFor("KAR-2026-OOOO11").includes("O"), false);
-check("no I or Q either", /[IQ]/.test(couponCodeFor("KAR-IQIQIQ")), false);
-check("it is upper case and safe to type", /^PAN[A-Z0-9]+$/.test(couponCodeFor("kar-202611-00042")), true);
-check("an empty order number still gives a code", couponCodeFor(""), "PAN");
-check("a Discover Bread code is recognised", isDiscoverBreadCode("PAN100042"), true);
-check("...in lower case too", isDiscoverBreadCode("pan100042"), true);
+// The tail is read aloud and printed on a receipt printer, so O and 0
+// must not have to be told apart. (The name itself has an O, which is
+// fine — nobody mishears "DESCUBREPAN".)
+check("the tail has no letter O", couponCodeFor("KAR-2026-OOOO11").split("-")[1].includes("O"), false);
+check("no I or Q in the tail either", /[IQ]/.test(couponCodeFor("KAR-IQIQIQ").split("-")[1]), false);
+check("it is upper case and safe to type", /^DESCUBREPAN-[A-Z0-9]+$/.test(couponCodeFor("kar-202611-00042")), true);
+check("an empty order number still gives a code", couponCodeFor(""), "DESCUBREPAN-");
+check("a DESCUBREPAN code is recognised", isDiscoverBreadCode("DESCUBREPAN-100042"), true);
+check("...in lower case too", isDiscoverBreadCode("descubrepan-100042"), true);
+check("...and the bare name", isDiscoverBreadCode("DESCUBREPAN"), true);
 check("another coupon is not", isDiscoverBreadCode("WELCOME10"), false);
 check("nor the free-cake one", isDiscoverBreadCode("CAKE10-ABC-1"), false);
 check("nor nothing", isDiscoverBreadCode(null), false);
 
 console.log("\n  what the kitchen reads");
-const earned = slipNoteForEarned("KAR-202611-00042", "en");
-check("the cake's slip carries the code", earned.includes("PAN100042"), true);
-check("...and says what it is worth", earned.includes("2 FREE BREADS"), true);
-check("in Spanish too", slipNoteForEarned("KAR-202611-00042", "es").includes("2 PANES GRATIS"), true);
+const earnedEs = slipNoteForEarned("KAR-202611-00042", "es");
+check("the cake's slip carries the code", earnedEs.includes("DESCUBREPAN-100042"), true);
+// The exact words the meeting asked the customer to receive.
+check("...and says the coupon is registered", earnedEs.includes(REGISTERED_MESSAGE.es), true);
+check("the registered message is the one agreed", REGISTERED_MESSAGE.es, "¡TU CUPÓN HA SIDO REGISTRADO!");
 // An instruction, not a price: nobody should be working out a discount.
-check("using it is an instruction to add bread", slipNoteForRedeemed("en"), "ADD 2 FREE BREADS — OUR CHOICE");
-check("...in Spanish", slipNoteForRedeemed("es"), "AGREGAR 2 PANES GRATIS — LOS ESCOGEMOS NOSOTROS");
-check("it says the bakery chooses", slipNoteForRedeemed("en").includes("OUR CHOICE"), true);
+// Worded exactly as the meeting asked: this is the line the kitchen acts on.
+check("the comanda line is the agreed wording", slipNoteForRedeemed("es"), "DESCUBREPAN — AGREGAR 2 PANES GRATIS");
+check("...and in English", slipNoteForRedeemed("en"), "DESCUBREPAN — ADD 2 FREE BREADS");
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 if (failed) process.exit(1);

@@ -28,6 +28,21 @@ export const FREE_BREADS = 2;
 export const VALID_FOR_DAYS = 90;
 
 /**
+ * The minimum bread order the coupon needs, before tax and before the two
+ * free breads are counted. Rubén's number.
+ */
+export const MIN_ORDER_DOLLARS = 30;
+
+/** What the customer is told the moment the coupon is minted. */
+export const REGISTERED_MESSAGE = {
+  es: "¡TU CUPÓN HA SIDO REGISTRADO!",
+  en: "YOUR COUPON HAS BEEN REGISTERED!",
+} as const;
+
+/** The name everyone uses for it, in the meeting and on the comanda. */
+export const COUPON_NAME = "DESCUBREPAN";
+
+/**
  * The categories that count as bread for the redemption rule. A cake does
  * not: the offer is for discovering the bread.
  */
@@ -79,26 +94,31 @@ export function couponCodeFor(orderNumber: string): string {
     .replace(/[^A-Z0-9]/g, "")
     .replace(/[OIQ]/g, "0")
     .slice(-6);
-  return `PAN${tail}`;
+  // Named DESCUBREPAN, with a per-order tail. The name is what everyone
+  // calls it; the tail is what makes it one customer's rather than a
+  // public code anyone can pass around — the brief asks for both.
+  return `${COUPON_NAME}-${tail}`;
 }
 
 /** The line printed on the cake's slip, for whoever packs the box. */
 export function slipNoteForEarned(orderNumber: string, locale: string): string {
   const code = couponCodeFor(orderNumber);
   return locale === "es"
-    ? `CUPÓN DESCUBRE PAN: ${code} — ${FREE_BREADS} PANES GRATIS EN SU PRÓXIMO PEDIDO`
-    : `DISCOVER BREAD COUPON: ${code} — ${FREE_BREADS} FREE BREADS ON THEIR NEXT ORDER`;
+    ? `${COUPON_NAME} — ${REGISTERED_MESSAGE.es} CÓDIGO: ${code}`
+    : `${COUPON_NAME} — ${REGISTERED_MESSAGE.en} CODE: ${code}`;
 }
 
 /** The line printed when the coupon is being used: an instruction, not a price. */
 export function slipNoteForRedeemed(locale: string): string {
+  // Worded exactly as the meeting asked, because this is the line the
+  // kitchen acts on.
   return locale === "es"
-    ? `AGREGAR ${FREE_BREADS} PANES GRATIS — LOS ESCOGEMOS NOSOTROS`
-    : `ADD ${FREE_BREADS} FREE BREADS — OUR CHOICE`;
+    ? `${COUPON_NAME} — AGREGAR ${FREE_BREADS} PANES GRATIS`
+    : `${COUPON_NAME} — ADD ${FREE_BREADS} FREE BREADS`;
 }
 
 export function isDiscoverBreadCode(code: string | null | undefined): boolean {
-  return /^PAN[A-Z0-9]{1,8}$/.test((code ?? "").trim().toUpperCase());
+  return /^DESCUBREPAN(-[A-Z0-9]{1,8})?$/.test((code ?? "").trim().toUpperCase());
 }
 
 /** The Sanity coupon document for a code. Zero value, on purpose. */
@@ -115,6 +135,9 @@ export function couponDocument(orderNumber: string, now = new Date()) {
     discountType: "FIXED" as const,
     discountValue: 0,
     appliesTo: "ALL",
+    // Thirty dollars of bread before tax. Enforced by the coupon itself, so
+    // it cannot be forgotten at the till.
+    minOrderDollars: MIN_ORDER_DOLLARS,
     maxUses: 1,
     perUserLimit: 1,
     active: true,

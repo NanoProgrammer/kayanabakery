@@ -163,8 +163,10 @@ export async function buildPackingSlipPdf(
         slug: it.slug ?? null,
         categorySlugs: it.categorySlugs ?? null,
       }));
-      if (isDiscoverBreadCode(order.couponCode)) return slipNoteForRedeemed("en");
-      if (earnsCoupon(lines)) return slipNoteForEarned(order.orderNumber ?? "", "en");
+      // Spanish: the comanda is read by the kitchen, and the meeting
+      // agreed the exact wording.
+      if (isDiscoverBreadCode(order.couponCode)) return slipNoteForRedeemed("es");
+      if (earnsCoupon(lines)) return slipNoteForEarned(order.orderNumber ?? "", "es");
       return null;
     })(),
     karyanaCakeNote: slipNote(

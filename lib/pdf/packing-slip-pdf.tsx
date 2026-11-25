@@ -5,7 +5,17 @@
  * single-column layout, not a side-by-side Billing/Shipping invoice layout.
  */
 
-import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer";
+
+/**
+ * No automatic hyphenation.
+ *
+ * react-pdf breaks long words across lines with a hyphen, which turned
+ * "REGISTRADO" into "REG-ISTRADO" on the kitchen slip. On a comanda that is
+ * read at a glance while packing a box, a word split in half is a word
+ * misread — and product names get the same treatment.
+ */
+Font.registerHyphenationCallback((word) => [word]);
 
 // 4in x 6in at 72pt/in
 const PAGE_WIDTH = 4 * 72;

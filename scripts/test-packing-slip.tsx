@@ -192,23 +192,26 @@ console.log("\n5. Delivery slips too\n");
   const earnedSlip = await textFor({
     ...base,
     items: [{ name: "3 Leches Tiramisu", quantity: 1 }],
-    discoverBreadNote: "DISCOVER BREAD COUPON: PAN100042 — 2 FREE BREADS ON THEIR NEXT ORDER",
+    discoverBreadNote: "DESCUBREPAN — ¡TU CUPÓN HA SIDO REGISTRADO! CÓDIGO: DESCUBREPAN-100042",
   });
   const flat = (t: string) => t.replace(/\s+/g, "").toUpperCase();
-  check("the cake's slip carries the code", flat(earnedSlip).includes("PAN100042"));
-  check("...and what it is worth", flat(earnedSlip).includes("2FREEBREADS"));
+  check("the cake's slip carries the code", flat(earnedSlip).includes("DESCUBREPAN-100042"));
+  // react-pdf hyphenates long words across lines; on a comanda read at a
+  // glance, "REG-ISTRADO" is a word misread. Hyphenation is off.
+  check("...and tells them it is registered, unbroken", flat(earnedSlip).includes("REGISTRADO"));
+  check("no word is split with a hyphen", !/[A-ZÁÉÍÓÚÑ]-[A-ZÁÉÍÓÚÑ]{3,}/.test(flat(earnedSlip).replace("DESCUBREPAN-100042", "")));
 
   // On a redemption this is two loaves somebody has to physically put in
   // the box, not a discount to work out.
   const redeemSlip = await textFor({
     ...base,
-    discoverBreadNote: "ADD 2 FREE BREADS — OUR CHOICE",
+    discoverBreadNote: "DESCUBREPAN — AGREGAR 2 PANES GRATIS",
   });
-  check("using it prints an instruction", flat(redeemSlip).includes("ADD2FREEBREADS"));
-  check("...and says the bakery chooses", flat(redeemSlip).includes("OURCHOICE"));
+  check("the comanda says to add the breads", flat(redeemSlip).includes("AGREGAR2PANESGRATIS"));
+  check("...under the coupon's name", flat(redeemSlip).includes("DESCUBREPAN"));
 
   const plain = await textFor({ ...base, discoverBreadNote: null });
-  check("an ordinary order prints neither", !flat(plain).includes("FREEBREADS"));
+  check("an ordinary order prints neither", !flat(plain).includes("DESCUBREPAN"));
 
   console.log("\nCustomer notes on the slip\n");
   // The box has been printed since the slip was built and was always empty,

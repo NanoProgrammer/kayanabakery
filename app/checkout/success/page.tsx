@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatCents } from "@/lib/checkout/pricing";
 import { PurchaseEvent } from "@/components/checkout/PurchaseEvent";
+import { earnsCoupon } from "@/lib/coupons/discover-bread";
+import { CouponRegistered } from "@/components/checkout/CouponRegistered";
 
 export const metadata = { title: "Order confirmed" };
 export const dynamic = "force-dynamic";
@@ -52,6 +54,17 @@ export default async function CheckoutSuccessPage({
 
   const items = (order.items as any[]) || [];
 
+  // A cake in the order means a DESCUBREPAN coupon was minted for them.
+  // Told here because this is the one screen they are guaranteed to see —
+  // an email can go unopened and the kitchen slip never reaches them.
+  const earnedCoupon = earnsCoupon(
+    items.map((it: any) => ({
+      name: it.name,
+      slug: it.slug ?? null,
+      categorySlugs: it.categorySlugs ?? null,
+    }))
+  );
+
   return (
     <div className="container-bakery py-16">
       <PurchaseEvent
@@ -59,6 +72,11 @@ export default async function CheckoutSuccessPage({
         totalCents={order.total}
         items={items}
       />
+      {earnedCoupon && (
+        <div className="mx-auto max-w-2xl">
+          <CouponRegistered orderNumber={order.orderNumber} />
+        </div>
+      )}
       <div className="mx-auto max-w-2xl">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-canela-light">
           <CheckCircle2 className="h-10 w-10 text-canela-dark" />

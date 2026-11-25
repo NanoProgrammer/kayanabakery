@@ -68,6 +68,22 @@ export const productsByCategorySlugQuery = groq`
   }
 `;
 
+/**
+ * The cakes, for the spotlight at the top of the home page (Situación 9).
+ *
+ * Every cake rather than four, because the spotlight groups them into
+ * families and needs at least one with a photo in each.
+ */
+export const cakesForHomeQuery = groq`
+  *[_type == "product" && "cakes" in categories[]->slug.current] | order(displayOrder asc) {
+    _id, name, nameEs, "slug": slug.current,
+    description, descriptionEs,
+    price, compareAtPrice, image, tag,
+    inStock, stockQuantity, unit, leadTime, membersOnly, isOffSeason,
+    "categories": categories[]->{ "slug": slug.current, name, nameEs }
+  }
+`;
+
 export const allProductsQuery = groq`
   *[_type == "product"] | order(displayOrder asc) {
     _id, _createdAt, displayOrder, name, nameEs, "slug": slug.current,

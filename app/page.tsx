@@ -8,6 +8,7 @@ import { ConchaVideoSection } from "@/components/home/VideoConchaEmoji";
 import { GoogleReviewsSection } from "@/components/home/GoogleReviewsSection";
 import { Newsletter } from "@/components/home/Newsletter";
 import { MembershipTeaser } from "@/components/home/MembershipTeaser";
+import { CakesSpotlight } from "@/components/home/CakesSpotlight";
 import { sanityFetch } from "@/sanity/lib/fetch";
 import {
   featuredCategoriesQuery,
@@ -17,6 +18,7 @@ import {
   siteSettingsQuery,
   featuredTestimonialsQuery,
   featuredGoogleReviewsQuery,
+  cakesForHomeQuery,
 } from "@/sanity/lib/queries";
 import type {
   Category,
@@ -39,6 +41,7 @@ export default async function HomePage() {
     settings,
     testimonials,
     reviews,
+    cakes,
   ] = await Promise.all([
     sanityFetch<Category[]>({
       query: featuredCategoriesQuery,
@@ -68,11 +71,17 @@ export default async function HomePage() {
       query: featuredGoogleReviewsQuery,
       tags: ["googleReview"],
     }),
+    sanityFetch<Product[]>({
+      query: cakesForHomeQuery,
+      tags: ["product"],
+    }),
   ]);
 
   return (
     <>
       <Hero settings={settings} categories={categories} />
+      {/* Situación 9: cakes first, to sell more of them. */}
+      <CakesSpotlight cakes={cakes ?? []} />
       <Newsletter />
       <SignatureProducts products={products} />
       {promo && <HolidayBanner promo={promo} />}

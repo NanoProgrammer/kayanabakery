@@ -19,6 +19,8 @@
  * anything we send.
  */
 
+import { NEW_ORDER_STATUS_MESSAGES } from "@/lib/feature-flags";
+
 /** Every status a customer can be told about, in the order they happen. */
 export type NotifiableStatus =
   | "CONFIRMED"
@@ -27,13 +29,34 @@ export type NotifiableStatus =
   | "OUT_FOR_DELIVERY"
   | "COMPLETED";
 
-export const NOTIFIABLE_STATUSES: NotifiableStatus[] = [
+/** All four states the meeting named, plus READY. The finished set. */
+export const ALL_NOTIFIABLE_STATUSES: NotifiableStatus[] = [
   "CONFIRMED",
   "IN_PROGRESS",
   "READY",
   "OUT_FOR_DELIVERY",
   "COMPLETED",
 ];
+
+/** The three that were already going out before the meeting. */
+export const EXISTING_NOTIFIABLE_STATUSES: NotifiableStatus[] = [
+  "READY",
+  "OUT_FOR_DELIVERY",
+  "COMPLETED",
+];
+
+/**
+ * What actually goes out today.
+ *
+ * "Confirmado" and "en preparación" are built and tested but wait on
+ * NEW_ORDER_STATUS_MESSAGES: they are two more texts arriving on a real
+ * customer's phone for every order, which Karyana announces rather than
+ * discovers. The consent and duplicate rules below stay on either way —
+ * those only ever remove unwanted messages.
+ */
+export const NOTIFIABLE_STATUSES: NotifiableStatus[] = NEW_ORDER_STATUS_MESSAGES
+  ? ALL_NOTIFIABLE_STATUSES
+  : EXISTING_NOTIFIABLE_STATUSES;
 
 /**
  * A phone number reduced to what identifies it.

@@ -84,6 +84,23 @@ export const cakesForHomeQuery = groq`
   }
 `;
 
+/**
+ * The assorted bread boxes, the second door on the home page.
+ *
+ * Situación 9 names two products as the main entrances to the Club: the
+ * tres leches cakes and these. The cakes got the spotlight above; this is
+ * the other half.
+ */
+export const breadBoxesForHomeQuery = groq`
+  *[_type == "product" && "boxes" in categories[]->slug.current] | order(displayOrder asc) [0...4] {
+    _id, name, nameEs, "slug": slug.current,
+    description, descriptionEs,
+    price, compareAtPrice, image, tag,
+    inStock, stockQuantity, unit, leadTime, membersOnly, isOffSeason,
+    "categories": categories[]->{ "slug": slug.current, name, nameEs }
+  }
+`;
+
 export const allProductsQuery = groq`
   *[_type == "product"] | order(displayOrder asc) {
     _id, _createdAt, displayOrder, name, nameEs, "slug": slug.current,

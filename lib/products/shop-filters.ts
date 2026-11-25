@@ -11,8 +11,12 @@
  * to come from the catalogue rather than be guessed, and sorting must be
  * stable or products jump around as you type.
  */
+import { unitsSold, hasSalesData, type SalesBySlug } from "./bestsellers";
+
 export type ShopProduct = {
   _id: string;
+  /** Needed to match a product against what the orders actually sold. */
+  slug?: string | null;
   name: string;
   nameEs?: string | null;
   description?: string | null;
@@ -136,7 +140,11 @@ function createdTime(p: ShopProduct): number {
  * keep a fixed order. Without that, re-sorting on every keystroke makes the
  * grid shuffle under the customer's hand.
  */
-export function sortProducts<T extends ShopProduct>(products: readonly T[], key: SortKey): T[] {
+export function sortProducts<T extends ShopProduct>(
+  products: readonly T[],
+  key: SortKey,
+  sales?: SalesBySlug | null
+): T[] {
   const tie = (a: T, b: T) => a._id.localeCompare(b._id);
   const copy = [...products];
 
@@ -155,8 +163,25 @@ export function sortProducts<T extends ShopProduct>(products: readonly T[], key:
       return copy.sort((a, b) => normalize(a.name).localeCompare(normalize(b.name)) || tie(a, b));
     case "featured":
     default:
-      // Bestsellers, then what is new, then Karyana's own display order —
-      // which is the order the shop had before any of this existed.
+      // Real sales first, as the meeting asked (Situación 12): what people
+      // actually bought in the last three months, most units first.
+      //
+      // The Studio's BESTSELLER tag stays as the tie-break rather than the
+      // answer. It still decides the order among everything that has sold
+      // nothing — a new product nobody has bought yet can be promoted by
+      // hand, which is the only thing the tag was ever good for — and it
+      // decides the whole order when no orders could be read at all, so a
+      // database that is down leaves the shop looking exactly as before
+      // rather than shuffled into nonsense.
+      if (hasSalesData(sales)) {
+        return copy.sort(
+          (a, b) =>
+            unitsSold(sales, b.slug) - unitsSold(sales, a.slug) ||
+            tagRank(a.tag) - tagRank(b.tag) ||
+            (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999) ||
+            tie(a, b)
+        );
+      }
       return copy.sort(
         (a, b) =>
           tagRank(a.tag) - tagRank(b.tag) ||
@@ -199,7 +224,8 @@ export const defaultFilters: ShopFilters = {
 
 export function applyFilters<T extends ShopProduct>(
   products: readonly T[],
-  filters: ShopFilters
+  filters: ShopFilters,
+  sales?: SalesBySlug | null
 ): T[] {
   const matched = products.filter((p) => {
     if (filters.category && !(p.categories ?? []).some((c) => c?.slug === filters.category)) {
@@ -208,7 +234,7 @@ export function applyFilters<T extends ShopProduct>(
     if (filters.maxPrice != null && p.price > filters.maxPrice) return false;
     return matchesSearch(p, filters.search);
   });
-  return sortProducts(matched, filters.sort);
+  return sortProducts(matched, filters.sort, sales);
 }
 
 /** Whether anything is narrowing the list, for showing a "clear" button. */

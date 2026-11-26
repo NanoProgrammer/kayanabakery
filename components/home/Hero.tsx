@@ -3,14 +3,26 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { urlFor } from "@/sanity/lib/image";
 import { cn } from "@/lib/utils";
 import type { SiteSettings, Category } from "@/types";
 
+/**
+ * El vídeo se quitó.
+ *
+ * Era la PRIMERA diapositiva: un mp4 alojado todavía en el WordPress
+ * viejo, a pantalla completa, antes que cualquier otra cosa. Mientras
+ * carga —y desde una conexión de teléfono eso es un rato— lo único que
+ * ve un cliente al abrir la página es un rectángulo café vacío con un
+ * botón flotando. La primera impresión de la panadería era una pantalla
+ * en negro.
+ *
+ * Lo primero ahora es la portada de verdad, y justo debajo los
+ * pasteles.
+ */
 type Slide =
-  | { type: "video"; src: string }
   | { type: "info" }
   | { type: "category"; category: Category };
 
@@ -24,7 +36,6 @@ export function Hero({
   const { t, locale } = useLocale();
 
   const slides: Slide[] = [
-    { type: "video", src: "https://karyanabakery.ca/wp-content/uploads/2025/07/Free-delivery-3.mp4" },
     { type: "info" },
     ...(categories ?? [])
       .filter((c) => c.image)
@@ -46,8 +57,7 @@ export function Hero({
 
   useEffect(() => {
     if (paused) return;
-    const delay = slides[current].type === "video" ? 2500 : 1500;
-    const timer = setTimeout(next, delay);
+    const timer = setTimeout(next, 1500);
     return () => clearTimeout(timer);
   }, [current, paused, next, slides]);
 
@@ -88,13 +98,6 @@ export function Hero({
             )}
           >
             {/* ── Background ── */}
-            {slide.type === "video" && (
-              <video
-                src={slide.src}
-                autoPlay muted loop playsInline
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            )}
             {slide.type === "info" && (
               <>
                 {heroBg ? (
@@ -118,23 +121,6 @@ export function Hero({
             <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/35 to-ink/5" />
 
             {/* ── Content ── */}
-
-            {/* VIDEO SLIDE: just a centered Order Now button */}
-            {slide.type === "video" && (
-              <div className="absolute inset-0 flex flex-col items-center justify-end pb-28 md:justify-center md:pb-0">
-                <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-cream/15 px-4 py-1.5 text-xs uppercase tracking-[0.25em] backdrop-blur-sm border border-cream/20 text-cream">
-                  <Sparkles className="h-3 w-3 text-gold" />
-                  {t("home.heroEyebrow")}
-                </div>
-                <Link
-                  href="/shop"
-                  className="btn-primary group text-lg px-10 py-4"
-                >
-                  {t("home.heroCta")}
-                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </div>
-            )}
 
             {/* INFO SLIDE: title + subtitle + stats + buttons */}
             {slide.type === "info" && (

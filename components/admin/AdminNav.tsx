@@ -10,6 +10,7 @@ import {
   Users,
   Coins,
   Gift,
+  Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ export function AdminNav() {
     { href: "/admin/credits", icon: Coins, label: "Credit Policy" },
     { href: "/admin/referrals", icon: Users, label: "Referral renewals" },
     { href: "/admin/discover-bread", icon: Gift, label: "Cupones DESCUBREPAN" },
+    { href: "/admin/inventario", icon: Boxes, label: "Inventario / pickup hoy" },
   ];
 
   return (

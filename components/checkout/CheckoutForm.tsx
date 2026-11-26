@@ -124,7 +124,7 @@ export function CheckoutForm({
   // Coupon + points
   const [coupon, setCoupon] = useState<{
     code: string;
-    discountType: "PERCENT" | "FIXED";
+    discountType: "PERCENT" | "FIXED" | "FREE_SHIPPING" | "FREE_BREAD";
     appliesTo?: string | null;
     discountValue: number;
     description?: string;

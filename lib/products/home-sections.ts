@@ -21,6 +21,7 @@
  * pasteles, la portada los encuentra.
  */
 import { familyForProduct } from "./cake-families";
+import { unitsSold, hasSalesData, type SalesBySlug } from "./bestsellers";
 
 export type HomeProduct = {
   _id: string;
@@ -83,20 +84,41 @@ export function isBreadBoxProduct(p: HomeProduct): boolean {
   return BOX_WORDS.some((w) => name.includes(w));
 }
 
-/** Orden de Karyana, con el id de desempate para que no baile. */
-function byDisplayOrder<T extends HomeProduct>(a: T, b: T): number {
-  return (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999) || a._id.localeCompare(b._id);
+/**
+ * Lo más vendido primero, igual que el shop.
+ *
+ * La portada ordenaba por el orden de Karyana y el shop por ventas
+ * reales, así que el "más vendido" de una no era el de la otra. Si no
+ * hay ventas que leer —base caída, o build— se vuelve a su orden, que
+ * es exactamente lo que hacía antes.
+ *
+ * El id desempata siempre, para que la fila no baile entre recargas.
+ */
+function ranked<T extends HomeProduct>(items: T[], sales?: SalesBySlug | null): T[] {
+  const byHer = (a: T, b: T) =>
+    (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999) || a._id.localeCompare(b._id);
+  if (!hasSalesData(sales)) return [...items].sort(byHer);
+  return [...items].sort(
+    (a, b) => unitsSold(sales, b.slug) - unitsSold(sales, a.slug) || byHer(a, b)
+  );
 }
 
 /** Los pasteles de la portada. Solo los que tienen foto: un hueco gris no vende. */
-export function selectCakes<T extends HomeProduct>(products: readonly T[]): T[] {
-  return products.filter((p) => isCakeProduct(p) && !!p.image).sort(byDisplayOrder);
+export function selectCakes<T extends HomeProduct>(
+  products: readonly T[],
+  sales?: SalesBySlug | null
+): T[] {
+  return ranked(products.filter((p) => isCakeProduct(p) && !!p.image), sales);
 }
 
 /** Las cajas de la portada, máximo cuatro para que la fila quede pareja. */
-export function selectBreadBoxes<T extends HomeProduct>(products: readonly T[], limit = 4): T[] {
-  return products
-    .filter((p) => isBreadBoxProduct(p) && !!p.image)
-    .sort(byDisplayOrder)
-    .slice(0, Math.max(0, limit));
+export function selectBreadBoxes<T extends HomeProduct>(
+  products: readonly T[],
+  sales?: SalesBySlug | null,
+  limit = 4
+): T[] {
+  return ranked(products.filter((p) => isBreadBoxProduct(p) && !!p.image), sales).slice(
+    0,
+    Math.max(0, limit)
+  );
 }

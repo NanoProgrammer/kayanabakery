@@ -57,6 +57,7 @@
     "test:standing": "npx tsx scripts/test-standing.ts",
     "test:discover-bread": "npx tsx scripts/test-discover-bread.ts",
     "test:discover-bread-batch": "npx tsx scripts/test-discover-bread-batch.ts",
+    "test:free-bread-coupon": "npx tsx scripts/test-free-bread-coupon.ts",
     "test:roadmap": "npx tsx scripts/test-roadmap.ts",
     "test:home-sections": "npx tsx scripts/test-home-sections.ts",
     "test:club-not-for-sale": "npx tsx scripts/test-club-is-not-for-sale.ts",

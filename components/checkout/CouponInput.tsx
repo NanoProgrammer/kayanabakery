@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Tag, X, Check } from "lucide-react";
+import { Tag, X, Check, Croissant } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
 import { isDiscoverBreadCode, FREE_BREADS } from "@/lib/coupons/discover-bread";
 
 type AppliedCoupon = {
   code: string;
-  discountType: "PERCENT" | "FIXED";
+  discountType: "PERCENT" | "FIXED" | "FREE_SHIPPING" | "FREE_BREAD";
   appliesTo?: string | null;
   discountValue: number;
   description?: string;
@@ -60,25 +60,48 @@ export function CouponInput({
     }
   }
 
+  // Por TIPO, no por el código: así funciona con cualquier cupón de
+  // panes gratis que Karyana cree en el Studio, no solo con DESCUBREPAN.
+  const freeBread =
+    applied?.discountType === "FREE_BREAD" || isDiscoverBreadCode(applied?.code);
+
   if (applied) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-canela bg-canela-light p-3">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-2xl border-2 p-3",
+          freeBread ? "border-gold bg-gold/10" : "border-canela bg-canela-light"
+        )}
+      >
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-canela-dark text-cream">
-            <Check className="h-4 w-4" />
+          <div
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-cream",
+              freeBread ? "bg-gold" : "bg-canela-dark"
+            )}
+          >
+            {freeBread ? <Croissant className="h-4 w-4" /> : <Check className="h-4 w-4" />}
           </div>
           <div>
             <p className="font-bold">{applied.code}</p>
-            {/* A Discover Bread code takes nothing off the bill — the two
-                breads go in the box. Without saying so, the customer
-                applies it, sees $0.00 off and thinks it is broken. */}
-            <p className="text-xs text-ink-soft">
-              {isDiscoverBreadCode(applied.code)
-                ? locale === "es"
-                  ? `${FREE_BREADS} panes gratis — los escogemos nosotros`
-                  : `${FREE_BREADS} free breads — our choice`
-                : applied.description}
-            </p>
+            {/* Un cupón de panes gratis no quita dinero: los dos panes van
+                en la caja y los escoge la panadería. Si no se dice aquí,
+                el cliente lo aplica, ve $0.00 de descuento y cree que
+                está roto. No tiene que escoger nada. */}
+            {freeBread ? (
+              <p className="text-sm font-medium text-ink">
+                {locale === "es"
+                  ? `Se te otorgarán ${FREE_BREADS} panes gratis`
+                  : `You'll be given ${FREE_BREADS} free breads`}
+                <span className="mt-0.5 block text-xs font-normal text-ink-soft">
+                  {locale === "es"
+                    ? "Los escogemos nosotros y van en tu caja — no hay nada que elegir ni descuento en el total."
+                    : "We pick them and they go in your box — nothing to choose, and nothing off the total."}
+                </span>
+              </p>
+            ) : (
+              <p className="text-xs text-ink-soft">{applied.description}</p>
+            )}
           </div>
         </div>
         <button

@@ -148,7 +148,8 @@ export function batchCouponDocument(candidate: Candidate, now = new Date()) {
     code,
     labelEn: `Discover Bread — ${FREE_BREADS} free breads, our choice (first batch)`,
     labelEs: `Descubre Pan — ${FREE_BREADS} panes gratis, los escogemos nosotros (primera tanda)`,
-    discountType: "FIXED" as const,
+    // El tipo propio: no descuenta dinero, vale dos panes.
+    discountType: "FREE_BREAD" as const,
     discountValue: 0,
     appliesTo: "ALL",
     minOrderDollars: MIN_ORDER_DOLLARS,

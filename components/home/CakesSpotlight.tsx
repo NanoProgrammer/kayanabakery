@@ -61,7 +61,7 @@ export function CakesSpotlight({ cakes }: { cakes: Product[] }) {
           href={`/product/${hero.slug}`}
           className="group mt-10 block overflow-hidden rounded-3xl border border-gold/25 bg-white/70 transition-shadow hover:shadow-xl md:grid md:grid-cols-5"
         >
-          <div className="relative aspect-[4/3] md:col-span-3 md:aspect-auto md:min-h-[26rem]">
+          <div className="relative aspect-[4/3] overflow-hidden md:col-span-3 md:aspect-auto md:min-h-[26rem]">
             <Image
               src={urlFor(hero.image).width(1200).height(900).url()}
               alt={es ? hero.nameEs || hero.name : hero.name}
@@ -69,6 +69,20 @@ export function CakesSpotlight({ cakes }: { cakes: Product[] }) {
               sizes="(min-width: 768px) 60vw, 100vw"
               className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
               priority
+            />
+            {/* El velo de los costados.
+                La foto llegaba a un borde recto justo donde empieza el
+                texto, y se veía pegada en vez de ser parte de la
+                tarjeta. Esto la funde con el fondo por los lados — y
+                abajo en el teléfono, que es donde el texto queda
+                debajo. Sin tocar el centro, que es el pastel. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/70 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-white/80"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-white/30"
             />
           </div>
           <div className="flex flex-col justify-center p-8 md:col-span-2 md:p-10">
@@ -97,13 +111,24 @@ export function CakesSpotlight({ cakes }: { cakes: Product[] }) {
                 href={`/category/${family.slug}`}
                 className="group overflow-hidden rounded-3xl border border-gold/20 bg-white/70 transition-shadow hover:shadow-lg"
               >
-                <div className="relative aspect-square">
+                <div className="relative aspect-square overflow-hidden">
                   <Image
                     src={urlFor(member.image).width(600).height(600).url()}
                     alt={es ? family.nameEs : family.name}
                     fill
                     sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  {/* El mismo velo por los costados, para que las cuatro
+                      se vean como una sola pieza y no como cuatro fotos
+                      recortadas. */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.35),transparent_22%,transparent_78%,rgba(255,255,255,0.35))]"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-white/55 to-transparent"
                   />
                 </div>
                 <div className="p-5">

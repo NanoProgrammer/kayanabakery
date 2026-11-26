@@ -400,10 +400,15 @@ export async function POST(req: Request) {
     }
 
     // Normalize for pricing engine
+    // FREE_BREAD vale dos panes, no dinero. Se fuerza a cero aquí para
+    // que un número escrito por accidente en el Studio no descuente
+    // nada: los panes van en la caja, nunca en la cuenta.
     const discountValue =
-      sanityCoupon.discountType === "FIXED"
-        ? Math.round((sanityCoupon.discountValue ?? 0) * 100)
-        : sanityCoupon.discountValue ?? 0;
+      sanityCoupon.discountType === "FREE_BREAD"
+        ? 0
+        : sanityCoupon.discountType === "FIXED"
+          ? Math.round((sanityCoupon.discountValue ?? 0) * 100)
+          : sanityCoupon.discountValue ?? 0;
     const minOrderCents = sanityCoupon.minOrderDollars
       ? Math.round(sanityCoupon.minOrderDollars * 100)
       : null;

@@ -28,7 +28,13 @@ export type PricingInput = {
   isGuest?: boolean;
   coupon?: {
     code: string;
-    discountType: "PERCENT" | "FIXED" | "FREE_SHIPPING";
+    /**
+     * FREE_BREAD takes nothing off the bill. It is worth two breads that
+     * the bakery puts in the box, chosen by them — the customer picks
+     * nothing. A money value would mean guessing which two breads, and a
+     * percentage would come off a cake as happily as off a bolillo.
+     */
+    discountType: "PERCENT" | "FIXED" | "FREE_SHIPPING" | "FREE_BREAD";
     discountValue: number;
     minOrderCents?: number;
     /** What the coupon is limited to: "ALL", "CATEGORY:slug" or
@@ -63,8 +69,17 @@ export type PricingBreakdown = {
   gstCents: number;
   totalCents: number;
   pointsEarned: number;
+  /**
+   * Breads the bakery adds to the box, free, chosen by them. Zero unless
+   * a FREE_BREAD coupon applied — and it only applies once the minimum
+   * is met, so the checkout can promise it truthfully.
+   */
+  freeBreads: number;
   errors: string[];
 };
+
+/** How many breads a FREE_BREAD coupon is worth. */
+export const COUPON_FREE_BREADS = 2;
 
 const DEFAULT_DELIVERY_FEE = 700;
 const DEFAULT_GST = 0.05;
@@ -127,6 +142,8 @@ export function computePricing(input: PricingInput): PricingBreakdown {
     .filter((item) => couponCovers(input.coupon?.appliesTo, item))
     .reduce((sum, i) => sum + i.price * i.quantity, 0);
 
+  let freeBreads = 0;
+
   if (input.coupon) {
     if (input.coupon.discountType === "FREE_SHIPPING") {
       couponIsFreeShipping = true;
@@ -137,6 +154,12 @@ export function computePricing(input: PricingInput): PricingBreakdown {
       errors.push(
         `Coupon requires min order of $${(input.coupon.minOrderCents / 100).toFixed(2)}`
       );
+    } else if (input.coupon.discountType === "FREE_BREAD") {
+      // Nothing comes off the bill, ever. The two breads go IN THE BOX
+      // and the bakery chooses them, so the customer picks nothing and
+      // there is no amount to get wrong. Only reached once the minimum
+      // is met, so the checkout can promise it truthfully.
+      freeBreads = COUPON_FREE_BREADS;
     } else if (input.coupon.discountType === "PERCENT") {
       couponDiscountCents = Math.floor(
         (eligibleSubtotalCents * Math.min(100, input.coupon.discountValue)) / 100
@@ -218,6 +241,7 @@ export function computePricing(input: PricingInput): PricingBreakdown {
     gstCents,
     totalCents,
     pointsEarned,
+    freeBreads,
     errors,
   };
 }

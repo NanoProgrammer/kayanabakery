@@ -22,6 +22,7 @@ import {
   allProductsQuery,
 } from "@/sanity/lib/queries";
 import { selectCakes, selectBreadBoxes } from "@/lib/products/home-sections";
+import { readSales } from "@/lib/products/sales";
 import type {
   Category,
   Product,
@@ -44,6 +45,7 @@ export default async function HomePage() {
     testimonials,
     reviews,
     allProducts,
+    sales,
   ] = await Promise.all([
     sanityFetch<Category[]>({
       query: featuredCategoriesQuery,
@@ -83,10 +85,12 @@ export default async function HomePage() {
       query: allProductsQuery,
       tags: ["product"],
     }),
+    // Lo más vendido primero, igual que el shop.
+    readSales(),
   ]);
 
-  const cakes = selectCakes((allProducts ?? []) as any[]) as unknown as Product[];
-  const breadBoxes = selectBreadBoxes((allProducts ?? []) as any[]) as unknown as Product[];
+  const cakes = selectCakes((allProducts ?? []) as any[], sales) as unknown as Product[];
+  const breadBoxes = selectBreadBoxes((allProducts ?? []) as any[], sales) as unknown as Product[];
 
   return (
     <>

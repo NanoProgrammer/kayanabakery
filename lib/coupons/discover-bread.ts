@@ -132,7 +132,8 @@ export function couponDocument(orderNumber: string, now = new Date()) {
     labelEs: `Descubre Pan — ${FREE_BREADS} panes gratis, los escogemos nosotros`,
     // Zero, deliberately. The breads go in the box; nothing comes off the
     // bill. See the note at the top of this file.
-    discountType: "FIXED" as const,
+    // El tipo propio: no descuenta dinero, vale dos panes.
+    discountType: "FREE_BREAD" as const,
     discountValue: 0,
     appliesTo: "ALL",
     // Thirty dollars of bread before tax. Enforced by the coupon itself, so

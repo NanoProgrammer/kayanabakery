@@ -143,7 +143,10 @@ const doc = batchCouponDocument({
 // Lo mismo que el automático: no descuenta dinero. Un cupón que vale
 // cero no puede regalar nada por accidente.
 check("vale cero", doc.discountValue, 0);
-check("...como monto fijo, no porcentaje", doc.discountType, "FIXED");
+// Antes era un cupón FIXED de $0 — un truco, y uno que Karyana no podía
+// crear a mano porque esa opción no existía en el Studio. Ahora tiene
+// su propio tipo.
+check("...y es de su tipo propio, no un truco de $0", doc.discountType, "FREE_BREAD");
 check("pide los $30", doc.minOrderDollars, 30);
 check("una sola vez", doc.maxUses, 1);
 check("...por una sola persona", doc.perUserLimit, 1);

@@ -64,10 +64,15 @@ export async function POST(req: Request) {
     }
 
     // Normalize discountValue: FREE_SHIPPING has no meaningful value, FIXED is in dollars → cents
+    // FREE_BREAD vale dos panes, no dinero. Se fuerza a cero aquí para
+    // que un número escrito por accidente en el Studio no descuente
+    // nada: los panes van en la caja, nunca en la cuenta.
     const discountValue =
-      coupon.discountType === "FIXED"
-        ? Math.round((coupon.discountValue ?? 0) * 100)
-        : coupon.discountValue ?? 0;
+      coupon.discountType === "FREE_BREAD"
+        ? 0
+        : coupon.discountType === "FIXED"
+          ? Math.round((coupon.discountValue ?? 0) * 100)
+          : coupon.discountValue ?? 0;
 
     return NextResponse.json({
       coupon: {

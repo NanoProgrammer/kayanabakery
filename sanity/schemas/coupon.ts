@@ -36,6 +36,10 @@ export const coupon = defineType({
           { title: "Percent (%)", value: "PERCENT" },
           { title: "Fixed $ off", value: "FIXED" },
           { title: "Free shipping", value: "FREE_SHIPPING" },
+          // Vale dos panes, no dinero. Los panes van EN LA CAJA y los
+          // escoge la panadería: el cliente no elige nada y no hay
+          // ningún monto que equivocar.
+          { title: "🥖 2 panes gratis (no descuenta dinero)", value: "FREE_BREAD" },
         ],
         layout: "radio",
       },
@@ -47,7 +51,16 @@ export const coupon = defineType({
       title: "Value",
       type: "number",
       description: "Percent (1-100) OR dollars off (e.g. 10 = $10)",
-      validation: (r) => r.required().min(0),
+      // Un cupón de panes gratis no tiene monto: dejarlo obligatorio
+      // obligaba a escribir un número que después no se usa para nada.
+      hidden: ({ document }) =>
+        document?.discountType === "FREE_SHIPPING" || document?.discountType === "FREE_BREAD",
+      validation: (r) =>
+        r.min(0).custom((value, context) => {
+          const type = (context.document as any)?.discountType;
+          if (type === "FREE_SHIPPING" || type === "FREE_BREAD") return true;
+          return value === undefined || value === null ? "Required" : true;
+        }),
     }),
     defineField({
       name: "minOrderDollars",
@@ -125,6 +138,8 @@ export const coupon = defineType({
           ? `${val}% off`
           : type === "FIXED"
           ? `$${val} off`
+          : type === "FREE_BREAD"
+          ? "🥖 2 panes gratis"
           : "Free shipping";
       return {
         title: code,

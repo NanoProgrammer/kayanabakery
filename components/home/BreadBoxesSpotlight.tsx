@@ -66,13 +66,25 @@ export function BreadBoxesSpotlight({ boxes }: { boxes: Product[] }) {
                 href={`/product/${box.slug}`}
                 className="group flex flex-col overflow-hidden rounded-3xl border border-canela/20 bg-cream transition-shadow hover:shadow-lg"
               >
-                <div className="relative aspect-[4/3]">
+                <div className="relative aspect-[4/3] overflow-hidden">
                   <Image
                     src={urlFor(box.image).width(800).height(600).url()}
                     alt={es ? box.nameEs || box.name : box.name}
                     fill
                     sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  {/* El mismo velo de los costados que los pasteles, para
+                      que las dos secciones se lean como una sola cosa.
+                      Va debajo del badge, que tiene que seguir
+                      destacando. */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.35),transparent_22%,transparent_78%,rgba(255,255,255,0.35))]"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-cream/60 to-transparent"
                   />
                   {/* The whole point of Pay Online N' Go, said before the
                       click rather than at the checkout. */}

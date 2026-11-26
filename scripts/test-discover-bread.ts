@@ -53,7 +53,11 @@ console.log("  the coupon is worth nothing in money");
 // two breads. Zero cannot be wrong.
 const doc = couponDocument("KAR-202611-00042");
 check("its value is zero", doc.discountValue, 0);
-check("...as a fixed amount, not a percentage", doc.discountType, "FIXED");
+// It used to be a FIXED coupon worth $0 — a trick, and one Karyana
+// could not reproduce in the Studio because no such option existed
+// there. It now has its own type, which the pricing engine refuses to
+// turn into money however the value is filled in.
+check("...and its own type, not a $0 trick", doc.discountType, "FREE_BREAD");
 check("it can be used once", doc.maxUses, 1);
 check("...by one person", doc.perUserLimit, 1);
 check("it expires", VALID_FOR_DAYS, 90);

@@ -58,7 +58,7 @@
     "test:discover-bread": "npx tsx scripts/test-discover-bread.ts",
     "test:discover-bread-batch": "npx tsx scripts/test-discover-bread-batch.ts",
     "test:roadmap": "npx tsx scripts/test-roadmap.ts",
-    "test:cakes-home": "npx tsx scripts/test-cakes-home-query.ts",
+    "test:home-sections": "npx tsx scripts/test-home-sections.ts",
     "test:club-not-for-sale": "npx tsx scripts/test-club-is-not-for-sale.ts",
     "test:bestsellers": "npx tsx scripts/test-bestsellers.ts",
     "test:customer-lookup": "npx tsx scripts/test-customer-lookup.ts",

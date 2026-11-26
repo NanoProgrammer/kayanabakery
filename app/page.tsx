@@ -19,9 +19,9 @@ import {
   siteSettingsQuery,
   featuredTestimonialsQuery,
   featuredGoogleReviewsQuery,
-  cakesForHomeQuery,
-  breadBoxesForHomeQuery,
+  allProductsQuery,
 } from "@/sanity/lib/queries";
+import { selectCakes, selectBreadBoxes } from "@/lib/products/home-sections";
 import type {
   Category,
   Product,
@@ -43,8 +43,7 @@ export default async function HomePage() {
     settings,
     testimonials,
     reviews,
-    cakes,
-    breadBoxes,
+    allProducts,
   ] = await Promise.all([
     sanityFetch<Category[]>({
       query: featuredCategoriesQuery,
@@ -74,15 +73,20 @@ export default async function HomePage() {
       query: featuredGoogleReviewsQuery,
       tags: ["googleReview"],
     }),
+    // El catálogo entero, y el filtro se hace en código.
+    //
+    // Antes eran dos consultas GROQ que pedían el slug exacto "cakes" y
+    // "boxes". Si la categoría en Sanity se llama de otra forma, la
+    // consulta devuelve cero y la sección simplemente no aparece — que
+    // es lo que pasó. Ver lib/products/home-sections.ts.
     sanityFetch<Product[]>({
-      query: cakesForHomeQuery,
-      tags: ["product"],
-    }),
-    sanityFetch<Product[]>({
-      query: breadBoxesForHomeQuery,
+      query: allProductsQuery,
       tags: ["product"],
     }),
   ]);
+
+  const cakes = selectCakes((allProducts ?? []) as any[]) as unknown as Product[];
+  const breadBoxes = selectBreadBoxes((allProducts ?? []) as any[]) as unknown as Product[];
 
   return (
     <>

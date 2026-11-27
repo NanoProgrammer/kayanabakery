@@ -16,7 +16,10 @@
  *  12  Buscador y orden         incluye "más rápidos" y ventas reales
  *  13  Pickup inmediato         incluye el descuento de inventario
  *
- * ── Esperando el visto bueno ──────────────────────────────────────
+ * ── Prendidas el 27 de noviembre, a petición de Santiago ─────────
+ *
+ *   8  Roadmap del Club        el camino y los niveles, visibles
+ *  10  Avisos de pedido        "confirmado" y "en preparación"
  */
 
 /**
@@ -26,21 +29,20 @@
  * el nivel se gana y no se compra. Es una decisión de negocio ya
  * tomada en la junta, pero anunciarla es de Karyana, no del código.
  *
- * Mientras esté apagado, /memberships muestra el encabezado, los
- * beneficios y las preguntas frecuentes, sin el camino ni los niveles.
+ * Apagado, /memberships mostraba solo el encabezado, los beneficios y
+ * las preguntas frecuentes.
  *
  * Lo que NO vuelve es la tabla de precios con "$30/mes" y botones de
  * Subscribe. Esa decía lo contrario de lo que el Club es hoy y por eso
  * se quitó; apagar el roadmap no es razón para volver a venderlo.
  */
-export const KLC_PUBLIC_ROADMAP = false;
+export const KLC_PUBLIC_ROADMAP = true;
 
 /**
  * SITUACIÓN 10 — los dos avisos nuevos: "confirmado" y "en preparación".
  *
- * Son mensajes que llegan al teléfono de la gente. Prenderlos duplica
- * los mensajes que recibe un cliente por pedido, así que espera a que
- * Karyana lo decida.
+ * Son mensajes que llegan al teléfono de la gente: con esto prendido,
+ * un cliente recibe dos avisos más por pedido.
  *
  * OJO: esto apaga SOLO los dos avisos nuevos. El consentimiento
  * (responder STOP o BAJA) y el freno de duplicados siguen activos a
@@ -49,4 +51,4 @@ export const KLC_PUBLIC_ROADMAP = false;
  * a mandar el mismo aviso dos veces — eso no es "esperar a anunciarlo",
  * es romperlo otra vez.
  */
-export const NEW_ORDER_STATUS_MESSAGES = false;
+export const NEW_ORDER_STATUS_MESSAGES = true;

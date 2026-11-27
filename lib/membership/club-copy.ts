@@ -36,8 +36,8 @@ export const CLUB_NAME = "Karyana Club";
  * payment" in three different places, which read as three different things.
  */
 export const AUTO_REORDER = {
-  en: "Bread auto reorder",
-  es: "Pedido automático de pan",
+  en: "Autoorder",
+  es: "Autoorden",
 } as const;
 
 export function autoReorderLabel(locale: string): string {
@@ -97,7 +97,7 @@ export const EARNED_CLUB_COPY: Record<"en" | "es", ClubCopy & { keeping: string 
     headline: "No se paga.",
     accent: "Se gana comprando pan.",
     whatItIs:
-      "Tu nivel en el Karyana Club sube solo: cada compra, cada persona que traes y cada cosa nueva que pruebas te acerca al siguiente.",
+      "Tu nivel en el Karyana Club sube solo: cada compra, cada persona que invitas y cada cosa nueva que pruebas te acerca al siguiente.",
     money:
       "No hay cuota. Nada que cobrar, nada que cancelar. Los puntos que ya tienes siguen siendo tuyos.",
     extras:
@@ -112,7 +112,7 @@ export const EARNED_CLUB_COPY: Record<"en" | "es", ClubCopy & { keeping: string 
     headline: "There's nothing to pay.",
     accent: "You earn it by buying bread.",
     whatItIs:
-      "Your place in the Karyana Club rises on its own: every order, every person you bring and every new thing you try moves you closer to the next one.",
+      "Your place in the Karyana Club rises on its own: every order, every person you invite and every new thing you try moves you closer to the next one.",
     money:
       "No fee. Nothing to charge, nothing to cancel. The points you already have stay yours.",
     extras:

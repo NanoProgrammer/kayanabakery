@@ -84,8 +84,8 @@ function unlocksFor(tier: EarnedTier, previous: EarnedTier | null): Bilingual[] 
   }
   if (gained("weeklyOrderSkip")) {
     out.push({
-      es: "Puedes saltarte una semana del pedido automático",
-      en: "Skip a week of the auto reorder",
+      es: "Puedes saltarte una semana del autoorden",
+      en: "Skip a week of your autoorder",
     });
   }
   if (gained("freeAdvanceSamples")) {

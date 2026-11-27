@@ -7,7 +7,15 @@
  * does not actually give, and that every step up says something. A stop
  * with an empty list of rewards is a stop nobody climbs to.
  */
-import { roadmap, fastestCakeHours, PILLARS } from "../lib/loyalty/roadmap";
+import { roadmap, fastestCakeHours, PILLARS, BONUS_CAP_NOTE, type Bilingual } from "../lib/loyalty/roadmap";
+
+/** Lo que suma una ruta, con los valores reales, para comprobarla. */
+function routeCredits(route: Bilingual): number {
+  const buys = Number(route.es.match(/^(\d+) compras/)?.[1] ?? 0);
+  const refs = Number(route.es.match(/(\d+) persona/)?.[1] ?? 0);
+  const fams = Number(route.es.match(/probar (\d+) familias/)?.[1] ?? 0);
+  return buys * 1 + refs * 2 + fams * 1;
+}
 import { TIER_THRESHOLDS, LEGENDARIO_MIN_PERSONAL_PURCHASES } from "../lib/loyalty/klc";
 import { TIERS } from "../lib/membership/tiers";
 
@@ -62,19 +70,62 @@ check(
 );
 check("the others have no extra condition", stops.slice(0, 3).every((s) => s.requirement === null), true);
 
-console.log("\n  what each one gives");
-// A stop that rewards nothing is a stop nobody climbs to.
-check("every stop says something", stops.every((s) => s.unlocks.length > 0), true);
-check("both languages, always", stops.every((s) => s.unlocks.every((u) => u.es && u.en)), true);
-// Nothing may be promised twice: repeating a perk at the next tier reads as
-// a new reward when it is not.
-const seen = new Set<string>();
-let repeated: string | null = null;
-for (const s of stops) for (const u of s.unlocks) {
-  if (seen.has(u.en)) repeated = u.en;
-  seen.add(u.en);
-}
-check("no reward is promised twice", repeated, null);
+console.log("\n  cómo se llega a cada uno");
+// Esto es lo que el roadmap tiene que contestar. Antes listaba
+// beneficios —qué recibes— que es otra pregunta y ya la contesta la
+// tabla de niveles de abajo.
+check("cada parada dice cómo llegar", stops.every((s) => s.routes.length > 0), true);
+check("en los dos idiomas", stops.every((s) => s.routes.every((r) => r.es && r.en)), true);
+check("la primera es entrar, no juntar nada", stops[0].routes[0].es.includes("Crea tu cuenta"), true);
+// Las rutas tienen que estar en acciones, no en premios.
+const ACCIONES = ["compras", "invitas", "familias", "Crea tu cuenta"];
+check(
+  "todo lo que dice es una acción",
+  stops.every((s) => s.routes.every((r) => ACCIONES.some((a) => r.es.includes(a)))),
+  true
+);
+// Y nada de beneficios: ni horas de espera, ni envío, ni puntos.
+const PREMIOS = ["espera", "Envío", "puntos", "cumpleaños", "agotado", "temporada"];
+check(
+  "ninguna ruta promete un beneficio",
+  stops.every((s) => s.routes.every((r) => !PREMIOS.some((b) => r.es.includes(b)))),
+  true
+);
+
+console.log("\n  las rutas cuadran con los números reales");
+// 4 KLC a 1 por compra = 4 compras.
+check("Artesano: comprando", stops[1].routes[0].es, "4 compras");
+// Un referido que compra vale 2, así que quedan 2 compras.
+check("Artesano: con una invitación", stops[1].routes[1].es, "2 compras + 1 persona que invitas y compra");
+// Dos familias nuevas valen 1 cada una.
+check("Artesano: descubriendo", stops[1].routes[2].es, "2 compras + probar 2 familias nuevas");
+check("Selecto: comprando", stops[2].routes[0].es, "10 compras");
+check("Legendario: comprando", stops[3].routes[0].es, "18 compras");
+check(
+  "todas las rutas de un nivel suman lo mismo",
+  routeCredits(stops[2].routes[0]) === 10 && routeCredits(stops[2].routes[1]) === 10,
+  true
+);
+
+console.log("\n  el tope, dicho donde muerde");
+// Invitar y descubrir topan en 6 al año: a partir de ahí una parte del
+// camino tiene que venir de comprar, y hay que decirlo antes de que
+// alguien invite a diez personas esperando llegar así.
+check("Básico no necesita advertencia", stops[0].caution, null);
+check("Artesano tampoco, 4 cabe en el tope", stops[1].caution, null);
+check("Selecto sí", stops[2].caution !== null, true);
+check("...y dice cuánto tiene que venir de comprar", stops[2].caution!.es.includes("4"), true);
+check("Legendario también", stops[3].caution!.es.includes("12"), true);
+
+console.log("\n  los cinco pilares dicen cuánto valen");
+// "Cada compra cuenta" sin decir cuánto no sirve para planear nada.
+check("cada uno trae su valor", PILLARS.every((p) => /\+\d+ KLC/.test(p.value)), true);
+check("comprar vale 1", PILLARS.find((p) => p.en === "Buy")!.value, "+1 KLC");
+check("invitar vale 2", PILLARS.find((p) => p.en === "Invite")!.value, "+2 KLC");
+check("quedarse vale 2 al año", PILLARS.find((p) => p.en === "Stay")!.value, "+2 KLC");
+check("...hasta 4", PILLARS.find((p) => p.en === "Stay")!.detail.es.includes("4"), true);
+check("gastar es por cada $50", PILLARS.find((p) => p.en === "Spend")!.detail.es.includes("$50"), true);
+check("el tope se dice una vez", BONUS_CAP_NOTE.es.includes("6 KLC"), true);
 
 console.log("\n  the cake wait is the headline");
 // Straight from her table: the thing a customer feels immediately.
@@ -86,33 +137,12 @@ check(
   stops.every((s, i) => i === 0 || s.fastestCakeHours <= stops[i - 1].fastestCakeHours),
   true
 );
-check("the first stop states the wait", stops[0].unlocks[0].en.includes("12 h"), true);
-check("Artesano states the drop", stops[1].unlocks[0].en, "Your cakes drop from 12 h to 4 h of waiting");
-
-console.log("\n  nothing is invented");
-// The page may only promise what the tier data actually grants.
+// La espera del pastel sigue siendo un dato real de la tabla de
+// Karyana y la tabla de niveles la muestra; el roadmap ya no, porque
+// es un beneficio y el roadmap es sobre cómo llegar.
 check(
-  "free delivery is only claimed where it exists",
-  stops.every((s) => !s.unlocks.some((u) => u.en.startsWith("Free delivery")) || TIERS[s.tier].freeDelivery),
-  true
-);
-check(
-  "Karyana's own hands are only promised where the data says so",
-  stops
-    .filter((s) => s.unlocks.some((u) => u.en.includes("herself")))
-    .every((s) => TIERS[s.tier].karyanaMakesYourCake),
-  true
-);
-// Artesano is the first tier with free delivery, so it must appear there
-// and nowhere else.
-check(
-  "free delivery appears at Artesano",
-  stops[1].unlocks.some((u) => u.en.startsWith("Free delivery")),
-  true
-);
-check(
-  "...and not again at Selecto",
-  stops[2].unlocks.some((u) => u.en.startsWith("Free delivery")),
+  "el roadmap no habla de la espera del pastel",
+  stops.some((s) => s.routes.some((r) => /h de espera|h of waiting/.test(r.es + r.en))),
   false
 );
 
@@ -125,7 +155,7 @@ check(
 );
 // Referral credit is for a purchase, not a signup — the addendum is firm
 // about this and the page must not suggest otherwise.
-const refer = PILLARS.find((p) => p.en === "Refer")!;
+const refer = PILLARS.find((p) => p.en === "Invite")!;
 check("referring pays on the first purchase", refer.detail.en.includes("first purchase"), true);
 check("...and says so in Spanish too", refer.detail.es.includes("primera compra"), true);
 

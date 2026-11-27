@@ -31,6 +31,18 @@ export const TIER_THRESHOLDS = {
 /** Legendario also needs this many personal purchases, on distinct dates. */
 export const LEGENDARIO_MIN_PERSONAL_PURCHASES = 4;
 
+/** KLC for every valid purchase. The first of Rubén's five pillars. */
+export const KLC_PER_PURCHASE = 1;
+
+/** Dollars of accumulated spend that earn one KLC. */
+export const DOLLARS_PER_SPEND_KLC = 50;
+
+/** KLC per year as an active customer... */
+export const KLC_PER_YEAR = 2;
+
+/** ...up to this many, so age alone cannot carry somebody to a tier. */
+export const MAX_TENURE_KLC = 4;
+
 /** KLC for a referred person's FIRST VALID PURCHASE. Registering earns none. */
 export const KLC_PER_CONVERTED_REFERRAL = 2;
 

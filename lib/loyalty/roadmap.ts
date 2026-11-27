@@ -15,7 +15,18 @@
  * true under either scheme — while the KLC counts are shown as what it
  * takes, not as a balance anybody holds yet.
  */
-import { TIER_THRESHOLDS, LEGENDARIO_MIN_PERSONAL_PURCHASES, type EarnedTier } from "./klc";
+import {
+  TIER_THRESHOLDS,
+  LEGENDARIO_MIN_PERSONAL_PURCHASES,
+  KLC_PER_PURCHASE,
+  DOLLARS_PER_SPEND_KLC,
+  KLC_PER_YEAR,
+  MAX_TENURE_KLC,
+  KLC_PER_CONVERTED_REFERRAL,
+  KLC_PER_NEW_FAMILY,
+  BONUS_KLC_CAP_PER_YEAR,
+  type EarnedTier,
+} from "./klc";
 import { TIER_ORDER } from "./standing";
 import { TIERS } from "@/lib/membership/tiers";
 import { CAKE_LEAD_TIMES } from "@/lib/products/cake-lead-times";
@@ -32,8 +43,14 @@ export type RoadmapStop = {
   requirement: Bilingual | null;
   /** The fastest a cake can be ready at this tier, in hours. */
   fastestCakeHours: number;
-  /** What this stop unlocks that the one below it did not. */
-  unlocks: Bilingual[];
+  /**
+   * Maneras concretas de llegar hasta aquí. No beneficios: el roadmap
+   * responde "qué tengo que hacer", y lo que se recibe ya está en la
+   * tabla de niveles que va justo debajo.
+   */
+  routes: Bilingual[];
+  /** La advertencia del tope, cuando aplica. */
+  caution: Bilingual | null;
 };
 
 /** The quickest cake in the table for a tier. The headline benefit. */
@@ -47,77 +64,72 @@ function creditsFor(tier: EarnedTier): number {
 }
 
 /**
- * What changes on arrival. Only the differences against the tier below, so
- * the list reads as a reward rather than as a specification.
+ * Maneras concretas de juntar los KLC que pide un nivel.
+ *
+ * Esto es lo que el roadmap tiene que contestar: qué hago para llegar.
+ * Todas las rutas se calculan con los valores reales de la tabla de
+ * Rubén, así que si cambia un número cambian las rutas — nunca hay dos
+ * verdades sobre cuánto cuesta subir.
+ *
+ * Son ejemplos, no requisitos: cualquier combinación que sume funciona.
  */
-function unlocksFor(tier: EarnedTier, previous: EarnedTier | null): Bilingual[] {
-  const now = TIERS[tier];
-  const before = previous ? TIERS[previous] : null;
+function routesTo(credits: number): Bilingual[] {
+  if (credits <= 0) {
+    return [
+      { es: "Crea tu cuenta. Ya estás dentro.", en: "Create your account. You're in." },
+    ];
+  }
+
   const out: Bilingual[] = [];
-  const gained = (key: keyof typeof now) => !!now[key] && !(before && before[key]);
+  const buys = Math.ceil(credits / KLC_PER_PURCHASE);
 
-  const fast = fastestCakeHours(tier);
-  const fastBefore = previous ? fastestCakeHours(previous) : null;
-  if (fastBefore === null) {
-    out.push({ es: `Pasteles listos desde ${fast} h`, en: `Cakes ready from ${fast} h` });
-  } else if (fast < fastBefore) {
+  // Solo comprando: la ruta que todos entienden.
+  out.push({
+    es: `${buys} compras`,
+    en: `${buys} purchases`,
+  });
+
+  // Con una persona invitada que llegue a comprar.
+  const afterReferral = credits - KLC_PER_CONVERTED_REFERRAL;
+  if (afterReferral > 0) {
     out.push({
-      es: `Tus pasteles bajan de ${fastBefore} h a ${fast} h de espera`,
-      en: `Your cakes drop from ${fastBefore} h to ${fast} h of waiting`,
+      es: `${Math.ceil(afterReferral / KLC_PER_PURCHASE)} compras + 1 persona que invitas y compra`,
+      en: `${Math.ceil(afterReferral / KLC_PER_PURCHASE)} purchases + 1 person you invite who buys`,
     });
   }
 
-  if (gained("outOfStockAccess")) {
-    out.push({ es: "Puedes pedir lo agotado", en: "You can order what's sold out" });
-  }
-  if (gained("offSeasonAccess")) {
-    out.push({ es: "Sabores de temporada fuera de temporada", en: "Seasonal flavours out of season" });
-  }
-  if (gained("freeDelivery")) {
-    const min = now.freeDeliveryMinOrderCents;
-    const from = min ? ` desde $${(min / 100).toFixed(0)}` : "";
-    const fromEn = min ? ` on orders over $${(min / 100).toFixed(0)}` : "";
-    out.push({ es: `Envío gratis${from}`, en: `Free delivery${fromEn}` });
-  }
-  if (gained("firstBoxWith6FreePieces")) {
-    out.push({ es: "6 piezas de regalo en tu primera caja", en: "6 free pieces in your first box" });
-  }
-  if (gained("weeklyOrderSkip")) {
+  // Probando cosas nuevas: dos familias distintas.
+  const families = Math.min(2, credits - 1);
+  const afterFamilies = credits - families * KLC_PER_NEW_FAMILY;
+  if (families >= 2 && afterFamilies > 0) {
     out.push({
-      es: "Puedes saltarte una semana del autoorden",
-      en: "Skip a week of your autoorder",
-    });
-  }
-  if (gained("freeAdvanceSamples")) {
-    out.push({ es: "Pruebas gratis antes que nadie", en: "Free samples before anyone else" });
-  }
-  if (gained("karyanaMakesYourCake")) {
-    out.push({ es: "Karyana hace tu pastel ella misma", en: "Karyana makes your cake herself" });
-  }
-  if (gained("partnerDiscounts")) {
-    out.push({ es: "Descuentos con negocios aliados", en: "Discounts with partner businesses" });
-  }
-  if (gained("personalizedService")) {
-    out.push({ es: "Atención personalizada", en: "Service that knows you by name" });
-  }
-  if (now.birthdayPoints > (before?.birthdayPoints ?? 0)) {
-    out.push({
-      es: `${now.birthdayPoints} puntos en tu cumpleaños`,
-      en: `${now.birthdayPoints} points on your birthday`,
-    });
-  }
-  if (now.pointsMultiplier > (before?.pointsMultiplier ?? 0)) {
-    out.push({
-      es: `${now.pointsMultiplier}× puntos en todo lo que compras`,
-      en: `${now.pointsMultiplier}× points on everything you buy`,
+      es: `${Math.ceil(afterFamilies / KLC_PER_PURCHASE)} compras + probar ${families} familias nuevas`,
+      en: `${Math.ceil(afterFamilies / KLC_PER_PURCHASE)} purchases + trying ${families} new families`,
     });
   }
 
   return out;
 }
 
+/**
+ * El aviso del tope, en los niveles donde de verdad muerde.
+ *
+ * Invitar y descubrir suman como máximo 6 KLC al año entre los dos. A
+ * partir de cierto nivel eso deja de ser un detalle: significa que una
+ * parte del camino TIENE que venir de comprar, y es mejor decirlo antes
+ * de que alguien invite a diez personas esperando llegar así.
+ */
+function cautionFor(credits: number): Bilingual | null {
+  if (credits <= BONUS_KLC_CAP_PER_YEAR) return null;
+  const fromBuying = credits - BONUS_KLC_CAP_PER_YEAR;
+  return {
+    es: `Invitar y descubrir suman máximo ${BONUS_KLC_CAP_PER_YEAR} KLC al año entre los dos, así que al menos ${fromBuying} tienen que venir de tus compras.`,
+    en: `Inviting and exploring are capped at ${BONUS_KLC_CAP_PER_YEAR} KLC a year between them, so at least ${fromBuying} have to come from buying.`,
+  };
+}
+
 export function roadmap(): RoadmapStop[] {
-  return TIER_ORDER.map((tier, i) => ({
+  return TIER_ORDER.map((tier) => ({
     tier,
     name: TIERS[tier].name,
     credits: creditsFor(tier),
@@ -129,40 +141,66 @@ export function roadmap(): RoadmapStop[] {
           }
         : null,
     fastestCakeHours: fastestCakeHours(tier),
-    unlocks: unlocksFor(tier, i === 0 ? null : TIER_ORDER[i - 1]),
+    routes: routesTo(creditsFor(tier)),
+    caution: cautionFor(creditsFor(tier)),
   }));
 }
 
-/** How KLC is earned. The five pillars, in the words a customer would use. */
-export const PILLARS: { es: string; en: string; detail: Bilingual }[] = [
-  { es: "Compra", en: "Buy", detail: { es: "Cada compra cuenta.", en: "Every purchase counts." } },
+/**
+ * Cómo se gana un KLC. Los cinco pilares, CON su valor.
+ *
+ * Antes decían "cada compra cuenta" sin decir cuánto, que para planear
+ * un camino es lo mismo que no decir nada. Los números salen de la
+ * tabla de Rubén, no están escritos aquí a mano.
+ */
+export const PILLARS: { es: string; en: string; value: string; detail: Bilingual }[] = [
+  {
+    es: "Compra",
+    en: "Buy",
+    value: `+${KLC_PER_PURCHASE} KLC`,
+    detail: { es: "Por cada pedido.", en: "For every order." },
+  },
   {
     es: "Gasta",
     en: "Spend",
-    detail: { es: "Los pedidos más grandes cuentan más.", en: "Bigger orders count for more." },
+    value: "+1 KLC",
+    detail: {
+      es: `Por cada $${DOLLARS_PER_SPEND_KLC} que acumulas en productos.`,
+      en: `For every $${DOLLARS_PER_SPEND_KLC} you accumulate in products.`,
+    },
   },
   {
     es: "Quédate",
     en: "Stay",
+    value: `+${KLC_PER_YEAR} KLC`,
     detail: {
-      es: "El tiempo que llevas con nosotros también suma.",
-      en: "Time with us adds up on its own.",
+      es: `Por cada año con nosotros, hasta ${MAX_TENURE_KLC}.`,
+      en: `For each year with us, up to ${MAX_TENURE_KLC}.`,
     },
   },
   {
     es: "Invita",
-    en: "Refer",
+    en: "Invite",
+    value: `+${KLC_PER_CONVERTED_REFERRAL} KLC`,
     detail: {
-      es: "Cuando quien invitas hace su primera compra.",
-      en: "When the person you invited makes their first purchase.",
+      es: "Cuando la persona que invitas hace su primera compra. Registrarse no basta.",
+      en: "When the person you invite makes their first purchase. Signing up isn't enough.",
     },
   },
   {
     es: "Descubre",
     en: "Explore",
+    value: `+${KLC_PER_NEW_FAMILY} KLC`,
     detail: {
       es: "La primera vez que pruebas una familia nueva: conchas, pan tradicional, pasteles, postres.",
       en: "The first time you try a new family: conchas, traditional bread, cakes, desserts.",
     },
   },
 ];
+
+/** El tope conjunto de invitar y descubrir, dicho una sola vez. */
+export const BONUS_CAP_NOTE: Bilingual = {
+  es: `Invitar y descubrir suman como máximo ${BONUS_KLC_CAP_PER_YEAR} KLC al año entre los dos. El Club premia sobre todo a quien regresa a comprar.`,
+  en: `Inviting and exploring add at most ${BONUS_KLC_CAP_PER_YEAR} KLC a year between them. The Club rewards coming back to buy above all.`,
+};
+

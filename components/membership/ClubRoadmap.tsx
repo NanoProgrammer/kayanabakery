@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Crown, Sparkles, Lock, Check } from "lucide-react";
 import { useLocale } from "@/lib/i18n/locale-provider";
 import { cn } from "@/lib/utils";
-import { roadmap, PILLARS } from "@/lib/loyalty/roadmap";
+import { roadmap, PILLARS, BONUS_CAP_NOTE } from "@/lib/loyalty/roadmap";
 import type { EarnedTier } from "@/lib/loyalty/klc";
 
 /**
@@ -164,8 +164,20 @@ export function ClubRoadmap({ currentTier }: { currentTier?: EarnedTier | null }
                     </p>
                   )}
 
-                  <ul className="mt-4 space-y-2 pl-[52px] text-sm text-ink md:pl-0">
-                    {stop.unlocks.map((u, j) => (
+                  {/* Cómo se llega, no qué se recibe. Los beneficios
+                      están en la tabla de niveles, justo debajo. */}
+                  <p className="mt-4 pl-[52px] text-[11px] font-bold uppercase tracking-widest text-canela-dark md:pl-0">
+                    {stop.credits === 0
+                      ? es
+                        ? "Cómo entras"
+                        : "How you get in"
+                      : es
+                        ? "Cómo llegas"
+                        : "How you get there"}
+                  </p>
+
+                  <ul className="mt-2 space-y-2 pl-[52px] text-sm text-ink md:pl-0">
+                    {stop.routes.map((u, j) => (
                       <li
                         key={u.en}
                         className={cn(
@@ -188,6 +200,21 @@ export function ClubRoadmap({ currentTier }: { currentTier?: EarnedTier | null }
                       </li>
                     ))}
                   </ul>
+
+                  {/* O cualquier mezcla: son ejemplos, no requisitos. */}
+                  {stop.routes.length > 1 && (
+                    <p className="mt-2 pl-[52px] text-xs text-ink-soft md:pl-0">
+                      {es ? "…o cualquier mezcla que sume." : "…or any mix that adds up."}
+                    </p>
+                  )}
+
+                  {/* El tope, dicho antes de que alguien invite a diez
+                      personas esperando llegar así. */}
+                  {stop.caution && (
+                    <p className="mt-3 pl-[52px] text-xs text-ink-soft md:pl-0">
+                      {es ? stop.caution.es : stop.caution.en}
+                    </p>
+                  )}
 
                   {isHere && (
                     <p className="ml-[52px] mt-4 inline-block rounded-full bg-gold/15 px-3 py-1 text-xs font-bold uppercase tracking-widest text-gold md:ml-0">
@@ -222,15 +249,25 @@ export function ClubRoadmap({ currentTier }: { currentTier?: EarnedTier | null }
                 )}
                 style={{ transitionDelay: shown ? `${1300 + i * 90}ms` : "0ms" }}
               >
-                <dt className="text-sm font-bold uppercase tracking-widest text-canela-dark">
-                  {es ? p.es : p.en}
+                <dt className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-bold uppercase tracking-widest text-canela-dark">
+                    {es ? p.es : p.en}
+                  </span>
+                  {/* Cuánto vale. Sin el número, "cada compra cuenta" no
+                      le sirve a nadie para planear su camino. */}
+                  <span className="shrink-0 font-display text-base text-gold">{p.value}</span>
                 </dt>
                 <dd className="mt-1 text-sm text-ink-soft">{es ? p.detail.es : p.detail.en}</dd>
               </div>
             ))}
           </dl>
-          {/* Said here rather than discovered later. */}
-          <p className="mt-8 border-t border-canela/20 pt-6 text-sm text-ink-soft">
+          {/* El tope, una sola vez y en su sitio. */}
+          <p className="mt-6 rounded-2xl bg-cream p-4 text-sm text-ink-soft">
+            {es ? BONUS_CAP_NOTE.es : BONUS_CAP_NOTE.en}
+          </p>
+
+          {/* Dicho antes de que pase, nunca después. */}
+          <p className="mt-6 border-t border-canela/20 pt-6 text-sm text-ink-soft">
             {es
               ? "Tu nivel se conserva mientras sigas comprando. Si pasas mucho tiempo sin venir te avisamos antes, nunca después, y nunca bajas más de un nivel a la vez."
               : "Your tier holds as long as you keep buying. If it's been a while we tell you before it changes, never after, and you never drop more than one step at a time."}

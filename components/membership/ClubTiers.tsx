@@ -5,6 +5,7 @@ import { Check, X, Lock } from "lucide-react";
 import { TIERS, type MembershipTier } from "@/lib/membership/tiers";
 import { TIER_THRESHOLDS, LEGENDARIO_MIN_PERSONAL_PURCHASES } from "@/lib/loyalty/klc";
 import { useLocale } from "@/lib/i18n/locale-provider";
+import { autoReorderLabel } from "@/lib/membership/club-copy";
 import { cn } from "@/lib/utils";
 
 /**
@@ -77,7 +78,8 @@ export function ClubTiers({ currentTier }: { currentTier: MembershipTier }) {
           const benefits: { ok: boolean; label: string }[] = [
             {
               ok: data.includedBreadWithPayment,
-              label: es ? "Orden automática de pan" : "Bread Auto Reorder",
+              // Un solo nombre, desde lib/membership/club-copy.ts.
+              label: autoReorderLabel(locale),
             },
             {
               ok: data.freeAdvanceSamples,

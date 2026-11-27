@@ -67,8 +67,8 @@ for (const locale of ["en", "es"] as const) {
 }
 
 console.log("\n  the automatic order has one name");
-check("English", autoReorderLabel("en"), "Bread auto reorder");
-check("Spanish", autoReorderLabel("es"), "Pedido automático de pan");
+check("English", autoReorderLabel("en"), "Autoorder");
+check("Spanish", autoReorderLabel("es"), "Autoorden");
 check("an unknown locale falls back to English", autoReorderLabel("fr"), AUTO_REORDER.en);
 check("clubCopy falls back to English too", clubCopy("fr").name, CLUB_NAME);
 check("clubCopy('es') is Spanish", clubCopy("es"), CLUB_COPY.es);

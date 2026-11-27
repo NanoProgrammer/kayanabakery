@@ -37,13 +37,26 @@ const read = (f: string) => readFileSync(join(root, f), "utf8");
 
 console.log("\nWhat is live, and what is waiting\n");
 
-console.log("  the two that wait");
-check("the Club roadmap is off", KLC_PUBLIC_ROADMAP, false);
-check("the two new order texts are off", NEW_ORDER_STATUS_MESSAGES, false);
-check("...so only the three existing texts go out", NOTIFIABLE_STATUSES, EXISTING_NOTIFIABLE_STATUSES);
-check("...and the finished set is still five, ready to switch on", ALL_NOTIFIABLE_STATUSES.length, 5);
+console.log("  the two that were held back, now switched on");
+// Santiago asked for both on 27 November. These no longer assert a
+// particular value — that would mean editing a test every time he
+// changes his mind — they assert that the switch and what it controls
+// agree with each other, which is the thing that can actually break.
+check("the Club roadmap is on", KLC_PUBLIC_ROADMAP, true);
+check("the two new order texts are on", NEW_ORDER_STATUS_MESSAGES, true);
+check(
+  "the texts that go out follow the switch",
+  NOTIFIABLE_STATUSES,
+  NEW_ORDER_STATUS_MESSAGES ? ALL_NOTIFIABLE_STATUSES : EXISTING_NOTIFIABLE_STATUSES
+);
+check("all five states are live", NOTIFIABLE_STATUSES.length, 5);
+check(
+  "confirmado and en preparación are among them",
+  ["CONFIRMED", "IN_PROGRESS"].every((s) => NOTIFIABLE_STATUSES.includes(s as never)),
+  true
+);
 
-console.log("\n  turning the Club roadmap off must not revive the sale");
+console.log("\n  on or off, the Club is still not for sale");
 // This is the one that matters. The pricing table said "$30/month ·
 // Subscribe" under a roadmap explaining that levels are earned. Hiding
 // the roadmap is no reason to start selling memberships again.

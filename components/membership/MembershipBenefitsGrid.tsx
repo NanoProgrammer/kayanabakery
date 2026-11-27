@@ -53,8 +53,8 @@ export function MembershipBenefitsGrid() {
       title: locale === "es" ? "Saltar la semana" : "Skip the week",
       desc:
         locale === "es"
-          ? "Pausa tu orden cuando lo necesites"
-          : "Pause your order whenever you need",
+          ? "Pausa tu autoorden cuando lo necesites"
+          : "Pause your autoorder whenever you need",
     },
     {
       icon: Gift,

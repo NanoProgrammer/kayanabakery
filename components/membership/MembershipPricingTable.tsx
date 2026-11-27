@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, X, Crown, Star, Sparkles } from "lucide-react";
 import { TIERS, type MembershipTier } from "@/lib/membership/tiers";
 import { useLocale, pickI18n } from "@/lib/i18n/locale-provider";
+import { autoReorderLabel } from "@/lib/membership/club-copy";
 import { cn } from "@/lib/utils";
 import type { MembershipPlanCMS } from "@/types";
 
@@ -73,10 +74,9 @@ export function MembershipPricingTable({
               // about, which is that every dollar comes back as points and
               // is then spent on something.
               ok: data.includedBreadWithPayment,
-              label:
-                // Same label on every tier (client request, PRs #93–#96);
-                // tiers without it show it crossed out via `ok`.
-                locale === "es" ? "Orden automatica de pan" : "Bread Auto Reorder",
+              // Same label on every tier (client request, PRs #93–#96);
+              // tiers without it show it crossed out via `ok`.
+              label: autoReorderLabel(locale),
             },
             ...(
               tier === "BASICO" || tier === "ARTESANO" || tier === "SELECTO" || tier === "LEGENDARIO" || tier === "EMBAJADOR"
@@ -98,8 +98,8 @@ export function MembershipPricingTable({
                     ok: data.weeklyOrderSkip,
                     label:
                       locale === "es"
-                        ? "Saltar orden semanal"
-                        : "Weekly order skip",
+                        ? "Saltar una semana del autoorden"
+                        : "Skip an autoorder week",
                   }]
             ),
             {
